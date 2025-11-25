@@ -1,0 +1,36 @@
+name: frontend-ci-cd
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Unit tests
+        run: pnpm test --run
+
+      - name: E2E tests
+        run: pnpm test:e2e --project=chromium
+
+      - name: Build
+        run: pnpm build
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SA }}
+          projectId: table-de-marque-72e86
+          channelId: live
