@@ -1,7 +1,6 @@
 import { test, expect } from "@playwright/test";
 
 test("match list loads (mocked API)", async ({ page }) => {
-
   // Mock API
   await page.route("**/matches", async (route) => {
     return route.fulfill({
@@ -13,9 +12,8 @@ test("match list loads (mocked API)", async ({ page }) => {
     });
   });
 
-  // IMPORTANT : plus de page.goto("http://localhost:5173")
-  // Playwright ouvre automatiquement la racine du serveur web préconfiguré.
-  await page.goto("/");
+  // Navigation vers le serveur lancé par webServer
+  await page.goto("http://localhost:4173/");
 
   await expect(page.getByText("A vs B")).toBeVisible();
 });
