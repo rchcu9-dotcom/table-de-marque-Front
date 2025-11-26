@@ -19,7 +19,7 @@ jobs:
         run: pnpm install
 
       - name: Unit tests
-        run: pnpm test --run
+        run: pnpm test
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps
