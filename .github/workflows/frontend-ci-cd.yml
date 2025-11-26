@@ -23,27 +23,20 @@ jobs:
           node-version: 20
           cache: pnpm
 
-      - name: Install deps
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Unit tests
+      - name: Run unit tests
         run: pnpm test
 
       - name: Install Playwright Browsers
         run: pnpm dlx playwright install --with-deps
 
-      - name: E2E tests
+      - name: Run E2E tests
         run: pnpm test:e2e
 
       - name: Build
         run: pnpm build
 
       - name: Firebase Auth
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.FIREBASE_SA }}
-
-      - name: Deploy to Firebase Hosting
-        run: |
-          npm install -g firebase-tools
-          firebase hosting:deploy --project table-de-marque-72e86 --only hosting
+        uses: google-github-actions/au

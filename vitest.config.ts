@@ -6,7 +6,13 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
-    setupFiles: "./src/tests/setup.ts",
-    exclude: ["tests/**/*.spec.ts"], // empêche Vitest de lire les tests Playwright
-  },
+    setupFiles: ["./tests/unit/setup.ts"],
+    exclude: [
+      "node_modules",
+      "dist",
+      ".git",
+      "tests/e2e",
+      "tests/match-list.spec.ts"
+    ]
+  }
 });
