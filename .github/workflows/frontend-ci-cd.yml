@@ -29,6 +29,9 @@ jobs:
       - name: Run unit tests
         run: pnpm test
 
+      - name: Prepare production environment variables
+        run: cp .env.production .env
+
       - name: Build (required before E2E)
         run: pnpm build
 
