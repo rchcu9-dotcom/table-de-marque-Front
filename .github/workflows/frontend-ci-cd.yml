@@ -26,11 +26,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Inject production environment variables
+        run: |
+          echo "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}" > .env
+
       - name: Run unit tests
         run: pnpm test
-
-      - name: Prepare production environment variables
-        run: cp .env.production .env
 
       - name: Build (required before E2E)
         run: pnpm build
