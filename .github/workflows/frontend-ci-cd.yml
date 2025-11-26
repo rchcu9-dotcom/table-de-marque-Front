@@ -39,4 +39,7 @@ jobs:
         run: pnpm build
 
       - name: Firebase Auth
-        uses: google-github-actions/au
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SA }}
+
