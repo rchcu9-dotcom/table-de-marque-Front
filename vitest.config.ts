@@ -7,5 +7,8 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     setupFiles: "./src/tests/setup.ts",
+
+    // ⛔ Empêche Vitest de lire les tests Playwright
+    exclude: ["tests/**/*.spec.ts"],
   },
 });
