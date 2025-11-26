@@ -1,23 +1,21 @@
 import { test, expect } from "@playwright/test";
 
 test("match list loads (mocked API)", async ({ page }) => {
-  // Interception de l’API
+
+  // Mock API
   await page.route("**/matches", async (route) => {
-    await route.fulfill({
+    return route.fulfill({
       status: 200,
+      contentType: "application/json",
       body: JSON.stringify([
-        {
-          id: "1",
-          teamA: "A",
-          teamB: "B",
-          date: "2025-01-01",
-          status: "planned",
-        },
-      ]),
-      headers: { "Content-Type": "application/json" },
+        { id: 1, home: "A", away: "B" }
+      ])
     });
   });
 
-  await page.goto("http://localhost:5173/");
+  // IMPORTANT : plus de page.goto("http://localhost:5173")
+  // Playwright ouvre automatiquement la racine du serveur web préconfiguré.
+  await page.goto("/");
+
   await expect(page.getByText("A vs B")).toBeVisible();
 });
