@@ -21,8 +21,11 @@ jobs:
       - name: Unit tests
         run: pnpm test --run
 
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps
+
       - name: E2E tests
-        run: pnpm test:e2e --project=chromium
+        run: pnpm exec playwright test
 
       - name: Build
         run: pnpm build
@@ -33,4 +36,4 @@ jobs:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SA }}
           projectId: table-de-marque-72e86
-          channelId: live
+
