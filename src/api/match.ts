@@ -8,8 +8,11 @@ export type Match = {
   status: MatchStatus;
 };
 
+// Normalisation propre : supprime les / finaux si l'URL existe
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL;
+
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, "") ?? "http://localhost:3000";
+  rawBaseUrl ? rawBaseUrl.replace(/\/+$/, "") : "http://localhost:3000";
 
 export async function fetchMatches(): Promise<Match[]> {
   const url = `${API_BASE_URL}/matches`;
