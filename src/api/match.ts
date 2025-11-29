@@ -6,6 +6,8 @@ export type Match = {
   teamA: string;
   teamB: string;
   status: MatchStatus;
+  scoreA: number | null;
+  scoreB: number | null;
 };
 
 // Normalisation propre : supprime les / finaux si l'URL existe

@@ -11,7 +11,24 @@ export default function MatchListPage() {
         {
             key: "teamA",
             label: "Match",
-            render: (_value, item) => `${item.teamA} vs ${item.teamB}`,
+            render: (_value, item) => {
+                const hasScore = (item.status === "ongoing" || item.status === "finished") &&
+                    item.scoreA !== null &&
+                    item.scoreB !== null;
+                const winner = hasScore && item.scoreA !== null && item.scoreB !== null && item.scoreA !== item.scoreB
+                    ? item.scoreA > item.scoreB
+                        ? "A"
+                        : "B"
+                    : null;
+                if (!hasScore) {
+                    return `${item.teamA} vs ${item.teamB}`;
+                }
+                return (_jsxs("span", { "data-testid": `match-line-${item.id}`, className: "flex items-center gap-2", children: [_jsx("span", { className: winner === "A"
+                                ? "text-emerald-300 font-semibold"
+                                : "text-slate-100", children: item.teamA }), _jsxs("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-800 text-xs text-slate-100", children: [_jsx("span", { children: item.scoreA }), _jsx("span", { className: "text-slate-500", children: "-" }), _jsx("span", { children: item.scoreB })] }), _jsx("span", { className: winner === "B"
+                                ? "text-emerald-300 font-semibold"
+                                : "text-slate-100", children: item.teamB })] }));
+            },
         },
         {
             key: "date",

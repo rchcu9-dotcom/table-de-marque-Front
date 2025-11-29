@@ -11,13 +11,16 @@ test("match list loads (mocked API)", async ({ page }) => {
           date: "2025-01-01T12:00:00Z",
           teamA: "A",
           teamB: "B",
-          status: "planned"
+          status: "finished",
+          scoreA: 2,
+          scoreB: 1
         }
       ])
     });
   });
 
-  await page.goto("http://localhost:4173/");
+  await page.goto("http://localhost:4174/");
 
-  await expect(page.getByText("A vs B")).toBeVisible();
+  await expect(page.getByTestId("match-line-1")).toBeVisible();
+  await expect(page.getByTestId("match-line-1")).toHaveText(/A\s*2\s*-\s*1\s*B/i);
 });
