@@ -12,7 +12,7 @@ export default function MatchDetailPage() {
     return (
       <div className="flex items-center gap-2 text-slate-300 text-sm">
         <Spinner />
-        <span>Chargement du match…</span>
+        <span>Chargement du match...</span>
       </div>
     );
   }
@@ -32,6 +32,13 @@ export default function MatchDetailPage() {
         : "B"
       : null;
 
+  const statusLabels: Record<typeof data.status, string> = {
+    planned: "Planifie",
+    ongoing: "En cours",
+    finished: "Termine",
+    deleted: "Supprime",
+  };
+
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">
@@ -49,20 +56,15 @@ export default function MatchDetailPage() {
       </h1>
 
       <Card>
-        <div className="space-y-2">
-          <div className="text-sm">
-            <span className="text-slate-400 mr-2 font-medium">Date :</span>
-            {new Date(data.date).toLocaleString()}
-          </div>
+        <div className="space-y-3 text-sm text-slate-200">
+          <div className="text-base">{new Date(data.date).toLocaleString()}</div>
 
-          <div className="text-sm">
-            <span className="text-slate-400 mr-2 font-medium">Statut :</span>
-            <Badge color="accent">{data.status}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge color="accent">{statusLabels[data.status]}</Badge>
           </div>
 
           {hasScore && (
             <div className="text-sm">
-              <span className="text-slate-400 mr-2 font-medium">Score :</span>
               <span
                 data-testid="match-score"
                 className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-slate-800 text-slate-100 font-semibold"

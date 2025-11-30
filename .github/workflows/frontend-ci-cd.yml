@@ -12,6 +12,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Clean workspace
+        run: rm -rf dist node_modules .turbo .parcel-cache .cache
+
       - name: Setup PNPM
         uses: pnpm/action-setup@v3
         with:
