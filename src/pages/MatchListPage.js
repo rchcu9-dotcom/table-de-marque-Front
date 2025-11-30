@@ -34,6 +34,34 @@ export default function MatchListPage({ searchQuery = "", sort, onSortChange, })
             return haystack.some((value) => value.includes(normalizedQuery));
         });
     }, [data, normalizedQuery]);
+    const momentumMatches = React.useMemo(() => {
+        if (!data || data.length === 0)
+            return [];
+        const sortByDateAsc = [...data].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const ongoingIndex = sortByDateAsc.findIndex((m) => m.status === "ongoing");
+        const allFinished = sortByDateAsc.every((m) => m.status === "finished" || m.status === "deleted");
+        // 1) Aucun match démarré => 3 premiers par date croissante
+        if (ongoingIndex === -1) {
+            if (allFinished) {
+                // 3) Tous joués => 3 derniers par date décroissante
+                const desc = [...sortByDateAsc].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                return desc.slice(0, 3);
+            }
+            return sortByDateAsc.slice(0, 3);
+        }
+        // 2) Il y a un match en cours
+        const lastIndex = sortByDateAsc.length - 1;
+        if (ongoingIndex === 0) {
+            // 2-1) premier match par date croissante
+            return sortByDateAsc.slice(0, 3);
+        }
+        if (ongoingIndex === lastIndex) {
+            // 2-3) match en cours est le dernier
+            return sortByDateAsc.slice(Math.max(lastIndex - 2, 0), lastIndex + 1);
+        }
+        // 2-2) match en cours au milieu
+        return sortByDateAsc.slice(ongoingIndex - 1, ongoingIndex + 2);
+    }, [data]);
     const fields = [
         {
             key: "teamA",
@@ -89,5 +117,5 @@ export default function MatchListPage({ searchQuery = "", sort, onSortChange, })
     return (_jsxs("div", { className: "space-y-4", children: [_jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3", children: [_jsxs("div", { className: "text-sm text-slate-400", children: [filteredMatches.length, " match", filteredMatches.length > 1 ? "s" : ""] }), _jsxs("div", { className: "flex items-center gap-2 text-sm", children: [_jsx("span", { className: "text-slate-500", children: "Trier" }), _jsx("select", { value: String(effectiveSort.key), onChange: (e) => updateSort({ ...effectiveSort, key: e.target.value }), className: "rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100", children: sortOptions.map((option) => (_jsx("option", { value: option.key, children: option.label }, option.key))) }), _jsxs("select", { value: effectiveSort.direction, onChange: (e) => updateSort({
                                     ...effectiveSort,
                                     direction: e.target.value,
-                                }), className: "rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100", children: [_jsx("option", { value: "asc", children: "Croissant" }), _jsx("option", { value: "desc", children: "Decroissant" })] })] })] }), isLoading && (_jsxs("div", { className: "flex items-center gap-2 text-slate-300 text-sm", children: [_jsx(Spinner, {}), _jsx("span", { children: "Chargement..." })] })), isError && (_jsx("div", { className: "text-red-400 text-sm", children: "Erreur de chargement." })), filteredMatches && filteredMatches.length === 0 && !isLoading && (_jsx("div", { className: "text-slate-400 text-sm", children: "Aucun match." })), filteredMatches && filteredMatches.length > 0 && (_jsx(List, { items: filteredMatches, fields: fields, sort: effectiveSort, onItemClick: (m) => navigate(`/matches/${m.id}`) }))] }));
+                                }), className: "rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100", children: [_jsx("option", { value: "asc", children: "Croissant" }), _jsx("option", { value: "desc", children: "Decroissant" })] })] })] }), isLoading && (_jsxs("div", { className: "flex items-center gap-2 text-slate-300 text-sm", children: [_jsx(Spinner, {}), _jsx("span", { children: "Chargement..." })] })), isError && (_jsx("div", { className: "text-red-400 text-sm", children: "Erreur de chargement." })), data && data.length > 0 && !isLoading && (_jsxs("div", { className: "space-y-2", children: [_jsxs("div", { className: "flex items-center gap-2 text-sm text-slate-400", children: [_jsx("span", { className: "text-base font-semibold text-slate-100", children: "Momentum" }), _jsx("span", { className: "rounded-full bg-slate-800 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-300", children: "Focus live" })] }), momentumMatches.length > 0 ? (_jsx("div", { "data-testid": "momentum-list", children: _jsx(List, { items: momentumMatches, fields: fields, onItemClick: (m) => navigate(`/matches/${m.id}`) }) })) : (_jsx("div", { className: "text-slate-500 text-sm", children: "Aucun match \u00E0 afficher pour le momentum." }))] })), filteredMatches && filteredMatches.length === 0 && !isLoading && (_jsx("div", { className: "text-slate-400 text-sm", children: "Aucun match." })), filteredMatches && filteredMatches.length > 0 && (_jsxs("div", { className: "space-y-2", children: [_jsx("div", { className: "text-base font-semibold text-slate-100", children: "Planning" }), _jsx(List, { items: filteredMatches, fields: fields, sort: effectiveSort, onItemClick: (m) => navigate(`/matches/${m.id}`) })] }))] }));
 }
