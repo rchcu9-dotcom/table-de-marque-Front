@@ -2,6 +2,7 @@ import React from "react";
 import List, { type Field, type SortConfig } from "../components/collections/List";
 import Badge from "../components/ds/Badge";
 import Spinner from "../components/ds/Spinner";
+import HexBadge from "../components/ds/HexBadge";
 
 import type { Match } from "../api/match";
 import { useMatches } from "../hooks/useMatches";
@@ -155,6 +156,13 @@ export default function MatchListPage({
 
   const fields = renderFields(false);
   const momentumFields = renderFields(true);
+  const renderLeading = (item: Match) => (
+    <div className="flex items-center gap-3">
+      <HexBadge name={item.teamA} imageUrl={item.teamALogo ?? undefined} size={44} />
+      <span className="text-xs uppercase text-slate-500">vs</span>
+      <HexBadge name={item.teamB} imageUrl={item.teamBLogo ?? undefined} size={44} />
+    </div>
+  );
   const sortOptions: Array<{ label: string; key: SortConfig<Match>["key"] }> = [
     { label: "Date", key: "date" },
     { label: "Equipe A", key: "teamA" },
@@ -228,6 +236,7 @@ export default function MatchListPage({
               <List
                 items={momentumMatches}
                 fields={momentumFields}
+                renderLeading={renderLeading}
                 onItemClick={(m) => navigate(`/matches/${m.id}`)}
               />
             </div>
@@ -251,6 +260,7 @@ export default function MatchListPage({
               items={filteredMatches}
               fields={fields}
               sort={effectiveSort}
+              renderLeading={renderLeading}
               onItemClick={(m) => navigate(`/matches/${m.id}`)}
             />
           </div>

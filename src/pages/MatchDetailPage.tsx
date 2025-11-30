@@ -3,6 +3,7 @@ import { useMatch } from "../hooks/useMatches";
 import Spinner from "../components/ds/Spinner";
 import Card from "../components/ds/Card";
 import Badge from "../components/ds/Badge";
+import HexBadge from "../components/ds/HexBadge";
 
 export default function MatchDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -41,19 +42,22 @@ export default function MatchDetailPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">
-        <span
-          className={winner === "A" ? "text-emerald-300 font-semibold" : ""}
-        >
-          {data.teamA}
-        </span>{" "}
-        vs{" "}
-        <span
-          className={winner === "B" ? "text-emerald-300 font-semibold" : ""}
-        >
-          {data.teamB}
-        </span>
-      </h1>
+      <div className="flex items-center gap-4">
+        <HexBadge name={data.teamA} imageUrl={data.teamALogo ?? undefined} size={64} />
+        <div className="flex flex-col">
+          <div className="text-xs uppercase text-slate-500">Match</div>
+          <div className="text-2xl font-semibold">
+            <span className={winner === "A" ? "text-emerald-300 font-semibold" : ""}>
+              {data.teamA}
+            </span>{" "}
+            vs{" "}
+            <span className={winner === "B" ? "text-emerald-300 font-semibold" : ""}>
+              {data.teamB}
+            </span>
+          </div>
+        </div>
+        <HexBadge name={data.teamB} imageUrl={data.teamBLogo ?? undefined} size={64} />
+      </div>
 
       <Card>
         <div className="space-y-3 text-sm text-slate-200">

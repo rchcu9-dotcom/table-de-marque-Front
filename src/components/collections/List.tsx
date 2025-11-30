@@ -20,6 +20,7 @@ type Props<T> = {
   fields: Field<T>[];
   sort?: SortConfig<T>;
   onItemClick?: (item: T) => void;
+  renderLeading?: (item: T) => React.ReactNode;
 };
 
 const normalizeValue = (value: unknown) => {
@@ -39,6 +40,7 @@ export default function List<T extends { id?: string | number }>({
   fields,
   sort,
   onItemClick,
+  renderLeading,
 }: Props<T>) {
   const sortedItems = React.useMemo(() => {
     if (!sort) return items;
@@ -69,6 +71,11 @@ export default function List<T extends { id?: string | number }>({
             onClick={() => onItemClick?.(item)}
           >
             <div className="flex flex-col gap-1">
+              {renderLeading && (
+                <div className="mb-2 flex items-center">
+                  {renderLeading(item)}
+                </div>
+              )}
               {primary && (
                 <div className="text-sm font-semibold">
                   {primary.render
