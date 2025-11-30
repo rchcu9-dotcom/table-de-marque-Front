@@ -66,7 +66,8 @@ describe("MatchListPage", () => {
       </MemoryRouter>,
     );
 
-    const matchLine = screen.getByTestId("match-line-1");
+    const planning = within(screen.getByTestId("planning-list"));
+    const matchLine = planning.getByTestId("match-line-1");
     expect(matchLine.textContent).toMatch(/Rennes\s*2\s*-\s*1\s*Meudon/i);
   });
 
@@ -77,8 +78,9 @@ describe("MatchListPage", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.queryByTestId("match-line-2")).toBeInTheDocument();
-    expect(screen.queryByTestId("match-line-1")).not.toBeInTheDocument();
+    const planning = within(screen.getByTestId("planning-list"));
+    expect(planning.queryByTestId("match-line-2")).toBeInTheDocument();
+    expect(planning.queryByTestId("match-line-1")).not.toBeInTheDocument();
   });
 
   it("momentum sans match en cours prend les 3 premiers par date", () => {
@@ -96,8 +98,8 @@ describe("MatchListPage", () => {
     );
 
     const momentum = within(screen.getByTestId("momentum-list"));
-    const ids = momentum.getAllByTestId(/match-line-/).map((el) => el.getAttribute("data-testid"));
-    expect(ids).toEqual(["match-line-a", "match-line-b", "match-line-c"]);
+    const ids = momentum.getAllByTestId(/momentum-match-line-/).map((el) => el.getAttribute("data-testid"));
+    expect(ids).toEqual(["momentum-match-line-a", "momentum-match-line-b", "momentum-match-line-c"]);
   });
 
   it("momentum autour d'un match en cours affiche precedent, courant, suivant", () => {
@@ -115,8 +117,8 @@ describe("MatchListPage", () => {
     );
 
     const momentum = within(screen.getByTestId("momentum-list"));
-    const ids = momentum.getAllByTestId(/match-line-/).map((el) => el.getAttribute("data-testid"));
-    expect(ids).toEqual(["match-line-a", "match-line-b", "match-line-c"]);
+    const ids = momentum.getAllByTestId(/momentum-match-line-/).map((el) => el.getAttribute("data-testid"));
+    expect(ids).toEqual(["momentum-match-line-a", "momentum-match-line-b", "momentum-match-line-c"]);
   });
 
   it("momentum avec tous les matchs joues prend les 3 derniers par date decroissante", () => {
@@ -134,7 +136,7 @@ describe("MatchListPage", () => {
     );
 
     const momentum = within(screen.getByTestId("momentum-list"));
-    const ids = momentum.getAllByTestId(/match-line-/).map((el) => el.getAttribute("data-testid"));
-    expect(ids).toEqual(["match-line-d", "match-line-c", "match-line-b"]);
+    const ids = momentum.getAllByTestId(/momentum-match-line-/).map((el) => el.getAttribute("data-testid"));
+    expect(ids).toEqual(["momentum-match-line-d", "momentum-match-line-c", "momentum-match-line-b"]);
   });
 });

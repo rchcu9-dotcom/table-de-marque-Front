@@ -29,7 +29,7 @@ export default function MatchListPage({
   const updateSort = onSortChange ?? setLocalSort;
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
-  const filteredMatches = React.useMemo(() => {
+  const filteredMatches = React.useMemo<Match[]>(() => {
     if (!data) return [];
     if (!normalizedQuery) return data;
     return data.filter((item) => {
@@ -48,9 +48,9 @@ export default function MatchListPage({
   }, [data, normalizedQuery]);
 
   const momentumMatches = React.useMemo(() => {
-    if (!data || data.length === 0) return [];
+    if (!filteredMatches || filteredMatches.length === 0) return [];
 
-    const sortByDateAsc = [...data].sort(
+    const sortByDateAsc = [...filteredMatches].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
     );
     const ongoingIndex = sortByDateAsc.findIndex((m) => m.status === "ongoing");
@@ -82,9 +82,9 @@ export default function MatchListPage({
     }
     // 2-2) match en cours au milieu
     return sortByDateAsc.slice(ongoingIndex - 1, ongoingIndex + 2);
-  }, [data]);
+  }, [filteredMatches]);
 
-  const fields: Field<Match>[] = [
+  const renderFields = (isMomentum = false): Field<Match>[] => [
     {
       key: "teamA",
       label: "Match",
@@ -100,38 +100,31 @@ export default function MatchListPage({
               : "B"
             : null;
 
-        if (!hasScore) {
-          return `${item.teamA} vs ${item.teamB}`;
-        }
-
         return (
           <span
-            data-testid={`match-line-${item.id}`}
-            className="flex items-center gap-2"
+            data-testid={`${isMomentum ? "momentum-" : ""}match-line-${item.id}`}
+            className={`flex items-center gap-2 ${!hasScore ? "text-slate-100" : ""}`}
           >
-            <span
-              className={
-                winner === "A"
-                  ? "text-emerald-300 font-semibold"
-                  : "text-slate-100"
-              }
-            >
+            <span className={winner === "A" ? "text-emerald-300 font-semibold" : "text-slate-100"}>
               {item.teamA}
             </span>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-800 text-xs text-slate-100">
-              <span>{item.scoreA}</span>
-              <span className="text-slate-500">-</span>
-              <span>{item.scoreB}</span>
-            </span>
-            <span
-              className={
-                winner === "B"
-                  ? "text-emerald-300 font-semibold"
-                  : "text-slate-100"
-              }
-            >
-              {item.teamB}
-            </span>
+            {hasScore ? (
+              <>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-800 text-xs text-slate-100">
+                  <span>{item.scoreA}</span>
+                  <span className="text-slate-500">-</span>
+                  <span>{item.scoreB}</span>
+                </span>
+                <span className={winner === "B" ? "text-emerald-300 font-semibold" : "text-slate-100"}>
+                  {item.teamB}
+                </span>
+              </>
+            ) : (
+              <span className="text-slate-400">vs</span>
+            )}
+            {!hasScore && (
+              <span className="text-slate-100">{item.teamB}</span>
+            )}
           </span>
         );
       },
@@ -160,6 +153,8 @@ export default function MatchListPage({
     },
   ];
 
+  const fields = renderFields(false);
+  const momentumFields = renderFields(true);
   const sortOptions: Array<{ label: string; key: SortConfig<Match>["key"] }> = [
     { label: "Date", key: "date" },
     { label: "Equipe A", key: "teamA" },
@@ -177,6 +172,7 @@ export default function MatchListPage({
         <div className="flex items-center gap-2 text-sm">
           <span className="text-slate-500">Trier</span>
           <select
+            data-testid="sort-key"
             value={String(effectiveSort.key)}
             onChange={(e) =>
               updateSort({ ...effectiveSort, key: e.target.value as keyof Match })
@@ -190,6 +186,7 @@ export default function MatchListPage({
             ))}
           </select>
           <select
+            data-testid="sort-direction"
             value={effectiveSort.direction}
             onChange={(e) =>
               updateSort({
@@ -230,7 +227,7 @@ export default function MatchListPage({
             <div data-testid="momentum-list">
               <List
                 items={momentumMatches}
-                fields={fields}
+                fields={momentumFields}
                 onItemClick={(m) => navigate(`/matches/${m.id}`)}
               />
             </div>
@@ -249,12 +246,14 @@ export default function MatchListPage({
       {filteredMatches && filteredMatches.length > 0 && (
         <div className="space-y-2">
           <div className="text-base font-semibold text-slate-100">Planning</div>
-          <List
-            items={filteredMatches}
-            fields={fields}
-            sort={effectiveSort}
-            onItemClick={(m) => navigate(`/matches/${m.id}`)}
-          />
+          <div data-testid="planning-list">
+            <List
+              items={filteredMatches}
+              fields={fields}
+              sort={effectiveSort}
+              onItemClick={(m) => navigate(`/matches/${m.id}`)}
+            />
+          </div>
         </div>
       )}
     </div>
