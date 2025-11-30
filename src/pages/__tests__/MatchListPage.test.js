@@ -65,6 +65,21 @@ describe("MatchListPage", () => {
         expect(planning.queryByTestId("match-line-2")).toBeInTheDocument();
         expect(planning.queryByTestId("match-line-1")).not.toBeInTheDocument();
     });
+    it("ne filtre ni ne trie la liste momentum avec la recherche", () => {
+        mockData = [
+            { id: "a", date: "2025-01-01T08:00:00Z", teamA: "Alpha", teamB: "Beta", status: "planned", scoreA: null, scoreB: null },
+            { id: "b", date: "2025-01-01T09:00:00Z", teamA: "Gamma", teamB: "Delta", status: "planned", scoreA: null, scoreB: null },
+            { id: "c", date: "2025-01-01T10:00:00Z", teamA: "Paris", teamB: "Omega", status: "planned", scoreA: null, scoreB: null },
+        ];
+        render(_jsx(MemoryRouter, { children: _jsx(MatchListPage, { searchQuery: "paris" }) }));
+        const momentum = within(screen.getByTestId("momentum-list"));
+        const ids = momentum
+            .queryAllByTestId(/momentum-match-/)
+            .map((el) => el.getAttribute("data-testid"));
+        expect(ids).toEqual(["momentum-match-a", "momentum-match-b", "momentum-match-c"]);
+        const planning = within(screen.getByTestId("planning-list"));
+        expect(planning.getAllByTestId(/match-line-/).length).toBe(1); // seul le match filtré reste
+    });
     it("momentum sans match en cours prend les 3 premiers par date", () => {
         mockData = [
             { id: "a", date: "2025-01-01T08:00:00Z", teamA: "A", teamB: "B", status: "planned", scoreA: null, scoreB: null },
@@ -74,8 +89,10 @@ describe("MatchListPage", () => {
         ];
         render(_jsx(MemoryRouter, { children: _jsx(MatchListPage, {}) }));
         const momentum = within(screen.getByTestId("momentum-list"));
-        const ids = momentum.getAllByTestId(/momentum-match-line-/).map((el) => el.getAttribute("data-testid"));
-        expect(ids).toEqual(["momentum-match-line-a", "momentum-match-line-b", "momentum-match-line-c"]);
+        const ids = momentum
+            .getAllByTestId(/momentum-match-/)
+            .map((el) => el.getAttribute("data-testid"));
+        expect(ids).toEqual(["momentum-match-a", "momentum-match-b", "momentum-match-c"]);
     });
     it("momentum autour d'un match en cours affiche precedent, courant, suivant", () => {
         mockData = [
@@ -86,8 +103,10 @@ describe("MatchListPage", () => {
         ];
         render(_jsx(MemoryRouter, { children: _jsx(MatchListPage, {}) }));
         const momentum = within(screen.getByTestId("momentum-list"));
-        const ids = momentum.getAllByTestId(/momentum-match-line-/).map((el) => el.getAttribute("data-testid"));
-        expect(ids).toEqual(["momentum-match-line-a", "momentum-match-line-b", "momentum-match-line-c"]);
+        const ids = momentum
+            .getAllByTestId(/momentum-match-/)
+            .map((el) => el.getAttribute("data-testid"));
+        expect(ids).toEqual(["momentum-match-a", "momentum-match-b", "momentum-match-c"]);
     });
     it("momentum avec tous les matchs joues prend les 3 derniers par date decroissante", () => {
         mockData = [
@@ -98,7 +117,9 @@ describe("MatchListPage", () => {
         ];
         render(_jsx(MemoryRouter, { children: _jsx(MatchListPage, {}) }));
         const momentum = within(screen.getByTestId("momentum-list"));
-        const ids = momentum.getAllByTestId(/momentum-match-line-/).map((el) => el.getAttribute("data-testid"));
-        expect(ids).toEqual(["momentum-match-line-d", "momentum-match-line-c", "momentum-match-line-b"]);
+        const ids = momentum
+            .getAllByTestId(/momentum-match-/)
+            .map((el) => el.getAttribute("data-testid"));
+        expect(ids).toEqual(["momentum-match-d", "momentum-match-c", "momentum-match-b"]);
     });
 });

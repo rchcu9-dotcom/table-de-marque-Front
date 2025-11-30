@@ -14,6 +14,43 @@ type Props = {
   onSortChange?: (sort: SortConfig<Match>) => void;
 };
 
+function computeMomentum(source: Match[]): Match[] {
+  if (!source || source.length === 0) return [];
+
+  const sortByDateAsc = [...source].sort(
+    (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+  );
+  const ongoingIndex = sortByDateAsc.findIndex((m) => m.status === "ongoing");
+  const allFinished = sortByDateAsc.every(
+    (m) => m.status === "finished" || m.status === "deleted",
+  );
+
+  // 1) Aucun match démarré => 3 premiers par date croissante
+  if (ongoingIndex === -1) {
+    if (allFinished) {
+      // 3) Tous joués => 3 derniers par date décroissante
+      const desc = [...sortByDateAsc].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      );
+      return desc.slice(0, 3);
+    }
+    return sortByDateAsc.slice(0, 3);
+  }
+
+  // 2) Il y a un match en cours
+  const lastIndex = sortByDateAsc.length - 1;
+  if (ongoingIndex === 0) {
+    // 2-1) premier match par date croissante
+    return sortByDateAsc.slice(0, 3);
+  }
+  if (ongoingIndex === lastIndex) {
+    // 2-3) match en cours est le dernier
+    return sortByDateAsc.slice(Math.max(lastIndex - 2, 0), lastIndex + 1);
+  }
+  // 2-2) match en cours au milieu
+  return sortByDateAsc.slice(ongoingIndex - 1, ongoingIndex + 2);
+}
+
 export default function MatchListPage({
   searchQuery = "",
   sort,
@@ -21,19 +58,26 @@ export default function MatchListPage({
 }: Props) {
   const { data, isLoading, isError } = useMatches();
   const navigate = useNavigate();
+  const [allMatches, setAllMatches] = React.useState<Match[]>([]);
   const [localSort, setLocalSort] = React.useState<SortConfig<Match>>({
     key: "date",
     direction: "asc",
   });
+
+  React.useEffect(() => {
+    if (data) {
+      setAllMatches(data);
+    }
+  }, [data]);
 
   const effectiveSort = sort ?? localSort;
   const updateSort = onSortChange ?? setLocalSort;
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const filteredMatches = React.useMemo<Match[]>(() => {
-    if (!data) return [];
-    if (!normalizedQuery) return data;
-    return data.filter((item) => {
+    if (!allMatches) return [];
+    if (!normalizedQuery) return allMatches;
+    return allMatches.filter((item) => {
       const haystack = [
         item.teamA,
         item.teamB,
@@ -46,44 +90,12 @@ export default function MatchListPage({
         .map((value) => String(value).toLowerCase());
       return haystack.some((value) => value.includes(normalizedQuery));
     });
-  }, [data, normalizedQuery]);
+  }, [allMatches, normalizedQuery]);
 
   const momentumMatches = React.useMemo(() => {
-    if (!filteredMatches || filteredMatches.length === 0) return [];
-
-    const sortByDateAsc = [...filteredMatches].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-    );
-    const ongoingIndex = sortByDateAsc.findIndex((m) => m.status === "ongoing");
-    const allFinished = sortByDateAsc.every(
-      (m) => m.status === "finished" || m.status === "deleted",
-    );
-
-    // 1) Aucun match démarré => 3 premiers par date croissante
-    if (ongoingIndex === -1) {
-      if (allFinished) {
-        // 3) Tous joués => 3 derniers par date décroissante
-        const desc = [...sortByDateAsc].sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-        );
-        return desc.slice(0, 3);
-      }
-      return sortByDateAsc.slice(0, 3);
-    }
-
-    // 2) Il y a un match en cours
-    const lastIndex = sortByDateAsc.length - 1;
-    if (ongoingIndex === 0) {
-      // 2-1) premier match par date croissante
-      return sortByDateAsc.slice(0, 3);
-    }
-    if (ongoingIndex === lastIndex) {
-      // 2-3) match en cours est le dernier
-      return sortByDateAsc.slice(Math.max(lastIndex - 2, 0), lastIndex + 1);
-    }
-    // 2-2) match en cours au milieu
-    return sortByDateAsc.slice(ongoingIndex - 1, ongoingIndex + 2);
-  }, [filteredMatches]);
+    // Momentum se base sur l'ensemble des matchs initiaux (non filtrés)
+    return computeMomentum(allMatches);
+  }, [allMatches]);
 
   const renderFields = (isMomentum = false): Field<Match>[] => [
     {
@@ -103,7 +115,7 @@ export default function MatchListPage({
 
         return (
           <span
-            data-testid={`${isMomentum ? "momentum-" : ""}match-line-${item.id}`}
+            data-testid={isMomentum ? undefined : `match-line-${item.id}`}
             className={`flex w-full items-center justify-center gap-2 ${!hasScore ? "text-slate-100" : ""}`}
           >
             <span className={winner === "A" ? "text-emerald-300 font-semibold" : "text-slate-100"}>
@@ -245,6 +257,7 @@ export default function MatchListPage({
                 items={momentumMatches}
                 fields={momentumFields}
                 alignCenter
+                itemTestIdPrefix="momentum-match-"
                 renderLeading={renderLeading}
                 onItemClick={(m) => navigate(`/matches/${m.id}`)}
               />

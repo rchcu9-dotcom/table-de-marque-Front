@@ -22,6 +22,7 @@ type Props<T> = {
   onItemClick?: (item: T) => void;
   renderLeading?: (item: T) => React.ReactNode;
   alignCenter?: boolean;
+  itemTestIdPrefix?: string;
 };
 
 const normalizeValue = (value: unknown) => {
@@ -43,6 +44,7 @@ export default function List<T extends { id?: string | number }>({
   onItemClick,
   renderLeading,
   alignCenter,
+  itemTestIdPrefix,
 }: Props<T>) {
   const sortedItems = React.useMemo(() => {
     if (!sort) return items;
@@ -72,6 +74,7 @@ export default function List<T extends { id?: string | number }>({
             className={`${
               onItemClick ? "cursor-pointer hover:bg-slate-800/80" : ""
             } ${alignCenter ? "flex flex-col items-center text-center w-full" : ""}`}
+            data-testid={itemTestIdPrefix ? `${itemTestIdPrefix}${item.id ?? idx}` : undefined}
             onClick={() => onItemClick?.(item)}
           >
             <div
