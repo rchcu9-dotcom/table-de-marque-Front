@@ -113,32 +113,43 @@ export default function MatchListPage({
               : "B"
             : null;
 
+        const logoSize = isMomentum ? 40 : 34;
+
         return (
-          <span
-            data-testid={isMomentum ? undefined : `match-line-${item.id}`}
-            className={`flex w-full items-center justify-center gap-2 ${!hasScore ? "text-slate-100" : ""}`}
+          <div
+            data-testid={isMomentum ? `momentum-match-${item.id}` : `match-line-${item.id}`}
+            className={`flex w-full items-center justify-between gap-2 ${isMomentum ? "text-slate-100" : ""}`}
           >
-            <span className={winner === "A" ? "text-emerald-300 font-semibold" : "text-slate-100"}>
-              {item.teamA}
-            </span>
-            {hasScore ? (
-              <>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-800 text-xs text-slate-100">
-                  <span>{item.scoreA}</span>
-                  <span className="text-slate-500">-</span>
-                  <span>{item.scoreB}</span>
-                </span>
+            <HexBadge
+              name={item.teamA}
+              imageUrl={item.teamALogo ?? undefined}
+              size={logoSize}
+            />
+            <div className="flex-1 text-center leading-tight">
+              <div className="text-sm font-semibold">
+                <span className={winner === "A" ? "text-emerald-300 font-semibold" : "text-slate-100"}>
+                  {item.teamA}
+                </span>{" "}
+                {hasScore ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-800 text-xs text-slate-100 mx-2">
+                    <span>{item.scoreA}</span>
+                    <span className="text-slate-500">-</span>
+                    <span>{item.scoreB}</span>
+                  </span>
+                ) : (
+                  <span className="text-slate-500 mx-2">vs</span>
+                )}
                 <span className={winner === "B" ? "text-emerald-300 font-semibold" : "text-slate-100"}>
                   {item.teamB}
                 </span>
-              </>
-            ) : (
-              <span className="text-slate-400">vs</span>
-            )}
-            {!hasScore && (
-              <span className="text-slate-100">{item.teamB}</span>
-            )}
-          </span>
+              </div>
+            </div>
+            <HexBadge
+              name={item.teamB}
+              imageUrl={item.teamBLogo ?? undefined}
+              size={logoSize}
+            />
+          </div>
         );
       },
     },
@@ -169,19 +180,7 @@ export default function MatchListPage({
   const fields = renderFields(false);
   const momentumFields = renderFields(true);
   const renderLeading = (item: Match) => (
-    <div className="flex w-full items-center justify-center gap-3">
-      <HexBadge
-        name={item.teamA}
-        imageUrl={item.teamALogo ?? undefined}
-        size={44}
-      />
-      <span className="text-xs uppercase text-slate-500">vs</span>
-      <HexBadge
-        name={item.teamB}
-        imageUrl={item.teamBLogo ?? undefined}
-        size={44}
-      />
-    </div>
+    <div className="flex w-full items-center justify-center gap-3" />
   );
   const sortOptions: Array<{ label: string; key: SortConfig<Match>["key"] }> = [
     { label: "Date", key: "date" },
@@ -257,8 +256,8 @@ export default function MatchListPage({
                 items={momentumMatches}
                 fields={momentumFields}
                 alignCenter
-                itemTestIdPrefix="momentum-match-"
                 renderLeading={renderLeading}
+                cardClassName="!bg-amber-500/20 !border-amber-400/60 shadow-none"
                 onItemClick={(m) => navigate(`/matches/${m.id}`)}
               />
             </div>

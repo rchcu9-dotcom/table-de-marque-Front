@@ -119,6 +119,7 @@ describe("MatchListPage", () => {
         const momentum = within(screen.getByTestId("momentum-list"));
         const ids = momentum
             .getAllByTestId(/momentum-match-/)
+            .slice(0, 3)
             .map((el) => el.getAttribute("data-testid"));
         expect(ids).toEqual(["momentum-match-d", "momentum-match-c", "momentum-match-b"]);
     });

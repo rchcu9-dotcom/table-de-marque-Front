@@ -1,4 +1,4 @@
-import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import React from "react";
 import List from "../components/collections/List";
 import Badge from "../components/ds/Badge";
@@ -38,7 +38,6 @@ export default function MatchListPage({ searchQuery = "", sort, onSortChange, })
     const { data, isLoading, isError } = useMatches();
     const navigate = useNavigate();
     const [allMatches, setAllMatches] = React.useState([]);
-    const originalMatchesRef = React.useRef(null);
     const [localSort, setLocalSort] = React.useState({
         key: "date",
         direction: "asc",
@@ -46,9 +45,6 @@ export default function MatchListPage({ searchQuery = "", sort, onSortChange, })
     React.useEffect(() => {
         if (data) {
             setAllMatches(data);
-            if (!originalMatchesRef.current) {
-                originalMatchesRef.current = data;
-            }
         }
     }, [data]);
     const effectiveSort = sort ?? localSort;
@@ -90,7 +86,8 @@ export default function MatchListPage({ searchQuery = "", sort, onSortChange, })
                         ? "A"
                         : "B"
                     : null;
-                return (_jsxs("span", { "data-testid": isMomentum ? undefined : `match-line-${item.id}`, className: `flex w-full items-center justify-center gap-2 ${!hasScore ? "text-slate-100" : ""}`, children: [_jsx("span", { className: winner === "A" ? "text-emerald-300 font-semibold" : "text-slate-100", children: item.teamA }), hasScore ? (_jsxs(_Fragment, { children: [_jsxs("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-800 text-xs text-slate-100", children: [_jsx("span", { children: item.scoreA }), _jsx("span", { className: "text-slate-500", children: "-" }), _jsx("span", { children: item.scoreB })] }), _jsx("span", { className: winner === "B" ? "text-emerald-300 font-semibold" : "text-slate-100", children: item.teamB })] })) : (_jsx("span", { className: "text-slate-400", children: "vs" })), !hasScore && (_jsx("span", { className: "text-slate-100", children: item.teamB }))] }));
+                const logoSize = isMomentum ? 40 : 34;
+                return (_jsxs("div", { "data-testid": isMomentum ? `momentum-match-${item.id}` : `match-line-${item.id}`, className: `flex w-full items-center justify-between gap-2 ${isMomentum ? "text-slate-100" : ""}`, children: [_jsx(HexBadge, { name: item.teamA, imageUrl: item.teamALogo ?? undefined, size: logoSize }), _jsx("div", { className: "flex-1 text-center leading-tight", children: _jsxs("div", { className: "text-sm font-semibold", children: [_jsx("span", { className: winner === "A" ? "text-emerald-300 font-semibold" : "text-slate-100", children: item.teamA }), " ", hasScore ? (_jsxs("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-800 text-xs text-slate-100 mx-2", children: [_jsx("span", { children: item.scoreA }), _jsx("span", { className: "text-slate-500", children: "-" }), _jsx("span", { children: item.scoreB })] })) : (_jsx("span", { className: "text-slate-500 mx-2", children: "vs" })), _jsx("span", { className: winner === "B" ? "text-emerald-300 font-semibold" : "text-slate-100", children: item.teamB })] }) }), _jsx(HexBadge, { name: item.teamB, imageUrl: item.teamBLogo ?? undefined, size: logoSize })] }));
             },
         },
         {
@@ -118,7 +115,7 @@ export default function MatchListPage({ searchQuery = "", sort, onSortChange, })
     ];
     const fields = renderFields(false);
     const momentumFields = renderFields(true);
-    const renderLeading = (item) => (_jsxs("div", { className: "flex w-full items-center justify-center gap-3", children: [_jsx(HexBadge, { name: item.teamA, imageUrl: item.teamALogo ?? undefined, size: 44 }), _jsx("span", { className: "text-xs uppercase text-slate-500", children: "vs" }), _jsx(HexBadge, { name: item.teamB, imageUrl: item.teamBLogo ?? undefined, size: 44 })] }));
+    const renderLeading = (item) => (_jsx("div", { className: "flex w-full items-center justify-center gap-3" }));
     const sortOptions = [
         { label: "Date", key: "date" },
         { label: "Equipe A", key: "teamA" },
@@ -128,5 +125,5 @@ export default function MatchListPage({ searchQuery = "", sort, onSortChange, })
     return (_jsxs("div", { className: "space-y-4", children: [_jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3", children: [_jsxs("div", { className: "text-sm text-slate-400", children: [filteredMatches.length, " match", filteredMatches.length > 1 ? "s" : ""] }), _jsxs("div", { className: "flex items-center gap-2 text-sm", children: [_jsx("span", { className: "text-slate-500", children: "Trier" }), _jsx("select", { "data-testid": "sort-key", value: String(effectiveSort.key), onChange: (e) => updateSort({ ...effectiveSort, key: e.target.value }), className: "rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100", children: sortOptions.map((option) => (_jsx("option", { value: option.key, children: option.label }, option.key))) }), _jsxs("select", { "data-testid": "sort-direction", value: effectiveSort.direction, onChange: (e) => updateSort({
                                     ...effectiveSort,
                                     direction: e.target.value,
-                                }), className: "rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100", children: [_jsx("option", { value: "asc", children: "Croissant" }), _jsx("option", { value: "desc", children: "Decroissant" })] })] })] }), isLoading && (_jsxs("div", { className: "flex items-center gap-2 text-slate-300 text-sm", children: [_jsx(Spinner, {}), _jsx("span", { children: "Chargement..." })] })), isError && (_jsx("div", { className: "text-red-400 text-sm", children: "Erreur de chargement." })), data && data.length > 0 && !isLoading && (_jsxs("div", { className: "space-y-2", children: [_jsxs("div", { className: "flex items-center gap-2 text-sm text-slate-400", children: [_jsx("span", { className: "text-base font-semibold text-slate-100", children: "Momentum" }), _jsx("span", { className: "rounded-full bg-slate-800 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-300", children: "Focus live" })] }), momentumMatches.length > 0 ? (_jsx("div", { "data-testid": "momentum-list", children: _jsx(List, { items: momentumMatches, fields: momentumFields, alignCenter: true, itemTestIdPrefix: "momentum-match-", renderLeading: renderLeading, onItemClick: (m) => navigate(`/matches/${m.id}`) }) })) : (_jsx("div", { className: "text-slate-500 text-sm", children: "Aucun match \u00E0 afficher pour le momentum." }))] })), filteredMatches && filteredMatches.length === 0 && !isLoading && (_jsx("div", { className: "text-slate-400 text-sm", children: "Aucun match." })), filteredMatches && filteredMatches.length > 0 && (_jsxs("div", { className: "space-y-2", children: [_jsx("div", { className: "text-base font-semibold text-slate-100", children: "Planning" }), _jsx("div", { "data-testid": "planning-list", children: _jsx(List, { items: filteredMatches, fields: fields, sort: effectiveSort, alignCenter: true, renderLeading: renderLeading, onItemClick: (m) => navigate(`/matches/${m.id}`) }) })] }))] }));
+                                }), className: "rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100", children: [_jsx("option", { value: "asc", children: "Croissant" }), _jsx("option", { value: "desc", children: "Decroissant" })] })] })] }), isLoading && (_jsxs("div", { className: "flex items-center gap-2 text-slate-300 text-sm", children: [_jsx(Spinner, {}), _jsx("span", { children: "Chargement..." })] })), isError && (_jsx("div", { className: "text-red-400 text-sm", children: "Erreur de chargement." })), data && data.length > 0 && !isLoading && (_jsxs("div", { className: "space-y-2", children: [_jsxs("div", { className: "flex items-center gap-2 text-sm text-slate-400", children: [_jsx("span", { className: "text-base font-semibold text-slate-100", children: "Momentum" }), _jsx("span", { className: "rounded-full bg-slate-800 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-300", children: "Focus live" })] }), momentumMatches.length > 0 ? (_jsx("div", { "data-testid": "momentum-list", children: _jsx(List, { items: momentumMatches, fields: momentumFields, alignCenter: true, renderLeading: renderLeading, cardClassName: "!bg-amber-500/20 !border-amber-400/60 shadow-none", onItemClick: (m) => navigate(`/matches/${m.id}`) }) })) : (_jsx("div", { className: "text-slate-500 text-sm", children: "Aucun match \u00E0 afficher pour le momentum." }))] })), filteredMatches && filteredMatches.length === 0 && !isLoading && (_jsx("div", { className: "text-slate-400 text-sm", children: "Aucun match." })), filteredMatches && filteredMatches.length > 0 && (_jsxs("div", { className: "space-y-2", children: [_jsx("div", { className: "text-base font-semibold text-slate-100", children: "Planning" }), _jsx("div", { "data-testid": "planning-list", children: _jsx(List, { items: filteredMatches, fields: fields, sort: effectiveSort, alignCenter: true, renderLeading: renderLeading, onItemClick: (m) => navigate(`/matches/${m.id}`) }) })] }))] }));
 }

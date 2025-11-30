@@ -23,6 +23,7 @@ type Props<T> = {
   renderLeading?: (item: T) => React.ReactNode;
   alignCenter?: boolean;
   itemTestIdPrefix?: string;
+  cardClassName?: string;
 };
 
 const normalizeValue = (value: unknown) => {
@@ -45,6 +46,7 @@ export default function List<T extends { id?: string | number }>({
   renderLeading,
   alignCenter,
   itemTestIdPrefix,
+  cardClassName,
 }: Props<T>) {
   const sortedItems = React.useMemo(() => {
     if (!sort) return items;
@@ -71,7 +73,7 @@ export default function List<T extends { id?: string | number }>({
         return (
           <Card
             key={item.id ?? idx}
-            className={`${
+            className={`${cardClassName ?? ""} ${
               onItemClick ? "cursor-pointer hover:bg-slate-800/80" : ""
             } ${alignCenter ? "flex flex-col items-center text-center w-full" : ""}`}
             data-testid={itemTestIdPrefix ? `${itemTestIdPrefix}${item.id ?? idx}` : undefined}
