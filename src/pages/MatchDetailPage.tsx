@@ -42,9 +42,9 @@ export default function MatchDetailPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center justify-center gap-6">
         <HexBadge name={data.teamA} imageUrl={data.teamALogo ?? undefined} size={64} />
-        <div className="flex flex-col">
+        <div className="flex flex-col items-center text-center">
           <div className="text-xs uppercase text-slate-500">Match</div>
           <div className="text-2xl font-semibold">
             <span className={winner === "A" ? "text-emerald-300 font-semibold" : ""}>
@@ -60,7 +60,7 @@ export default function MatchDetailPage() {
       </div>
 
       <Card>
-        <div className="space-y-3 text-sm text-slate-200">
+        <div className="space-y-3 text-sm text-slate-200 flex flex-col items-center text-center">
           <div className="text-base">{new Date(data.date).toLocaleString()}</div>
 
           <div className="flex items-center gap-2">

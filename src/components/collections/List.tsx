@@ -21,6 +21,7 @@ type Props<T> = {
   sort?: SortConfig<T>;
   onItemClick?: (item: T) => void;
   renderLeading?: (item: T) => React.ReactNode;
+  alignCenter?: boolean;
 };
 
 const normalizeValue = (value: unknown) => {
@@ -41,6 +42,7 @@ export default function List<T extends { id?: string | number }>({
   sort,
   onItemClick,
   renderLeading,
+  alignCenter,
 }: Props<T>) {
   const sortedItems = React.useMemo(() => {
     if (!sort) return items;
@@ -59,7 +61,7 @@ export default function List<T extends { id?: string | number }>({
   }, [items, sort]);
 
   return (
-    <div className="space-y-3">
+    <div className={`space-y-3 ${alignCenter ? "flex flex-col items-center w-full" : ""}`}>
       {sortedItems.map((item, idx) => {
         const primary = fields.find((f) => !f.secondary);
         const secondaryFields = fields.filter((f) => f.secondary);
@@ -67,17 +69,27 @@ export default function List<T extends { id?: string | number }>({
         return (
           <Card
             key={item.id ?? idx}
-            className={onItemClick ? "cursor-pointer hover:bg-slate-800/80" : ""}
+            className={`${
+              onItemClick ? "cursor-pointer hover:bg-slate-800/80" : ""
+            } ${alignCenter ? "flex flex-col items-center text-center w-full" : ""}`}
             onClick={() => onItemClick?.(item)}
           >
-            <div className="flex flex-col gap-1">
+            <div
+              className={`flex w-full flex-col gap-1 ${
+                alignCenter ? "items-center text-center" : ""
+              }`}
+            >
               {renderLeading && (
-                <div className="mb-2 flex items-center">
+                <div
+                  className={`mb-2 flex items-center ${
+                    alignCenter ? "w-full justify-center" : ""
+                  }`}
+                >
                   {renderLeading(item)}
                 </div>
               )}
               {primary && (
-                <div className="text-sm font-semibold">
+                <div className={`text-sm font-semibold ${alignCenter ? "w-full text-center" : ""}`}>
                   {primary.render
                     ? primary.render((item as any)[primary.key], item)
                     : String((item as any)[primary.key])}
@@ -85,7 +97,11 @@ export default function List<T extends { id?: string | number }>({
               )}
 
               {secondaryFields.length > 0 && (
-                <div className="text-xs text-slate-400 flex flex-wrap gap-x-4 gap-y-1">
+                <div
+                  className={`text-xs text-slate-400 flex flex-wrap gap-x-4 gap-y-1 ${
+                    alignCenter ? "justify-center w-full text-center" : ""
+                  }`}
+                >
                   {secondaryFields.map((f) => (
                     <span key={String(f.key)} className="inline-flex items-center gap-1">
                       {!f.hideLabel && f.label && (

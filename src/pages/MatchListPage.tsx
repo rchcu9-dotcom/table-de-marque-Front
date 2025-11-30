@@ -104,7 +104,7 @@ export default function MatchListPage({
         return (
           <span
             data-testid={`${isMomentum ? "momentum-" : ""}match-line-${item.id}`}
-            className={`flex items-center gap-2 ${!hasScore ? "text-slate-100" : ""}`}
+            className={`flex w-full items-center justify-center gap-2 ${!hasScore ? "text-slate-100" : ""}`}
           >
             <span className={winner === "A" ? "text-emerald-300 font-semibold" : "text-slate-100"}>
               {item.teamA}
@@ -157,10 +157,18 @@ export default function MatchListPage({
   const fields = renderFields(false);
   const momentumFields = renderFields(true);
   const renderLeading = (item: Match) => (
-    <div className="flex items-center gap-3">
-      <HexBadge name={item.teamA} imageUrl={item.teamALogo ?? undefined} size={44} />
+    <div className="flex w-full items-center justify-center gap-3">
+      <HexBadge
+        name={item.teamA}
+        imageUrl={item.teamALogo ?? undefined}
+        size={44}
+      />
       <span className="text-xs uppercase text-slate-500">vs</span>
-      <HexBadge name={item.teamB} imageUrl={item.teamBLogo ?? undefined} size={44} />
+      <HexBadge
+        name={item.teamB}
+        imageUrl={item.teamBLogo ?? undefined}
+        size={44}
+      />
     </div>
   );
   const sortOptions: Array<{ label: string; key: SortConfig<Match>["key"] }> = [
@@ -236,6 +244,7 @@ export default function MatchListPage({
               <List
                 items={momentumMatches}
                 fields={momentumFields}
+                alignCenter
                 renderLeading={renderLeading}
                 onItemClick={(m) => navigate(`/matches/${m.id}`)}
               />
@@ -260,6 +269,7 @@ export default function MatchListPage({
               items={filteredMatches}
               fields={fields}
               sort={effectiveSort}
+              alignCenter
               renderLeading={renderLeading}
               onItemClick={(m) => navigate(`/matches/${m.id}`)}
             />
