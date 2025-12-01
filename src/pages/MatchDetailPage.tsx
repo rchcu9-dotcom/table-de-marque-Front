@@ -4,10 +4,17 @@ import Spinner from "../components/ds/Spinner";
 import Card from "../components/ds/Card";
 import Badge from "../components/ds/Badge";
 import HexBadge from "../components/ds/HexBadge";
+import DataTable from "../components/collections/DataTable";
+import { useClassementForMatch } from "../hooks/useClassement";
 
 export default function MatchDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data, isLoading, isError } = useMatch(id);
+  const {
+    data: classement,
+    isLoading: isClassementLoading,
+    isError: isClassementError,
+  } = useClassementForMatch(id);
 
   if (isLoading) {
     return (
@@ -86,6 +93,64 @@ export default function MatchDetailPage() {
                 </span>
               </span>
             </div>
+          )}
+        </div>
+      </Card>
+
+      <Card>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="text-base font-semibold text-slate-100">
+              Classement {classement ? `- ${classement.pouleName}` : ""}
+            </div>
+            <div className="text-xs text-slate-500">
+              Actualisation auto (60s)
+            </div>
+          </div>
+
+          {isClassementLoading && (
+            <div className="flex items-center gap-2 text-slate-300 text-sm">
+              <Spinner />
+              <span>Chargement du classement...</span>
+            </div>
+          )}
+
+          {isClassementError && (
+            <div className="text-red-400 text-sm">
+              Classement indisponible.
+            </div>
+          )}
+
+          {classement && (
+            <DataTable
+              items={classement.equipes}
+              columns={[
+                { key: "rang", label: "Rang" },
+                {
+                  key: "name",
+                  label: "Equipe",
+                  render: (_value, item) => (
+                    <div className="flex items-center gap-2">
+                      {item.logoUrl ? (
+                        <img
+                          src={item.logoUrl}
+                          alt={item.name}
+                          className="h-6 w-6 rounded-full object-cover bg-slate-800"
+                        />
+                      ) : (
+                        <div className="h-6 w-6 rounded-full bg-slate-800" />
+                      )}
+                      <span>{item.name}</span>
+                    </div>
+                  ),
+                },
+                { key: "points", label: "Pts" },
+                { key: "victoires", label: "V" },
+                { key: "nuls", label: "N" },
+                { key: "defaites", label: "D" },
+                { key: "diff", label: "Diff." },
+              ]}
+            />
           )}
         </div>
       </Card>
