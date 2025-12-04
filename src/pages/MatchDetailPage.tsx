@@ -131,12 +131,12 @@ export default function MatchDetailPage() {
             <DataTable
               items={classement.equipes}
               columns={[
-                { key: "rang", label: "Rang" },
+                { key: "rang", label: "Pos" },
                 {
                   key: "name",
                   label: "Equipe",
                   render: (_value, item) => (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                       {item.logoUrl ? (
                         <img
                           src={item.logoUrl}
