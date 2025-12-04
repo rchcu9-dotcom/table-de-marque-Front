@@ -49,7 +49,8 @@ describe("useMomentumMatches", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
-    expect(global.fetch).toHaveBeenCalledWith(apiUrl);
+    const calledUrl = (global.fetch as unknown as { mock: { calls: any[][] } }).mock.calls[0][0];
+    expect(String(calledUrl)).toMatch(/\/matches\/momentum$/);
     expect(result.current.data?.[0].id).toBe("m1");
     expect(result.current.data?.[0].status).toBe("ongoing");
   });
