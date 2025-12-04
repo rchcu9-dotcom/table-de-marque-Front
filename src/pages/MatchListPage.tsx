@@ -54,7 +54,7 @@ function computeMomentum(source: Match[]): Match[] {
 export default function MatchListPage({
   searchQuery = "",
   sort,
-  onSortChange,
+  onSortChange: _onSortChange,
 }: Props) {
   const {
     data: momentumData,
@@ -68,10 +68,8 @@ export default function MatchListPage({
   } = useMatches();
   const navigate = useNavigate();
   const [allMatches, setAllMatches] = React.useState<Match[]>([]);
-  const [localSort, setLocalSort] = React.useState<SortConfig<Match>>({
-    key: "date",
-    direction: "asc",
-  });
+  const [teamFilter, setTeamFilter] = React.useState<string>("all");
+  const [pouleFilter, setPouleFilter] = React.useState<string>("all");
 
   React.useEffect(() => {
     if (planningData) {
@@ -79,14 +77,30 @@ export default function MatchListPage({
     }
   }, [planningData]);
 
-  const effectiveSort = sort ?? localSort;
-  const updateSort = onSortChange ?? setLocalSort;
+  const effectiveSort = sort ?? { key: "date", direction: "asc" as const };
 
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const filteredMatches = React.useMemo<Match[]>(() => {
     if (!allMatches) return [];
-    if (!normalizedQuery) return allMatches;
-    return allMatches.filter((item) => {
+    let base = allMatches;
+
+    if (teamFilter !== "all") {
+      const needle = teamFilter.toLowerCase();
+      base = base.filter(
+        (item) =>
+          item.teamA.toLowerCase() === needle || item.teamB.toLowerCase() === needle,
+      );
+    }
+
+    if (pouleFilter !== "all") {
+      base = base.filter((item) => {
+        const poule = (item.pouleName || item.pouleCode || "").toLowerCase();
+        return poule === pouleFilter;
+      });
+    }
+
+    if (!normalizedQuery) return base;
+    return base.filter((item) => {
       const haystack = [
         item.teamA,
         item.teamB,
@@ -99,9 +113,34 @@ export default function MatchListPage({
         .map((value) => String(value).toLowerCase());
       return haystack.some((value) => value.includes(normalizedQuery));
     });
-  }, [allMatches, normalizedQuery]);
+  }, [allMatches, normalizedQuery, teamFilter, pouleFilter]);
+
+  const teamOptions = React.useMemo(() => {
+    const set = new Set<string>();
+    allMatches?.forEach((m) => {
+      if (m.teamA) set.add(m.teamA);
+      if (m.teamB) set.add(m.teamB);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [allMatches]);
+
+  const pouleOptions = React.useMemo(() => {
+    const set = new Set<string>();
+    allMatches?.forEach((m) => {
+      const label = (m.pouleName || m.pouleCode || "").trim();
+      if (label) set.add(label);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [allMatches]);
 
   const momentumMatches = momentumData ?? computeMomentum(allMatches);
+  const hasOngoingMomentum = momentumMatches.some((m) => m.status === "ongoing");
+  const hasFinishedMomentum = momentumMatches.some((m) => m.status === "finished");
+  const momentumBorderClass = hasOngoingMomentum
+    ? "!border-amber-300/70"
+    : hasFinishedMomentum
+      ? "!border-emerald-400/70"
+      : "!border-slate-500/60";
 
   const renderFields = (isMomentum = false): Field<Match>[] => [
     {
@@ -121,18 +160,21 @@ export default function MatchListPage({
 
         const logoSize = isMomentum ? 40 : 34;
 
+        const pouleLabel = item.pouleName || item.pouleCode;
+
         return (
           <div
             data-testid={isMomentum ? `momentum-match-${item.id}` : `match-line-${item.id}`}
             className={`flex w-full items-center justify-between gap-2 ${isMomentum ? "text-slate-100" : ""}`}
           >
-            <HexBadge
-              name={item.teamA}
-              imageUrl={item.teamALogo ?? undefined}
-              size={logoSize}
-            />
-            <div className="flex-1 text-center leading-tight">
-              <div className="text-sm font-semibold">
+            <HexBadge name={item.teamA} imageUrl={item.teamALogo ?? undefined} size={logoSize} />
+            <div className="flex-1 leading-tight space-y-1">
+              <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-slate-400">
+                <span className="rounded-full bg-slate-800 px-2 py-0.5 text-slate-200">
+                  {pouleLabel ? `Poule ${pouleLabel}` : "Poule ?"}
+                </span>
+              </div>
+              <div className="text-sm font-semibold text-center">
                 <span className={winner === "A" ? "text-emerald-300 font-semibold" : "text-slate-100"}>
                   {item.teamA}
                 </span>{" "}
@@ -150,11 +192,7 @@ export default function MatchListPage({
                 </span>
               </div>
             </div>
-            <HexBadge
-              name={item.teamB}
-              imageUrl={item.teamBLogo ?? undefined}
-              size={logoSize}
-            />
+            <HexBadge name={item.teamB} imageUrl={item.teamBLogo ?? undefined} size={logoSize} />
           </div>
         );
       },
@@ -172,13 +210,17 @@ export default function MatchListPage({
       secondary: true,
       hideLabel: true,
       render: (value: Match["status"]) => {
-        const map: Record<Match["status"], string> = {
-          planned: "Planifie",
-          ongoing: "En cours",
-          finished: "Termine",
-          deleted: "Supprime",
+        const map: Record<
+          Match["status"],
+          { label: string; color: "success" | "muted" | "warning" | "default" }
+        > = {
+          planned: { label: "Planifie", color: "muted" },
+          ongoing: { label: "En cours", color: "warning" },
+          finished: { label: "Termine", color: "success" },
+          deleted: { label: "Supprime", color: "muted" },
         };
-        return <Badge color="accent">{map[value]}</Badge>;
+        const meta = map[value];
+        return <Badge color={meta.color}>{meta.label}</Badge>;
       },
     },
   ];
@@ -188,53 +230,9 @@ export default function MatchListPage({
   const renderLeading = (item: Match) => (
     <div className="flex w-full items-center justify-center gap-3" />
   );
-  const sortOptions: Array<{ label: string; key: SortConfig<Match>["key"] }> = [
-    { label: "Date", key: "date" },
-    { label: "Equipe A", key: "teamA" },
-    { label: "Equipe B", key: "teamB" },
-    { label: "Statut", key: "status" },
-  ];
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="text-sm text-slate-400">
-          {filteredMatches.length} match{filteredMatches.length > 1 ? "s" : ""}
-        </div>
-
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-slate-500">Trier</span>
-          <select
-            data-testid="sort-key"
-            value={String(effectiveSort.key)}
-            onChange={(e) =>
-              updateSort({ ...effectiveSort, key: e.target.value as keyof Match })
-            }
-            className="rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100"
-          >
-            {sortOptions.map((option) => (
-              <option key={option.key as string} value={option.key as string}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <select
-            data-testid="sort-direction"
-            value={effectiveSort.direction}
-            onChange={(e) =>
-              updateSort({
-                ...effectiveSort,
-                direction: e.target.value as SortConfig<Match>["direction"],
-              })
-            }
-            className="rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100"
-          >
-            <option value="asc">Croissant</option>
-            <option value="desc">Decroissant</option>
-          </select>
-        </div>
-      </div>
-
       {isPlanningLoading && (
         <div className="flex items-center gap-2 text-slate-300 text-sm">
           <Spinner />
@@ -252,9 +250,6 @@ export default function MatchListPage({
             <span className="text-base font-semibold text-slate-100">
               Momentum
             </span>
-            <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-300">
-              Focus live
-            </span>
           </div>
           <div data-testid="momentum-list">
             <List
@@ -262,7 +257,9 @@ export default function MatchListPage({
               fields={momentumFields}
               alignCenter
               renderLeading={renderLeading}
-              cardClassName="!bg-amber-500/20 !border-amber-400/60 shadow-none"
+              cardClassName={(item) =>
+                `${momentumBorderClass} ${item.status === "ongoing" ? "live-pulse-card" : ""} !bg-slate-900/70 shadow-none`
+              }
               onItemClick={(m) => navigate(`/matches/${m.id}`)}
             />
           </div>
@@ -289,6 +286,45 @@ export default function MatchListPage({
       {filteredMatches && filteredMatches.length > 0 && !isPlanningLoading && (
         <div className="space-y-2">
           <div className="text-base font-semibold text-slate-100">Planning</div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="text-sm text-slate-400">
+              {filteredMatches.length} match{filteredMatches.length > 1 ? "s" : ""}
+            </div>
+
+            <div className="flex items-center gap-3 text-sm flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="text-slate-500">Equipes</span>
+                <select
+                  value={teamFilter}
+                  onChange={(e) => setTeamFilter(e.target.value)}
+                  className="rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100"
+                >
+                  <option value="all">Toutes</option>
+                  {teamOptions.map((team) => (
+                    <option key={team} value={team.toLowerCase()}>
+                      {team}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-slate-500">Poule</span>
+                <select
+                  value={pouleFilter}
+                  onChange={(e) => setPouleFilter(e.target.value)}
+                  className="rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100"
+                >
+                  <option value="all">Toutes</option>
+                  {pouleOptions.map((poule) => (
+                    <option key={poule} value={poule.toLowerCase()}>
+                      {poule}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
           <div data-testid="planning-list">
             <List
               items={filteredMatches}
@@ -296,6 +332,9 @@ export default function MatchListPage({
               sort={effectiveSort}
               alignCenter
               renderLeading={renderLeading}
+              cardClassName={(item) =>
+                `${item.status === "ongoing" ? "live-pulse-card !border-amber-300/60" : ""}`
+              }
               onItemClick={(m) => navigate(`/matches/${m.id}`)}
             />
           </div>

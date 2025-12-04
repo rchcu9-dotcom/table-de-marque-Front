@@ -23,7 +23,7 @@ type Props<T> = {
   renderLeading?: (item: T) => React.ReactNode;
   alignCenter?: boolean;
   itemTestIdPrefix?: string;
-  cardClassName?: string;
+  cardClassName?: string | ((item: T) => string);
 };
 
 const normalizeValue = (value: unknown) => {
@@ -64,16 +64,23 @@ export default function List<T extends { id?: string | number }>({
     return [...items].sort((a, b) => comparator(a, b) * factor);
   }, [items, sort]);
 
+  const resolveCardClassName = React.useCallback(
+    (item: T) =>
+      typeof cardClassName === "function" ? cardClassName(item) : (cardClassName ?? ""),
+    [cardClassName]
+  );
+
   return (
     <div className={`space-y-3 ${alignCenter ? "flex flex-col items-center w-full" : ""}`}>
       {sortedItems.map((item, idx) => {
         const primary = fields.find((f) => !f.secondary);
         const secondaryFields = fields.filter((f) => f.secondary);
+        const itemCardClass = resolveCardClassName(item);
 
         return (
           <Card
             key={item.id ?? idx}
-            className={`${cardClassName ?? ""} ${
+            className={`${itemCardClass} ${
               onItemClick ? "cursor-pointer hover:bg-slate-800/80" : ""
             } ${alignCenter ? "flex flex-col items-center text-center w-full" : ""}`}
             data-testid={itemTestIdPrefix ? `${itemTestIdPrefix}${item.id ?? idx}` : undefined}

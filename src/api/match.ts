@@ -10,6 +10,8 @@ export type Match = {
   scoreB: number | null;
   teamALogo?: string | null;
   teamBLogo?: string | null;
+  pouleName?: string | null;
+  pouleCode?: string | null;
 };
 
 // Normalisation propre : supprime les / finaux si l'URL existe

@@ -10,3 +10,33 @@ body {
 #root {
   min-height: 100vh;
 }
+
+.live-pulse-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.live-pulse-card::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  background: radial-gradient(circle at 50% 50%, rgba(250, 204, 21, 0.25), rgba(250, 204, 21, 0));
+  opacity: 0.35;
+  animation: livePulse 1.6s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes livePulse {
+  0% {
+    opacity: 0.2;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 0.25;
+    transform: scale(0.99);
+  }
+}

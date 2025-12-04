@@ -46,6 +46,12 @@ export default function MatchDetailPage() {
     finished: "Termine",
     deleted: "Supprime",
   };
+  const statusColors: Record<typeof data.status, "success" | "muted" | "warning" | "default"> = {
+    planned: "muted",
+    ongoing: "warning",
+    finished: "success",
+    deleted: "muted",
+  };
 
   return (
     <div className="space-y-4">
@@ -71,7 +77,7 @@ export default function MatchDetailPage() {
           <div className="text-base">{new Date(data.date).toLocaleString()}</div>
 
           <div className="flex items-center gap-2">
-            <Badge color="accent">{statusLabels[data.status]}</Badge>
+            <Badge color={statusColors[data.status]}>{statusLabels[data.status]}</Badge>
           </div>
 
           {hasScore && (
