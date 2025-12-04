@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchMatches, fetchMatchById } from "../api/match";
+import { fetchMatches, fetchMatchById, fetchMomentumMatches } from "../api/match";
 export function useMatches() {
     return useQuery({
         queryKey: ["matches"],
@@ -11,5 +11,11 @@ export function useMatch(id) {
         queryKey: ["matches", id],
         queryFn: () => fetchMatchById(id),
         enabled: !!id,
+    });
+}
+export function useMomentumMatches() {
+    return useQuery({
+        queryKey: ["matches", "momentum"],
+        queryFn: fetchMomentumMatches,
     });
 }

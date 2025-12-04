@@ -4,7 +4,7 @@ import List from "../components/collections/List";
 import Badge from "../components/ds/Badge";
 import Spinner from "../components/ds/Spinner";
 import HexBadge from "../components/ds/HexBadge";
-import { useMatches } from "../hooks/useMatches";
+import { useMatches, useMomentumMatches } from "../hooks/useMatches";
 import { useNavigate } from "react-router-dom";
 function computeMomentum(source) {
     if (!source || source.length === 0)
@@ -35,7 +35,8 @@ function computeMomentum(source) {
     return sortByDateAsc.slice(ongoingIndex - 1, ongoingIndex + 2);
 }
 export default function MatchListPage({ searchQuery = "", sort, onSortChange, }) {
-    const { data, isLoading, isError } = useMatches();
+    const { data: momentumData, isLoading: isMomentumLoading, isError: isMomentumError, } = useMomentumMatches();
+    const { data: planningData, isLoading: isPlanningLoading, isError: isPlanningError, } = useMatches();
     const navigate = useNavigate();
     const [allMatches, setAllMatches] = React.useState([]);
     const [localSort, setLocalSort] = React.useState({
@@ -43,10 +44,10 @@ export default function MatchListPage({ searchQuery = "", sort, onSortChange, })
         direction: "asc",
     });
     React.useEffect(() => {
-        if (data) {
-            setAllMatches(data);
+        if (planningData) {
+            setAllMatches(planningData);
         }
-    }, [data]);
+    }, [planningData]);
     const effectiveSort = sort ?? localSort;
     const updateSort = onSortChange ?? setLocalSort;
     const normalizedQuery = searchQuery.trim().toLowerCase();
@@ -69,10 +70,7 @@ export default function MatchListPage({ searchQuery = "", sort, onSortChange, })
             return haystack.some((value) => value.includes(normalizedQuery));
         });
     }, [allMatches, normalizedQuery]);
-    const momentumMatches = React.useMemo(() => {
-        // Momentum se base sur l'ensemble des matchs initiaux (non filtrés)
-        return computeMomentum(allMatches);
-    }, [allMatches]);
+    const momentumMatches = momentumData ?? computeMomentum(allMatches);
     const renderFields = (isMomentum = false) => [
         {
             key: "teamA",
@@ -125,5 +123,5 @@ export default function MatchListPage({ searchQuery = "", sort, onSortChange, })
     return (_jsxs("div", { className: "space-y-4", children: [_jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3", children: [_jsxs("div", { className: "text-sm text-slate-400", children: [filteredMatches.length, " match", filteredMatches.length > 1 ? "s" : ""] }), _jsxs("div", { className: "flex items-center gap-2 text-sm", children: [_jsx("span", { className: "text-slate-500", children: "Trier" }), _jsx("select", { "data-testid": "sort-key", value: String(effectiveSort.key), onChange: (e) => updateSort({ ...effectiveSort, key: e.target.value }), className: "rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100", children: sortOptions.map((option) => (_jsx("option", { value: option.key, children: option.label }, option.key))) }), _jsxs("select", { "data-testid": "sort-direction", value: effectiveSort.direction, onChange: (e) => updateSort({
                                     ...effectiveSort,
                                     direction: e.target.value,
-                                }), className: "rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100", children: [_jsx("option", { value: "asc", children: "Croissant" }), _jsx("option", { value: "desc", children: "Decroissant" })] })] })] }), isLoading && (_jsxs("div", { className: "flex items-center gap-2 text-slate-300 text-sm", children: [_jsx(Spinner, {}), _jsx("span", { children: "Chargement..." })] })), isError && (_jsx("div", { className: "text-red-400 text-sm", children: "Erreur de chargement." })), data && data.length > 0 && !isLoading && (_jsxs("div", { className: "space-y-2", children: [_jsxs("div", { className: "flex items-center gap-2 text-sm text-slate-400", children: [_jsx("span", { className: "text-base font-semibold text-slate-100", children: "Momentum" }), _jsx("span", { className: "rounded-full bg-slate-800 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-300", children: "Focus live" })] }), momentumMatches.length > 0 ? (_jsx("div", { "data-testid": "momentum-list", children: _jsx(List, { items: momentumMatches, fields: momentumFields, alignCenter: true, renderLeading: renderLeading, cardClassName: "!bg-amber-500/20 !border-amber-400/60 shadow-none", onItemClick: (m) => navigate(`/matches/${m.id}`) }) })) : (_jsx("div", { className: "text-slate-500 text-sm", children: "Aucun match \u00E0 afficher pour le momentum." }))] })), filteredMatches && filteredMatches.length === 0 && !isLoading && (_jsx("div", { className: "text-slate-400 text-sm", children: "Aucun match." })), filteredMatches && filteredMatches.length > 0 && (_jsxs("div", { className: "space-y-2", children: [_jsx("div", { className: "text-base font-semibold text-slate-100", children: "Planning" }), _jsx("div", { "data-testid": "planning-list", children: _jsx(List, { items: filteredMatches, fields: fields, sort: effectiveSort, alignCenter: true, renderLeading: renderLeading, onItemClick: (m) => navigate(`/matches/${m.id}`) }) })] }))] }));
+                                }), className: "rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100", children: [_jsx("option", { value: "asc", children: "Croissant" }), _jsx("option", { value: "desc", children: "Decroissant" })] })] })] }), isPlanningLoading && (_jsxs("div", { className: "flex items-center gap-2 text-slate-300 text-sm", children: [_jsx(Spinner, {}), _jsx("span", { children: "Chargement..." })] })), isPlanningError && (_jsx("div", { className: "text-red-400 text-sm", children: "Erreur de chargement." })), momentumMatches && momentumMatches.length > 0 && !isMomentumLoading && (_jsxs("div", { className: "space-y-2", children: [_jsxs("div", { className: "flex items-center gap-2 text-sm text-slate-400", children: [_jsx("span", { className: "text-base font-semibold text-slate-100", children: "Momentum" }), _jsx("span", { className: "rounded-full bg-slate-800 px-2 py-0.5 text-[11px] uppercase tracking-wide text-slate-300", children: "Focus live" })] }), _jsx("div", { "data-testid": "momentum-list", children: _jsx(List, { items: momentumMatches, fields: momentumFields, alignCenter: true, renderLeading: renderLeading, cardClassName: "!bg-amber-500/20 !border-amber-400/60 shadow-none", onItemClick: (m) => navigate(`/matches/${m.id}`) }) })] })), isMomentumLoading && (_jsxs("div", { className: "flex items-center gap-2 text-slate-300 text-sm", children: [_jsx(Spinner, {}), _jsx("span", { children: "Chargement du momentum..." })] })), isMomentumError && (_jsx("div", { className: "text-red-400 text-sm", children: "Erreur de chargement du momentum." })), filteredMatches && filteredMatches.length === 0 && !isPlanningLoading && (_jsx("div", { className: "text-slate-400 text-sm", children: "Aucun match." })), filteredMatches && filteredMatches.length > 0 && !isPlanningLoading && (_jsxs("div", { className: "space-y-2", children: [_jsx("div", { className: "text-base font-semibold text-slate-100", children: "Planning" }), _jsx("div", { "data-testid": "planning-list", children: _jsx(List, { items: filteredMatches, fields: fields, sort: effectiveSort, alignCenter: true, renderLeading: renderLeading, onItemClick: (m) => navigate(`/matches/${m.id}`) }) })] }))] }));
 }

@@ -71,6 +71,11 @@ export default defineConfig([
   },
 ])
 ```
+
+## API calls used by the UI
+
+- `GET /matches` : liste complète pour le Planning.
+- `GET /matches/momentum` : sous-ensemble (3 matchs autour du live) affiché en priorité.
 {
     "Prompt avec contexte IA (env local/prod)": {
     "prefix": "ia",
@@ -195,4 +200,3 @@ export default defineConfig([
     "description": "Cadre avec checklist + roadmap + diagramme d’architecture"
   }
 }
-

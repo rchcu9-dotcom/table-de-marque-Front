@@ -31,3 +31,10 @@ export async function fetchMatchById(id: string): Promise<Match> {
   if (!res.ok) throw new Error("Match introuvable");
   return res.json();
 }
+
+export async function fetchMomentumMatches(): Promise<Match[]> {
+  const url = `${API_BASE_URL}/matches/momentum`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Erreur lors du chargement du momentum");
+  return res.json();
+}

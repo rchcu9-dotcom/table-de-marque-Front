@@ -5,7 +5,7 @@ import Spinner from "../components/ds/Spinner";
 import HexBadge from "../components/ds/HexBadge";
 
 import type { Match } from "../api/match";
-import { useMatches } from "../hooks/useMatches";
+import { useMatches, useMomentumMatches } from "../hooks/useMatches";
 import { useNavigate } from "react-router-dom";
 
 type Props = {
@@ -56,7 +56,16 @@ export default function MatchListPage({
   sort,
   onSortChange,
 }: Props) {
-  const { data, isLoading, isError } = useMatches();
+  const {
+    data: momentumData,
+    isLoading: isMomentumLoading,
+    isError: isMomentumError,
+  } = useMomentumMatches();
+  const {
+    data: planningData,
+    isLoading: isPlanningLoading,
+    isError: isPlanningError,
+  } = useMatches();
   const navigate = useNavigate();
   const [allMatches, setAllMatches] = React.useState<Match[]>([]);
   const [localSort, setLocalSort] = React.useState<SortConfig<Match>>({
@@ -65,10 +74,10 @@ export default function MatchListPage({
   });
 
   React.useEffect(() => {
-    if (data) {
-      setAllMatches(data);
+    if (planningData) {
+      setAllMatches(planningData);
     }
-  }, [data]);
+  }, [planningData]);
 
   const effectiveSort = sort ?? localSort;
   const updateSort = onSortChange ?? setLocalSort;
@@ -92,10 +101,7 @@ export default function MatchListPage({
     });
   }, [allMatches, normalizedQuery]);
 
-  const momentumMatches = React.useMemo(() => {
-    // Momentum se base sur l'ensemble des matchs initiaux (non filtrés)
-    return computeMomentum(allMatches);
-  }, [allMatches]);
+  const momentumMatches = momentumData ?? computeMomentum(allMatches);
 
   const renderFields = (isMomentum = false): Field<Match>[] => [
     {
@@ -229,18 +235,18 @@ export default function MatchListPage({
         </div>
       </div>
 
-      {isLoading && (
+      {isPlanningLoading && (
         <div className="flex items-center gap-2 text-slate-300 text-sm">
           <Spinner />
           <span>Chargement...</span>
         </div>
       )}
 
-      {isError && (
+      {isPlanningError && (
         <div className="text-red-400 text-sm">Erreur de chargement.</div>
       )}
 
-      {data && data.length > 0 && !isLoading && (
+      {momentumMatches && momentumMatches.length > 0 && !isMomentumLoading && (
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm text-slate-400">
             <span className="text-base font-semibold text-slate-100">
@@ -250,30 +256,37 @@ export default function MatchListPage({
               Focus live
             </span>
           </div>
-          {momentumMatches.length > 0 ? (
-            <div data-testid="momentum-list">
-              <List
-                items={momentumMatches}
-                fields={momentumFields}
-                alignCenter
-                renderLeading={renderLeading}
-                cardClassName="!bg-amber-500/20 !border-amber-400/60 shadow-none"
-                onItemClick={(m) => navigate(`/matches/${m.id}`)}
-              />
-            </div>
-          ) : (
-            <div className="text-slate-500 text-sm">
-              Aucun match à afficher pour le momentum.
-            </div>
-          )}
+          <div data-testid="momentum-list">
+            <List
+              items={momentumMatches}
+              fields={momentumFields}
+              alignCenter
+              renderLeading={renderLeading}
+              cardClassName="!bg-amber-500/20 !border-amber-400/60 shadow-none"
+              onItemClick={(m) => navigate(`/matches/${m.id}`)}
+            />
+          </div>
         </div>
       )}
 
-      {filteredMatches && filteredMatches.length === 0 && !isLoading && (
+      {isMomentumLoading && (
+        <div className="flex items-center gap-2 text-slate-300 text-sm">
+          <Spinner />
+          <span>Chargement du momentum...</span>
+        </div>
+      )}
+
+      {isMomentumError && (
+        <div className="text-red-400 text-sm">
+          Erreur de chargement du momentum.
+        </div>
+      )}
+
+      {filteredMatches && filteredMatches.length === 0 && !isPlanningLoading && (
         <div className="text-slate-400 text-sm">Aucun match.</div>
       )}
 
-      {filteredMatches && filteredMatches.length > 0 && (
+      {filteredMatches && filteredMatches.length > 0 && !isPlanningLoading && (
         <div className="space-y-2">
           <div className="text-base font-semibold text-slate-100">Planning</div>
           <div data-testid="planning-list">
