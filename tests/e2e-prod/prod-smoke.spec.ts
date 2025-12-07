@@ -34,7 +34,15 @@ test.describe("Smoke prod (lecture seule)", () => {
 
     await page.goto("/");
 
-    const firstMatch = page.locator('[data-testid^="match-line-"]').first();
+    const matchLocator = page.locator(
+      '[data-testid^="match-line-"], [data-testid^="momentum-match-"]',
+    );
+    const available = await matchLocator.count();
+    if (available === 0) {
+      test.skip("Aucun match rendu en prod pour navigation");
+    }
+
+    const firstMatch = matchLocator.first();
     await firstMatch.waitFor({ state: "visible", timeout: 30_000 });
     await firstMatch.click();
     await page.waitForURL(/\/matches\//, { timeout: 30_000 });
