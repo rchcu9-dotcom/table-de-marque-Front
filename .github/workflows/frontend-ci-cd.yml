@@ -18,6 +18,11 @@ jobs:
             echo "VITE_API_BASE_URL is empty";
             exit 1;
           fi
+          if echo "${{ secrets.VITE_API_BASE_URL }}" | grep -qi "localhost"; then
+            echo "VITE_API_BASE_URL contains localhost, aborting";
+            exit 1;
+          fi
+          echo "VITE_API_BASE_URL length: ${#VITE_API_BASE_URL}"
 
       - name: Clean workspace
         run: rm -rf dist node_modules .turbo .parcel-cache .cache
