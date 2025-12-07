@@ -12,6 +12,7 @@ export default defineConfig({
       "dist",
       ".git",
       "tests/e2e",
+      "tests/e2e-prod",
       "tests/match-list.spec.ts"
     ]
   }

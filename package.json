@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run --coverage=false",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:prod": "playwright test --config=playwright.config.prod.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.11",
