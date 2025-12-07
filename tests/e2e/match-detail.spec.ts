@@ -17,9 +17,9 @@ const MATCHES = [
     date: "2025-01-02T12:00:00Z",
     teamA: "Rennes",
     teamB: "Lille",
-    status: "finished",
+    status: "ongoing",
     scoreA: 0,
-    scoreB: 3,
+    scoreB: 2,
     pouleCode: "A",
     pouleName: "Poule A",
   },
@@ -142,6 +142,9 @@ test.describe("Match detail - résumés et slider", () => {
     await expect(page.getByTestId("summary-grid-teamA")).toBeVisible();
     await expect(page.getByTestId("summary-grid-teamB")).toBeVisible();
     await expect(page.getByTestId("classement-section")).toBeVisible();
+    await expect(page.getByTestId("summary-grid-teamA").getByTestId("summary-card-1")).toHaveClass(
+      /border-sky-400/,
+    );
 
     const teamAScoreWin = page
       .getByTestId("summary-grid-teamA")
@@ -181,13 +184,22 @@ test.describe("Match detail - résumés et slider", () => {
 
     const currentCard = page.getByTestId("poule-slider-card-1");
     await expect(page.getByTestId("poule-slider")).toBeVisible();
-    await expect(currentCard).toHaveClass(/border-emerald-400/);
+    await expect(currentCard).toHaveClass(/border-sky-400/);
 
     const targetCard = page.getByTestId("poule-slider-card-4");
     await targetCard.scrollIntoViewIfNeeded();
     await targetCard.click();
 
     await expect(page).toHaveURL(/\/matches\/4$/);
-    await expect(page.getByTestId("poule-slider-card-4")).toHaveClass(/border-emerald-400/);
+    await expect(page.getByTestId("poule-slider-card-4")).toHaveClass(/border-sky-400/);
+  });
+  test("liserets de sélection reflètent le statut (ongoing amber)", async ({ page }) => {
+    await page.goto("http://localhost:4174/matches/2");
+
+    const summaryCard = page.getByTestId("summary-grid-teamA").getByTestId("summary-card-2");
+    await expect(summaryCard).toHaveClass(/border-amber-300/);
+
+    const sliderCard = page.getByTestId("poule-slider-card-2");
+    await expect(sliderCard).toHaveClass(/border-amber-300/);
   });
 });

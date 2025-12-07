@@ -7,36 +7,9 @@ import { MemoryRouter } from "react-router-dom";
 import MatchListPage from "../MatchListPage";
 const mockNavigate = vi.fn();
 let mockData = [];
-const computeMomentum = (source) => {
-    if (!source || source.length === 0)
-        return [];
-    const sortByDateAsc = [...source].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    const ongoingIndex = sortByDateAsc.findIndex((m) => m.status === "ongoing");
-    const allFinished = sortByDateAsc.every((m) => m.status === "finished" || m.status === "deleted");
-    if (ongoingIndex === -1) {
-        if (allFinished) {
-            const desc = [...sortByDateAsc].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            return desc.slice(0, 3);
-        }
-        return sortByDateAsc.slice(0, 3);
-    }
-    const lastIndex = sortByDateAsc.length - 1;
-    if (ongoingIndex === 0) {
-        return sortByDateAsc.slice(0, 3);
-    }
-    if (ongoingIndex === lastIndex) {
-        return sortByDateAsc.slice(Math.max(lastIndex - 2, 0), lastIndex + 1);
-    }
-    return sortByDateAsc.slice(ongoingIndex - 1, ongoingIndex + 2);
-};
 vi.mock("../../hooks/useMatches", () => ({
     useMatches: () => ({
         data: mockData,
-        isLoading: false,
-        isError: false,
-    }),
-    useMomentumMatches: () => ({
-        data: computeMomentum(mockData),
         isLoading: false,
         isError: false,
     }),
@@ -103,7 +76,7 @@ describe("MatchListPage", () => {
         const ids = momentum
             .queryAllByTestId(/momentum-match-/)
             .map((el) => el.getAttribute("data-testid"));
-        expect(ids).toEqual(["momentum-match-a", "momentum-match-b", "momentum-match-c"]);
+        expect(ids).toEqual(["momentum-match-c", "momentum-match-b", "momentum-match-a"]);
         const planning = within(screen.getByTestId("planning-list"));
         expect(planning.getAllByTestId(/match-line-/).length).toBe(1); // seul le match filtré reste
     });
@@ -119,7 +92,7 @@ describe("MatchListPage", () => {
         const ids = momentum
             .getAllByTestId(/momentum-match-/)
             .map((el) => el.getAttribute("data-testid"));
-        expect(ids).toEqual(["momentum-match-a", "momentum-match-b", "momentum-match-c"]);
+        expect(ids).toEqual(["momentum-match-c", "momentum-match-b", "momentum-match-a"]);
     });
     it("momentum autour d'un match en cours affiche precedent, courant, suivant", () => {
         mockData = [
@@ -133,7 +106,7 @@ describe("MatchListPage", () => {
         const ids = momentum
             .getAllByTestId(/momentum-match-/)
             .map((el) => el.getAttribute("data-testid"));
-        expect(ids).toEqual(["momentum-match-a", "momentum-match-b", "momentum-match-c"]);
+        expect(ids).toEqual(["momentum-match-c", "momentum-match-b", "momentum-match-a"]);
     });
     it("momentum avec tous les matchs joues prend les 3 derniers par date decroissante", () => {
         mockData = [
@@ -149,5 +122,20 @@ describe("MatchListPage", () => {
             .slice(0, 3)
             .map((el) => el.getAttribute("data-testid"));
         expect(ids).toEqual(["momentum-match-d", "momentum-match-c", "momentum-match-b"]);
+    });
+    it("affiche les liserets momentum par statut et la pulsation sur l'en cours", () => {
+        render(_jsx(MemoryRouter, { children: _jsx(MatchListPage, {}) }));
+        const momentum = within(screen.getByTestId("momentum-list"));
+        const items = momentum.getAllByTestId(/momentum-match-/);
+        const cardClasses = items.map((el) => el.closest(".rounded-2xl")?.className ?? "");
+        expect(cardClasses[0]).toMatch(/border-slate-600/); // planned
+        expect(cardClasses[1]).toMatch(/border-amber-300/); // ongoing
+        expect(cardClasses[1]).toMatch(/live-pulse-card/);
+        expect(cardClasses[2]).toMatch(/border-sky-400/); // finished
+    });
+    it("options de filtres par défaut affichent Les equipes et Les poules", () => {
+        render(_jsx(MemoryRouter, { children: _jsx(MatchListPage, {}) }));
+        expect(screen.getByRole("option", { name: /Les equipes/i })).toBeInTheDocument();
+        expect(screen.getByRole("option", { name: /Les poules/i })).toBeInTheDocument();
     });
 });

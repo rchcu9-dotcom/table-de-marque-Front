@@ -3,9 +3,8 @@ import List, { type Field, type SortConfig } from "../components/collections/Lis
 import Badge from "../components/ds/Badge";
 import Spinner from "../components/ds/Spinner";
 import HexBadge from "../components/ds/HexBadge";
-
 import type { Match } from "../api/match";
-import { useMatches, useMomentumMatches } from "../hooks/useMatches";
+import { useMatches } from "../hooks/useMatches";
 import { useNavigate } from "react-router-dom";
 
 type Props = {
@@ -24,31 +23,45 @@ function computeMomentum(source: Match[]): Match[] {
   const allFinished = sortByDateAsc.every(
     (m) => m.status === "finished" || m.status === "deleted",
   );
+  const hasFinished = sortByDateAsc.some((m) => m.status === "finished");
+  const hasPlanned = sortByDateAsc.some((m) => m.status === "planned");
 
-  // 1) Aucun match démarré => 3 premiers par date croissante
+  const selectAndSortDesc = (arr: Match[]) =>
+    [...arr]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 3);
+
+  // Aucun match en cours
   if (ongoingIndex === -1) {
     if (allFinished) {
-      // 3) Tous joués => 3 derniers par date décroissante
-      const desc = [...sortByDateAsc].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-      );
-      return desc.slice(0, 3);
+      // tous joués -> 3 derniers, du plus récent au plus ancien
+      return selectAndSortDesc(sortByDateAsc.slice(-3));
     }
-    return sortByDateAsc.slice(0, 3);
+    // tournoi démarré (au moins un joué et un à jouer) -> centrer sur le prochain match à jouer
+    if (hasFinished && hasPlanned) {
+      const nextPlannedIndex = sortByDateAsc.findIndex((m) => m.status === "planned");
+      const start = Math.max(nextPlannedIndex - 1, 0);
+      const end = Math.min(nextPlannedIndex + 2, sortByDateAsc.length);
+      return selectAndSortDesc(sortByDateAsc.slice(start, end));
+    }
+    // tournoi pas commencé (tous planifiés) -> 3 premiers, ordonnés du plus récent au plus ancien
+    return selectAndSortDesc(sortByDateAsc.slice(0, 3));
   }
 
-  // 2) Il y a un match en cours
   const lastIndex = sortByDateAsc.length - 1;
+
+  // match en cours est le premier -> lui + 2 suivants
   if (ongoingIndex === 0) {
-    // 2-1) premier match par date croissante
-    return sortByDateAsc.slice(0, 3);
+    return selectAndSortDesc(sortByDateAsc.slice(0, 3));
   }
+
+  // match en cours est le dernier -> lui + 2 précédents les plus récents
   if (ongoingIndex === lastIndex) {
-    // 2-3) match en cours est le dernier
-    return sortByDateAsc.slice(Math.max(lastIndex - 2, 0), lastIndex + 1);
+    return selectAndSortDesc(sortByDateAsc.slice(Math.max(lastIndex - 2, 0), lastIndex + 1));
   }
-  // 2-2) match en cours au milieu
-  return sortByDateAsc.slice(ongoingIndex - 1, ongoingIndex + 2);
+
+  // match en cours au milieu -> un avant et un après
+  return selectAndSortDesc(sortByDateAsc.slice(ongoingIndex - 1, ongoingIndex + 2));
 }
 
 export default function MatchListPage({
@@ -56,11 +69,6 @@ export default function MatchListPage({
   sort,
   onSortChange: _onSortChange,
 }: Props) {
-  const {
-    data: momentumData,
-    isLoading: isMomentumLoading,
-    isError: isMomentumError,
-  } = useMomentumMatches();
   const {
     data: planningData,
     isLoading: isPlanningLoading,
@@ -133,14 +141,19 @@ export default function MatchListPage({
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [allMatches]);
 
-  const momentumMatches = momentumData ?? computeMomentum(allMatches);
-  const hasOngoingMomentum = momentumMatches.some((m) => m.status === "ongoing");
-  const hasFinishedMomentum = momentumMatches.some((m) => m.status === "finished");
-  const momentumBorderClass = hasOngoingMomentum
-    ? "!border-amber-300/70"
-    : hasFinishedMomentum
-      ? "!border-emerald-400/70"
-      : "!border-slate-500/60";
+  const momentumMatchesSource = computeMomentum(allMatches);
+  const momentumMatches = React.useMemo(
+    () =>
+      [...(momentumMatchesSource ?? [])].sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+      ),
+    [momentumMatchesSource],
+  );
+  const momentumBorderForStatus = (m: Match) => {
+    if (m.status === "ongoing") return "!border-amber-300/70";
+    if (m.status === "finished") return "!border-sky-400/70";
+    return "!border-slate-600/70";
+  };
 
   const renderFields = (isMomentum = false): Field<Match>[] => [
     {
@@ -212,11 +225,11 @@ export default function MatchListPage({
       render: (value: Match["status"]) => {
         const map: Record<
           Match["status"],
-          { label: string; color: "success" | "muted" | "warning" | "default" }
+          { label: string; color: "success" | "muted" | "warning" | "default" | "info" }
         > = {
           planned: { label: "Planifie", color: "muted" },
           ongoing: { label: "En cours", color: "warning" },
-          finished: { label: "Termine", color: "success" },
+          finished: { label: "Termine", color: "info" },
           deleted: { label: "Supprime", color: "muted" },
         };
         const meta = map[value];
@@ -227,7 +240,7 @@ export default function MatchListPage({
 
   const fields = renderFields(false);
   const momentumFields = renderFields(true);
-  const renderLeading = (item: Match) => (
+  const renderLeading = (_item: Match) => (
     <div className="flex w-full items-center justify-center gap-3" />
   );
 
@@ -244,7 +257,7 @@ export default function MatchListPage({
         <div className="text-red-400 text-sm">Erreur de chargement.</div>
       )}
 
-      {momentumMatches && momentumMatches.length > 0 && !isMomentumLoading && (
+      {momentumMatches && momentumMatches.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm text-slate-400">
             <span className="text-base font-semibold text-slate-100">
@@ -258,24 +271,11 @@ export default function MatchListPage({
               alignCenter
               renderLeading={renderLeading}
               cardClassName={(item) =>
-                `${momentumBorderClass} ${item.status === "ongoing" ? "live-pulse-card" : ""} !bg-slate-900/70 shadow-none`
+                `${momentumBorderForStatus(item)} ${item.status === "ongoing" ? "live-pulse-card" : ""} !bg-slate-900/70 shadow-none`
               }
               onItemClick={(m) => navigate(`/matches/${m.id}`)}
             />
           </div>
-        </div>
-      )}
-
-      {isMomentumLoading && (
-        <div className="flex items-center gap-2 text-slate-300 text-sm">
-          <Spinner />
-          <span>Chargement du momentum...</span>
-        </div>
-      )}
-
-      {isMomentumError && (
-        <div className="text-red-400 text-sm">
-          Erreur de chargement du momentum.
         </div>
       )}
 
@@ -293,36 +293,30 @@ export default function MatchListPage({
             </div>
 
             <div className="flex items-center gap-3 text-sm flex-wrap">
-              <div className="flex items-center gap-2">
-                <span className="text-slate-500">Equipes</span>
-                <select
-                  value={teamFilter}
-                  onChange={(e) => setTeamFilter(e.target.value)}
-                  className="rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100"
-                >
-                  <option value="all">Toutes</option>
-                  {teamOptions.map((team) => (
-                    <option key={team} value={team.toLowerCase()}>
-                      {team}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-slate-500">Poule</span>
-                <select
-                  value={pouleFilter}
-                  onChange={(e) => setPouleFilter(e.target.value)}
-                  className="rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100"
-                >
-                  <option value="all">Toutes</option>
-                  {pouleOptions.map((poule) => (
-                    <option key={poule} value={poule.toLowerCase()}>
-                      {poule}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <select
+                value={teamFilter}
+                onChange={(e) => setTeamFilter(e.target.value)}
+                className="rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100"
+              >
+                <option value="all">Les equipes</option>
+                {teamOptions.map((team) => (
+                  <option key={team} value={team.toLowerCase()}>
+                    {team}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={pouleFilter}
+                onChange={(e) => setPouleFilter(e.target.value)}
+                className="rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100"
+              >
+                <option value="all">Les poules</option>
+                {pouleOptions.map((poule) => (
+                  <option key={poule} value={poule.toLowerCase()}>
+                    {poule}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <div data-testid="planning-list">

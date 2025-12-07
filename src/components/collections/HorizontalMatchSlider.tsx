@@ -11,7 +11,7 @@ type Props = {
 const statusColors: Record<Match["status"], string> = {
   planned: "bg-slate-800 text-slate-200",
   ongoing: "bg-amber-400/90 text-slate-900",
-  finished: "bg-emerald-500/90 text-slate-900",
+  finished: "bg-sky-400/90 text-slate-900",
   deleted: "bg-slate-700 text-slate-200",
 };
 
@@ -20,6 +20,12 @@ export default function HorizontalMatchSlider({ matches, currentMatchId, onSelec
 
   const sliderRef = React.useRef<HTMLDivElement | null>(null);
   const cardRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
+
+  const selectedBorder = (m: Match) => {
+    if (m.status === "ongoing") return "!border-amber-300/80";
+    if (m.status === "finished") return "!border-sky-400/80";
+    return "!border-slate-600/80";
+  };
 
   React.useEffect(() => {
     if (!sliderRef.current || !currentMatchId) return;
@@ -48,14 +54,11 @@ export default function HorizontalMatchSlider({ matches, currentMatchId, onSelec
               cardRefs.current[m.id] = el;
             }}
             className={`snap-center min-w-[220px] max-w-[240px] flex-shrink-0 rounded-2xl border border-slate-800 bg-slate-900/70 p-3 shadow-inner shadow-slate-950 cursor-pointer hover:-translate-y-0.5 transition ${
-              m.id === currentMatchId ? "!border-emerald-400/70" : ""
-            }`}
+              m.id === currentMatchId ? selectedBorder(m) : ""
+            } ${m.status === "ongoing" ? "live-pulse-card" : ""}`}
             onClick={() => onSelect?.(m.id)}
           >
-            <div className="flex items-center justify-between text-xs text-slate-400">
-              <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[11px]">
-                {m.pouleName || m.pouleCode || "Poule ?"}
-              </span>
+            <div className="flex items-center justify-end text-xs text-slate-400">
               <span
                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] ${statusColors[m.status]}`}
               >
@@ -80,8 +83,8 @@ export default function HorizontalMatchSlider({ matches, currentMatchId, onSelec
             {(m.status === "ongoing" || m.status === "finished") &&
               m.scoreA !== null &&
               m.scoreB !== null && (
-                <div className="mt-3 flex items-center justify-center">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-100">
+              <div className="mt-3 flex items-center justify-center">
+                  <span className={`inline-flex items-center gap-1 rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-100 ${m.status === "ongoing" ? "live-pulse-card" : ""}`}>
                     <span>{m.scoreA}</span>
                     <span className="text-slate-500">-</span>
                     <span>{m.scoreB}</span>

@@ -3,7 +3,7 @@ import clsx from "clsx";
 
 type Props = {
   children: React.ReactNode;
-  color?: "default" | "accent" | "success" | "muted" | "warning";
+  color?: "default" | "accent" | "success" | "muted" | "warning" | "info";
 };
 
 export default function Badge({ children, color = "default" }: Props) {
@@ -16,6 +16,7 @@ export default function Badge({ children, color = "default" }: Props) {
     success: "bg-emerald-500/90 text-slate-900",
     muted: "bg-slate-700 text-slate-200",
     warning: "bg-amber-400/90 text-slate-900",
+    info: "bg-sky-400/90 text-slate-900",
   };
 
   return <span className={clsx(base, variants[color])}>{children}</span>;

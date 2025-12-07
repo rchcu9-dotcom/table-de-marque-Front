@@ -59,12 +59,13 @@ export default function MatchDetailPage() {
     finished: "Termine",
     deleted: "Supprime",
   };
-  const statusColors: Record<typeof data.status, "success" | "muted" | "warning" | "default"> = {
-    planned: "muted",
-    ongoing: "warning",
-    finished: "success",
-    deleted: "muted",
-  };
+  const statusColors: Record<typeof data.status, "success" | "muted" | "warning" | "default" | "info"> =
+    {
+      planned: "muted",
+      ongoing: "warning",
+      finished: "info",
+      deleted: "muted",
+    };
 
   return (
     <div className="space-y-4">
@@ -85,9 +86,14 @@ export default function MatchDetailPage() {
         <HexBadge name={data.teamB} imageUrl={data.teamBLogo ?? undefined} size={64} />
       </div>
 
-      <Card>
+      <Card className={data.status === "ongoing" ? "live-pulse-card" : ""}>
         <div className="space-y-3 text-sm text-slate-200 flex flex-col items-center text-center">
           <div className="text-base">{new Date(data.date).toLocaleString()}</div>
+          {(data.pouleName || data.pouleCode) && (
+            <div className="text-xs text-slate-400">
+              Poule {data.pouleName || data.pouleCode}
+            </div>
+          )}
 
           <div className="flex items-center gap-2">
             <Badge color={statusColors[data.status]}>{statusLabels[data.status]}</Badge>
@@ -151,9 +157,7 @@ export default function MatchDetailPage() {
       <Card data-testid="classement-section">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <div className="text-base font-semibold text-slate-100">
-              Classement {classement ? `- ${classement.pouleName}` : ""}
-            </div>
+            <div className="text-base font-semibold text-slate-100">Classement</div>
             <div className="text-xs text-slate-500">
               Actualisation auto (60s)
             </div>
@@ -210,7 +214,9 @@ export default function MatchDetailPage() {
         <Card data-testid="poule-slider">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="text-base font-semibold text-slate-100">Matchs de la poule</div>
+              <div className="text-base font-semibold text-slate-100">
+                Matchs de la poule {pouleMatches[0]?.pouleName || pouleMatches[0]?.pouleCode || ""}
+              </div>
               <div className="text-xs text-slate-500">Glissez horizontalement</div>
             </div>
 

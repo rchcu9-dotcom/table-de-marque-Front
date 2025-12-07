@@ -4,7 +4,7 @@ import List from "../components/collections/List";
 import Badge from "../components/ds/Badge";
 import Spinner from "../components/ds/Spinner";
 import HexBadge from "../components/ds/HexBadge";
-import { useMatches, useMomentumMatches } from "../hooks/useMatches";
+import { useMatches } from "../hooks/useMatches";
 import { useNavigate } from "react-router-dom";
 function computeMomentum(source) {
     if (!source || source.length === 0)
@@ -12,30 +12,40 @@ function computeMomentum(source) {
     const sortByDateAsc = [...source].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     const ongoingIndex = sortByDateAsc.findIndex((m) => m.status === "ongoing");
     const allFinished = sortByDateAsc.every((m) => m.status === "finished" || m.status === "deleted");
-    // 1) Aucun match démarré => 3 premiers par date croissante
+    const hasFinished = sortByDateAsc.some((m) => m.status === "finished");
+    const hasPlanned = sortByDateAsc.some((m) => m.status === "planned");
+    const selectAndSortDesc = (arr) => [...arr]
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 3);
+    // Aucun match en cours
     if (ongoingIndex === -1) {
         if (allFinished) {
-            // 3) Tous joués => 3 derniers par date décroissante
-            const desc = [...sortByDateAsc].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            return desc.slice(0, 3);
+            // tous joués -> 3 derniers, du plus récent au plus ancien
+            return selectAndSortDesc(sortByDateAsc.slice(-3));
         }
-        return sortByDateAsc.slice(0, 3);
+        // tournoi démarré (au moins un joué et un à jouer) -> centrer sur le prochain match à jouer
+        if (hasFinished && hasPlanned) {
+            const nextPlannedIndex = sortByDateAsc.findIndex((m) => m.status === "planned");
+            const start = Math.max(nextPlannedIndex - 1, 0);
+            const end = Math.min(nextPlannedIndex + 2, sortByDateAsc.length);
+            return selectAndSortDesc(sortByDateAsc.slice(start, end));
+        }
+        // tournoi pas commencé (tous planifiés) -> 3 premiers, ordonnés du plus récent au plus ancien
+        return selectAndSortDesc(sortByDateAsc.slice(0, 3));
     }
-    // 2) Il y a un match en cours
     const lastIndex = sortByDateAsc.length - 1;
+    // match en cours est le premier -> lui + 2 suivants
     if (ongoingIndex === 0) {
-        // 2-1) premier match par date croissante
-        return sortByDateAsc.slice(0, 3);
+        return selectAndSortDesc(sortByDateAsc.slice(0, 3));
     }
+    // match en cours est le dernier -> lui + 2 précédents les plus récents
     if (ongoingIndex === lastIndex) {
-        // 2-3) match en cours est le dernier
-        return sortByDateAsc.slice(Math.max(lastIndex - 2, 0), lastIndex + 1);
+        return selectAndSortDesc(sortByDateAsc.slice(Math.max(lastIndex - 2, 0), lastIndex + 1));
     }
-    // 2-2) match en cours au milieu
-    return sortByDateAsc.slice(ongoingIndex - 1, ongoingIndex + 2);
+    // match en cours au milieu -> un avant et un après
+    return selectAndSortDesc(sortByDateAsc.slice(ongoingIndex - 1, ongoingIndex + 2));
 }
 export default function MatchListPage({ searchQuery = "", sort, onSortChange: _onSortChange, }) {
-    const { data: momentumData, isLoading: isMomentumLoading, isError: isMomentumError, } = useMomentumMatches();
     const { data: planningData, isLoading: isPlanningLoading, isError: isPlanningError, } = useMatches();
     const navigate = useNavigate();
     const [allMatches, setAllMatches] = React.useState([]);
@@ -97,14 +107,15 @@ export default function MatchListPage({ searchQuery = "", sort, onSortChange: _o
         });
         return Array.from(set).sort((a, b) => a.localeCompare(b));
     }, [allMatches]);
-    const momentumMatches = momentumData ?? computeMomentum(allMatches);
-    const hasOngoingMomentum = momentumMatches.some((m) => m.status === "ongoing");
-    const hasFinishedMomentum = momentumMatches.some((m) => m.status === "finished");
-    const momentumBorderClass = hasOngoingMomentum
-        ? "!border-amber-300/70"
-        : hasFinishedMomentum
-            ? "!border-emerald-400/70"
-            : "!border-slate-500/60";
+    const momentumMatchesSource = computeMomentum(allMatches);
+    const momentumMatches = React.useMemo(() => [...(momentumMatchesSource ?? [])].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()), [momentumMatchesSource]);
+    const momentumBorderForStatus = (m) => {
+        if (m.status === "ongoing")
+            return "!border-amber-300/70";
+        if (m.status === "finished")
+            return "!border-sky-400/70";
+        return "!border-slate-600/70";
+    };
     const renderFields = (isMomentum = false) => [
         {
             key: "teamA",
@@ -139,7 +150,7 @@ export default function MatchListPage({ searchQuery = "", sort, onSortChange: _o
                 const map = {
                     planned: { label: "Planifie", color: "muted" },
                     ongoing: { label: "En cours", color: "warning" },
-                    finished: { label: "Termine", color: "success" },
+                    finished: { label: "Termine", color: "info" },
                     deleted: { label: "Supprime", color: "muted" },
                 };
                 const meta = map[value];
@@ -149,6 +160,6 @@ export default function MatchListPage({ searchQuery = "", sort, onSortChange: _o
     ];
     const fields = renderFields(false);
     const momentumFields = renderFields(true);
-    const renderLeading = (item) => (_jsx("div", { className: "flex w-full items-center justify-center gap-3" }));
-    return (_jsxs("div", { className: "space-y-4", children: [isPlanningLoading && (_jsxs("div", { className: "flex items-center gap-2 text-slate-300 text-sm", children: [_jsx(Spinner, {}), _jsx("span", { children: "Chargement..." })] })), isPlanningError && (_jsx("div", { className: "text-red-400 text-sm", children: "Erreur de chargement." })), momentumMatches && momentumMatches.length > 0 && !isMomentumLoading && (_jsxs("div", { className: "space-y-2", children: [_jsx("div", { className: "flex items-center gap-2 text-sm text-slate-400", children: _jsx("span", { className: "text-base font-semibold text-slate-100", children: "Momentum" }) }), _jsx("div", { "data-testid": "momentum-list", children: _jsx(List, { items: momentumMatches, fields: momentumFields, alignCenter: true, renderLeading: renderLeading, cardClassName: (item) => `${momentumBorderClass} ${item.status === "ongoing" ? "live-pulse-card" : ""} !bg-slate-900/70 shadow-none`, onItemClick: (m) => navigate(`/matches/${m.id}`) }) })] })), isMomentumLoading && (_jsxs("div", { className: "flex items-center gap-2 text-slate-300 text-sm", children: [_jsx(Spinner, {}), _jsx("span", { children: "Chargement du momentum..." })] })), isMomentumError && (_jsx("div", { className: "text-red-400 text-sm", children: "Erreur de chargement du momentum." })), filteredMatches && filteredMatches.length === 0 && !isPlanningLoading && (_jsx("div", { className: "text-slate-400 text-sm", children: "Aucun match." })), filteredMatches && filteredMatches.length > 0 && !isPlanningLoading && (_jsxs("div", { className: "space-y-2", children: [_jsx("div", { className: "text-base font-semibold text-slate-100", children: "Planning" }), _jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3", children: [_jsxs("div", { className: "text-sm text-slate-400", children: [filteredMatches.length, " match", filteredMatches.length > 1 ? "s" : ""] }), _jsxs("div", { className: "flex items-center gap-3 text-sm flex-wrap", children: [_jsxs("div", { className: "flex items-center gap-2", children: [_jsx("span", { className: "text-slate-500", children: "Equipes" }), _jsxs("select", { value: teamFilter, onChange: (e) => setTeamFilter(e.target.value), className: "rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100", children: [_jsx("option", { value: "all", children: "Toutes" }), teamOptions.map((team) => (_jsx("option", { value: team.toLowerCase(), children: team }, team)))] })] }), _jsxs("div", { className: "flex items-center gap-2", children: [_jsx("span", { className: "text-slate-500", children: "Poule" }), _jsxs("select", { value: pouleFilter, onChange: (e) => setPouleFilter(e.target.value), className: "rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100", children: [_jsx("option", { value: "all", children: "Toutes" }), pouleOptions.map((poule) => (_jsx("option", { value: poule.toLowerCase(), children: poule }, poule)))] })] })] })] }), _jsx("div", { "data-testid": "planning-list", children: _jsx(List, { items: filteredMatches, fields: fields, sort: effectiveSort, alignCenter: true, renderLeading: renderLeading, cardClassName: (item) => `${item.status === "ongoing" ? "live-pulse-card !border-amber-300/60" : ""}`, onItemClick: (m) => navigate(`/matches/${m.id}`) }) })] }))] }));
+    const renderLeading = (_item) => (_jsx("div", { className: "flex w-full items-center justify-center gap-3" }));
+    return (_jsxs("div", { className: "space-y-4", children: [isPlanningLoading && (_jsxs("div", { className: "flex items-center gap-2 text-slate-300 text-sm", children: [_jsx(Spinner, {}), _jsx("span", { children: "Chargement..." })] })), isPlanningError && (_jsx("div", { className: "text-red-400 text-sm", children: "Erreur de chargement." })), momentumMatches && momentumMatches.length > 0 && (_jsxs("div", { className: "space-y-2", children: [_jsx("div", { className: "flex items-center gap-2 text-sm text-slate-400", children: _jsx("span", { className: "text-base font-semibold text-slate-100", children: "Momentum" }) }), _jsx("div", { "data-testid": "momentum-list", children: _jsx(List, { items: momentumMatches, fields: momentumFields, alignCenter: true, renderLeading: renderLeading, cardClassName: (item) => `${momentumBorderForStatus(item)} ${item.status === "ongoing" ? "live-pulse-card" : ""} !bg-slate-900/70 shadow-none`, onItemClick: (m) => navigate(`/matches/${m.id}`) }) })] })), filteredMatches && filteredMatches.length === 0 && !isPlanningLoading && (_jsx("div", { className: "text-slate-400 text-sm", children: "Aucun match." })), filteredMatches && filteredMatches.length > 0 && !isPlanningLoading && (_jsxs("div", { className: "space-y-2", children: [_jsx("div", { className: "text-base font-semibold text-slate-100", children: "Planning" }), _jsxs("div", { className: "flex flex-wrap items-center justify-between gap-3", children: [_jsxs("div", { className: "text-sm text-slate-400", children: [filteredMatches.length, " match", filteredMatches.length > 1 ? "s" : ""] }), _jsxs("div", { className: "flex items-center gap-3 text-sm flex-wrap", children: [_jsxs("select", { value: teamFilter, onChange: (e) => setTeamFilter(e.target.value), className: "rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100", children: [_jsx("option", { value: "all", children: "Les equipes" }), teamOptions.map((team) => (_jsx("option", { value: team.toLowerCase(), children: team }, team)))] }), _jsxs("select", { value: pouleFilter, onChange: (e) => setPouleFilter(e.target.value), className: "rounded-xl border border-slate-800 bg-slate-900 px-2 py-1 text-slate-100", children: [_jsx("option", { value: "all", children: "Les poules" }), pouleOptions.map((poule) => (_jsx("option", { value: poule.toLowerCase(), children: poule }, poule)))] })] })] }), _jsx("div", { "data-testid": "planning-list", children: _jsx(List, { items: filteredMatches, fields: fields, sort: effectiveSort, alignCenter: true, renderLeading: renderLeading, cardClassName: (item) => `${item.status === "ongoing" ? "live-pulse-card !border-amber-300/60" : ""}`, onItemClick: (m) => navigate(`/matches/${m.id}`) }) })] }))] }));
 }
