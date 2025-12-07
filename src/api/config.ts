@@ -20,6 +20,13 @@ export function requireBaseUrl(): string {
 
   const cleaned = envBaseUrl?.trim() ?? "";
   if (cleaned.length > 0) {
+    // Si on est en prod mais que la valeur pointe sur localhost, on force la cible prod
+    if (!isDev && cleaned.toLowerCase().includes("localhost")) {
+      console.warn(
+        `VITE_API_BASE_URL=${cleaned} ignorée en prod, fallback sur ${prodFallback}`,
+      );
+      return prodFallback;
+    }
     return cleaned.replace(/\/+$/, "");
   }
 
