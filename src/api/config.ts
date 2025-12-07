@@ -8,28 +8,28 @@ export function requireBaseUrl(): string {
     (globalThis as any)?.process?.env ??
     {};
   const envBaseUrl = env?.VITE_API_BASE_URL;
+  const isDevFlag = Boolean((env as any)?.DEV ?? env?.NODE_ENV === "development");
+  const isLocalHost =
+    typeof window !== "undefined" &&
+    typeof window.location?.hostname === "string" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1");
+  const isDev = isDevFlag || isLocalHost;
+  const prodFallback = "https://match-service-1050044602376.europe-west9.run.app";
+  const devFallback = "http://localhost:3000";
 
-  if (!envBaseUrl || envBaseUrl.trim().length === 0) {
-    const fallback =
-      typeof window !== "undefined" && window.location
-        ? window.location.origin
-        : undefined;
-    if (fallback) {
-      console.warn(
-        "VITE_API_BASE_URL manquante : utilisation du fallback window.location.origin =",
-        fallback,
-      );
-      return fallback;
-    }
-
-    console.error(
-      "VITE_API_BASE_URL is missing; available env keys =",
-      env ? Object.keys(env) : "none",
-    );
-    throw new Error(
-      "VITE_API_BASE_URL manquante : definis-la dans .env.local (ex: http://localhost:3000).",
-    );
+  const cleaned = envBaseUrl?.trim() ?? "";
+  if (cleaned.length > 0) {
+    return cleaned.replace(/\/+$/, "");
   }
 
-  return envBaseUrl.trim().replace(/\/+$/, "");
+  if (!envBaseUrl || envBaseUrl.trim().length === 0) {
+    const fallback = isDev ? devFallback : prodFallback;
+    console.warn(
+      `VITE_API_BASE_URL manquante : fallback sur ${fallback} (${isDev ? "dev" : "prod"})`,
+    );
+    return fallback.replace(/\/+$/, "");
+  }
+
+  return devFallback.replace(/\/+$/, "");
 }

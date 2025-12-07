@@ -14,15 +14,10 @@ export type Match = {
   pouleCode?: string | null;
 };
 
-// Normalisation propre : supprime les / finaux si l'URL existe
-const rawBaseUrl = import.meta.env.VITE_API_BASE_URL;
+import { requireBaseUrl } from "./config";
 
-const API_BASE_URL =
-  rawBaseUrl && rawBaseUrl.trim().length > 0
-    ? rawBaseUrl.replace(/\/+$/, "")
-    : typeof window !== "undefined"
-      ? window.location.origin
-      : "http://localhost:3000";
+// Normalisation via helper (lève si manquant)
+const API_BASE_URL = requireBaseUrl();
 
 export async function fetchMatches(): Promise<Match[]> {
   const url = `${API_BASE_URL}/matches`;

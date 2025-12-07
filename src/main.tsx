@@ -8,6 +8,11 @@ import './styles/global.css';
 
 const queryClient = new QueryClient();
 
+if (import.meta.env.DEV) {
+  // Aid local troubleshooting of env injection
+  console.log('VITE_API_BASE_URL =', import.meta.env.VITE_API_BASE_URL);
+}
+
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>

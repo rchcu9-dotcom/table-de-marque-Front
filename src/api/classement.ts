@@ -1,3 +1,4 @@
+import { requireBaseUrl } from "./config";
 import type { Match } from "./match";
 
 export type ClassementEntry = {
@@ -20,13 +21,7 @@ export type PouleClassement = {
   equipes: ClassementEntry[];
 };
 
-const rawBaseUrl = import.meta.env.VITE_API_BASE_URL;
-const API_BASE_URL =
-  rawBaseUrl && rawBaseUrl.trim().length > 0
-    ? rawBaseUrl.replace(/\/+$/, "")
-    : typeof window !== "undefined"
-      ? window.location.origin
-      : "http://localhost:3000";
+const API_BASE_URL = requireBaseUrl();
 
 export async function fetchClassementByPoule(
   code: string,
