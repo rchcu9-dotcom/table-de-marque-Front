@@ -1,20 +1,33 @@
-import { useParams } from "react-router-dom";
-import { useMatch } from "../hooks/useMatches";
+import React from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useMatch, useMatches } from "../hooks/useMatches";
 import Spinner from "../components/ds/Spinner";
 import Card from "../components/ds/Card";
 import Badge from "../components/ds/Badge";
 import HexBadge from "../components/ds/HexBadge";
 import DataTable from "../components/collections/DataTable";
+import HorizontalMatchSlider from "../components/collections/HorizontalMatchSlider";
+import MatchSummaryGrid from "../components/collections/MatchSummaryGrid";
 import { useClassementForMatch } from "../hooks/useClassement";
 
 export default function MatchDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { data, isLoading, isError } = useMatch(id);
+  const { data: allMatches } = useMatches();
   const {
     data: classement,
     isLoading: isClassementLoading,
     isError: isClassementError,
   } = useClassementForMatch(id);
+
+  const pouleKey = (data?.pouleName || data?.pouleCode || "").trim().toLowerCase();
+  const pouleMatches = React.useMemo(() => {
+    if (!allMatches || !pouleKey) return [];
+    return [...allMatches]
+      .filter((m) => (m.pouleName || m.pouleCode || "").trim().toLowerCase() === pouleKey)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [allMatches, pouleKey]);
 
   if (isLoading) {
     return (
@@ -103,7 +116,39 @@ export default function MatchDetailPage() {
         </div>
       </Card>
 
-      <Card>
+      {pouleMatches.length > 0 && (
+        <Card data-testid="summary-section">
+          <div className="space-y-4">
+            <div data-testid="summary-grid-teamA">
+              <MatchSummaryGrid
+                matches={pouleMatches.filter(
+                  (m) =>
+                    m.teamA.toLowerCase() === data.teamA.toLowerCase() ||
+                    m.teamB.toLowerCase() === data.teamA.toLowerCase(),
+                )}
+                currentMatchId={data.id}
+                focusTeam={data.teamA}
+                onSelect={(targetId) => navigate(`/matches/${targetId}`)}
+              />
+            </div>
+
+            <div data-testid="summary-grid-teamB">
+              <MatchSummaryGrid
+                matches={pouleMatches.filter(
+                  (m) =>
+                    m.teamA.toLowerCase() === data.teamB.toLowerCase() ||
+                    m.teamB.toLowerCase() === data.teamB.toLowerCase(),
+                )}
+                currentMatchId={data.id}
+                focusTeam={data.teamB}
+                onSelect={(targetId) => navigate(`/matches/${targetId}`)}
+              />
+            </div>
+          </div>
+        </Card>
+      )}
+
+      <Card data-testid="classement-section">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="text-base font-semibold text-slate-100">
@@ -160,6 +205,23 @@ export default function MatchDetailPage() {
           )}
         </div>
       </Card>
+
+      {pouleMatches.length > 0 && (
+        <Card data-testid="poule-slider">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="text-base font-semibold text-slate-100">Matchs de la poule</div>
+              <div className="text-xs text-slate-500">Glissez horizontalement</div>
+            </div>
+
+            <HorizontalMatchSlider
+              matches={pouleMatches}
+              currentMatchId={data.id}
+              onSelect={(targetId) => navigate(`/matches/${targetId}`)}
+            />
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

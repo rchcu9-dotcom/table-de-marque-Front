@@ -18,6 +18,34 @@ vi.mock("../../hooks/useMatches", () => ({
     isLoading: false,
     isError: false,
   }),
+  useMatches: () => ({
+    data: [
+      {
+        id: "1",
+        date: "2025-11-29T08:00:00.000Z",
+        teamA: "Rennes",
+        teamB: "Meudon",
+        status: "finished",
+        scoreA: 2 as number | null,
+        scoreB: 1 as number | null,
+        pouleCode: "A",
+        pouleName: "Poule A",
+      },
+      {
+        id: "2",
+        date: "2025-11-29T09:00:00.000Z",
+        teamA: "Paris",
+        teamB: "Lyon",
+        status: "planned",
+        scoreA: null,
+        scoreB: null,
+        pouleCode: "A",
+        pouleName: "Poule A",
+      },
+    ],
+    isLoading: false,
+    isError: false,
+  }),
 }));
 
 vi.mock("../../hooks/useClassement", () => ({
