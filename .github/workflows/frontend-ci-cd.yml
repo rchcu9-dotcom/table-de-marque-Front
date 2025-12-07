@@ -50,6 +50,9 @@ jobs:
       - name: Run unit tests
         run: pnpm test
 
+      - name: Clean dist before build
+        run: rm -rf dist
+
       - name: Build (required before E2E)
         run: pnpm build
 
