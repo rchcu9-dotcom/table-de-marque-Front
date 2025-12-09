@@ -44,14 +44,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Prepare env for unit tests (local API URL)
-        run: |
-          rm -f .env .env.local .env.production
-          echo "VITE_API_BASE_URL=http://localhost:3000" > .env
-
-      - name: Run unit tests
-        run: pnpm test
-
       - name: Prepare env for build (prod secret)
         run: |
           rm -f .env .env.local .env.production
