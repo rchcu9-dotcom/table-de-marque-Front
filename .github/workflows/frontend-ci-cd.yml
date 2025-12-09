@@ -44,17 +44,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Remove any checked-in env files (avoid localhost overriding secret)
-        run: rm -f .env .env.local .env.production
+      - name: Prepare env for unit tests (local API URL)
+        run: |
+          rm -f .env .env.local .env.production
+          echo "VITE_API_BASE_URL=http://localhost:3000" > .env
 
-      - name: Run unit tests (local API URL for mocks)
-        env:
-          VITE_API_BASE_URL: http://localhost:3000
+      - name: Run unit tests
         run: pnpm test
 
+      - name: Prepare env for build (prod secret)
+        run: |
+          rm -f .env .env.local .env.production
+          echo "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}" > .env
+
       - name: Build (uses prod secret)
-        env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
         run: pnpm build
 
       - name: Firebase Auth
