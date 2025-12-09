@@ -44,20 +44,25 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Inject production environment variables
-        run: |
-          echo "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}" > .env
+      - name: Remove any checked-in env files (avoid localhost overriding secret)
+        run: rm -f .env .env.local .env.production
 
       - name: Run unit tests
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
         run: pnpm test
 
       - name: Build (required before E2E)
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
         run: pnpm build
 
       - name: Install Playwright Browsers
         run: pnpm dlx playwright install --with-deps
 
       - name: Run E2E tests
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
         run: pnpm test:e2e
 
       - name: Firebase Auth

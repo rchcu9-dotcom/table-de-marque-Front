@@ -1,3 +1,5 @@
+import { getApiBaseUrl } from "./env";
+
 export type MatchStatus = "planned" | "ongoing" | "finished" | "deleted";
 
 export type Match = {
@@ -14,10 +16,7 @@ export type Match = {
   pouleCode?: string | null;
 };
 
-import { requireBaseUrl } from "./config";
-
-// Normalisation via helper (lève si manquant)
-const API_BASE_URL = requireBaseUrl();
+const API_BASE_URL = getApiBaseUrl();
 
 export async function fetchMatches(): Promise<Match[]> {
   const url = `${API_BASE_URL}/matches`;

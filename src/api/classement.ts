@@ -1,4 +1,4 @@
-import { requireBaseUrl } from "./config";
+import { getApiBaseUrl } from "./env";
 import type { Match } from "./match";
 
 export type ClassementEntry = {
@@ -21,7 +21,7 @@ export type PouleClassement = {
   equipes: ClassementEntry[];
 };
 
-const API_BASE_URL = requireBaseUrl();
+const API_BASE_URL = getApiBaseUrl();
 
 export async function fetchClassementByPoule(
   code: string,
