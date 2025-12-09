@@ -3,8 +3,6 @@ name: Frontend CI/CD
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -63,11 +61,13 @@ jobs:
         run: pnpm test:e2e
 
       - name: Firebase Auth
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.FIREBASE_SA }}
 
       - name: Deploy to Firebase Hosting
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           npm install -g firebase-tools
           firebase deploy --project table-de-marque-72e86 --only hosting
