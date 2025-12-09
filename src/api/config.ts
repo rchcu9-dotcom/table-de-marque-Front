@@ -1,8 +1,11 @@
 /**
  * Returns the API base URL or throws with a clear message if missing.
  */
+declare const __APP_API_BASE_URL__: string | undefined;
+
 export function requireBaseUrl(): string {
-  const injected = (globalThis as any).__APP_API_BASE_URL__ as string | undefined;
+  const injected =
+    typeof __APP_API_BASE_URL__ !== "undefined" ? __APP_API_BASE_URL__ : undefined;
   const env =
     (typeof import.meta !== "undefined" ? (import.meta as any)?.env : undefined) ??
     (globalThis as any)?.process?.env ??
@@ -12,7 +15,7 @@ export function requireBaseUrl(): string {
 
   if (!raw) {
     // Diagnostic logs to inspect loaded environments when missing
-    console.error("globalThis.__APP_API_BASE_URL__ =", injected);
+    console.error("__APP_API_BASE_URL__ =", injected);
     console.error("import.meta.env =", (import.meta as any)?.env);
     console.error(
       "process.env.VITE_API_BASE_URL =",
