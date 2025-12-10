@@ -70,6 +70,19 @@ export default function MatchListPage({
   sort,
   onSortChange: _onSortChange,
 }: Props) {
+  const formatCountdown = React.useCallback((target: Date | null) => {
+    if (!target) return "";
+    const diffMs = target.getTime() - Date.now();
+    if (diffMs <= 0) return "quelques instants";
+    const totalMinutes = Math.floor(diffMs / 60000);
+    const days = Math.floor(totalMinutes / (60 * 24));
+    const hours = Math.floor((totalMinutes - days * 24 * 60) / 60);
+    const minutes = totalMinutes % 60;
+    if (days > 0) return `${days}j ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}min`;
+    return `${Math.max(minutes, 1)}min`;
+  }, []);
+
   const {
     data: planningData,
     isLoading: isPlanningLoading,
@@ -146,10 +159,29 @@ export default function MatchListPage({
   const momentumMatches = React.useMemo(
     () =>
       [...(momentumMatchesSource ?? [])].sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+        (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
       ),
     [momentumMatchesSource],
   );
+  const currentMomentumId =
+    momentumMatches[Math.floor(momentumMatches.length / 2)]?.id;
+  const momentumTitle = React.useMemo(() => {
+    if (!allMatches || allMatches.length === 0) return "Momentum";
+    const anyOngoing = allMatches.some((m) => m.status === "ongoing");
+    const allFinished = allMatches.every(
+      (m) => m.status === "finished" || m.status === "deleted",
+    );
+    const nextPlannedDate =
+      allMatches
+        .filter((m) => m.status === "planned")
+        .map((m) => new Date(m.date))
+        .sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
+
+    if (anyOngoing) return "En ce moment";
+    if (allFinished) return "Live terminé";
+    if (nextPlannedDate) return `Live dans ${formatCountdown(nextPlannedDate)}`;
+    return "Momentum";
+  }, [allMatches, formatCountdown]);
   const momentumBorderForStatus = (m: Match) => {
     if (m.status === "ongoing") return "!border-amber-300/70";
     if (m.status === "finished") return "!border-sky-400/70";
@@ -261,12 +293,13 @@ export default function MatchListPage({
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-sm text-slate-400">
             <span className="text-base font-semibold text-slate-100">
-              Momentum
+              {momentumTitle}
             </span>
           </div>
           <div data-testid="momentum-list" className="pb-1">
             <HorizontalMatchSlider
               matches={momentumMatches}
+              currentMatchId={currentMomentumId}
               testIdPrefix="momentum-match"
               onSelect={(id) => navigate(`/matches/${id}`)}
               getCardClassName={(item) =>

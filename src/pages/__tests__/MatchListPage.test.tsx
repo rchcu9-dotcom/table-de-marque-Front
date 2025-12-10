@@ -99,7 +99,7 @@ describe("MatchListPage", () => {
     const ids = momentum
       .queryAllByTestId(/momentum-match-/)
       .map((el) => el.getAttribute("data-testid"));
-    expect(ids).toEqual(["momentum-match-c", "momentum-match-b", "momentum-match-a"]);
+    expect(ids).toEqual(["momentum-match-a", "momentum-match-b", "momentum-match-c"]);
 
     const planning = within(screen.getByTestId("planning-list"));
     expect(planning.getAllByTestId(/match-line-/).length).toBe(1); // seul le match filtré reste
@@ -123,7 +123,7 @@ describe("MatchListPage", () => {
     const ids = momentum
       .getAllByTestId(/momentum-match-/)
       .map((el) => el.getAttribute("data-testid"));
-    expect(ids).toEqual(["momentum-match-c", "momentum-match-b", "momentum-match-a"]);
+    expect(ids).toEqual(["momentum-match-a", "momentum-match-b", "momentum-match-c"]);
   });
 
   it("momentum autour d'un match en cours affiche precedent, courant, suivant", () => {
@@ -144,7 +144,7 @@ describe("MatchListPage", () => {
     const ids = momentum
       .getAllByTestId(/momentum-match-/)
       .map((el) => el.getAttribute("data-testid"));
-    expect(ids).toEqual(["momentum-match-c", "momentum-match-b", "momentum-match-a"]);
+    expect(ids).toEqual(["momentum-match-a", "momentum-match-b", "momentum-match-c"]);
   });
 
   it("momentum avec tous les matchs joues prend les 3 derniers par date decroissante", () => {
@@ -166,7 +166,7 @@ describe("MatchListPage", () => {
       .getAllByTestId(/momentum-match-/)
       .slice(0, 3)
       .map((el) => el.getAttribute("data-testid"));
-    expect(ids).toEqual(["momentum-match-d", "momentum-match-c", "momentum-match-b"]);
+    expect(ids).toEqual(["momentum-match-b", "momentum-match-c", "momentum-match-d"]);
   });
 
   it("affiche les liserets momentum par statut et la pulsation sur l'en cours", () => {
@@ -179,10 +179,45 @@ describe("MatchListPage", () => {
     const momentum = within(screen.getByTestId("momentum-list"));
     const items = momentum.getAllByTestId(/momentum-match-/);
     const cardClasses = items.map((el) => el.closest(".rounded-2xl")?.className ?? "");
-    expect(cardClasses[0]).toMatch(/border-slate-600/); // planned
-    expect(cardClasses[1]).toMatch(/border-amber-300/); // ongoing
+    expect(cardClasses[0]).toMatch(/border-sky-400/); // finished (oldest)
+    expect(cardClasses[1]).toMatch(/border-amber-300/); // ongoing (middle)
     expect(cardClasses[1]).toMatch(/live-pulse-card/);
-    expect(cardClasses[2]).toMatch(/border-sky-400/); // finished
+    expect(cardClasses[2]).toMatch(/border-slate-600/); // planned (latest)
+  });
+
+  it("affiche le bon titre Momentum suivant l'etat du tournoi", () => {
+    // tous planned -> Live dans X temps
+    mockData = [
+      { id: "a", date: "2099-01-01T08:00:00Z", teamA: "A", teamB: "B", status: "planned", scoreA: null, scoreB: null },
+    ];
+    render(
+      <MemoryRouter>
+        <MatchListPage />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/Live dans/i)).toBeInTheDocument();
+
+    // en cours -> En ce moment
+    mockData = [
+      { id: "a", date: "2025-01-01T08:00:00Z", teamA: "A", teamB: "B", status: "ongoing", scoreA: 1, scoreB: 0 },
+    ];
+    render(
+      <MemoryRouter>
+        <MatchListPage />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("En ce moment")).toBeInTheDocument();
+
+    // tous finis -> Live terminé
+    mockData = [
+      { id: "a", date: "2025-01-01T08:00:00Z", teamA: "A", teamB: "B", status: "finished", scoreA: 1, scoreB: 0 },
+    ];
+    render(
+      <MemoryRouter>
+        <MatchListPage />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Live terminé")).toBeInTheDocument();
   });
 
   it("options de filtres par défaut affichent Les equipes et Les poules", () => {

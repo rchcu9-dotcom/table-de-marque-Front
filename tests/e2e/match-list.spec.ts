@@ -58,21 +58,21 @@ test.describe("Match list", () => {
 
     const momentumItems = page.getByTestId(/momentum-match-/);
     await expect(momentumItems).toHaveCount(3);
-    // Ordre attendu : id3 (planned), id2 (ongoing), id1 (finished) - tri date décroissant
+    // Ordre attendu : date croissante -> id1 (finished), id2 (ongoing), id3 (planned)
     const ids = await momentumItems.evaluateAll((nodes) =>
       nodes.map((n) => n.getAttribute("data-testid")),
     );
-    expect(ids).toEqual(["momentum-match-3", "momentum-match-2", "momentum-match-1"]);
+    expect(ids).toEqual(["momentum-match-1", "momentum-match-2", "momentum-match-3"]);
 
     const classes = await momentumItems.evaluateAll((nodes) =>
       nodes.map(
         (el) => ((el.closest(".rounded-2xl") as HTMLElement | null)?.className ?? "").toString(),
       ),
     );
-    expect(classes[0]).toMatch(/border-slate-600/); // planned
+    expect(classes[0]).toMatch(/border-sky-400/); // finished
     expect(classes[1]).toMatch(/border-amber-300/); // ongoing
     expect(classes[1]).toMatch(/live-pulse-card/);
-    expect(classes[2]).toMatch(/border-sky-400/); // finished
+    expect(classes[2]).toMatch(/border-slate-600/); // planned
 
     const selects = page.locator("select");
     await expect(selects.nth(0)).toContainText(/Les equipes/i);
