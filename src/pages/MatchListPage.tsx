@@ -6,6 +6,7 @@ import HexBadge from "../components/ds/HexBadge";
 import type { Match } from "../api/match";
 import { useMatches } from "../hooks/useMatches";
 import { useNavigate } from "react-router-dom";
+import HorizontalMatchSlider from "../components/collections/HorizontalMatchSlider";
 
 type Props = {
   searchQuery?: string;
@@ -239,7 +240,6 @@ export default function MatchListPage({
   ];
 
   const fields = renderFields(false);
-  const momentumFields = renderFields(true);
   const renderLeading = (_item: Match) => (
     <div className="flex w-full items-center justify-center gap-3" />
   );
@@ -264,16 +264,16 @@ export default function MatchListPage({
               Momentum
             </span>
           </div>
-          <div data-testid="momentum-list">
-            <List
-              items={momentumMatches}
-              fields={momentumFields}
-              alignCenter
-              renderLeading={renderLeading}
-              cardClassName={(item) =>
-                `${momentumBorderForStatus(item)} ${item.status === "ongoing" ? "live-pulse-card" : ""} !bg-slate-900/70 shadow-none`
+          <div data-testid="momentum-list" className="pb-1">
+            <HorizontalMatchSlider
+              matches={momentumMatches}
+              testIdPrefix="momentum-match"
+              onSelect={(id) => navigate(`/matches/${id}`)}
+              getCardClassName={(item) =>
+                `${momentumBorderForStatus(item)} ${
+                  item.status === "ongoing" ? "live-pulse-card" : ""
+                } !bg-slate-900/70 shadow-none`
               }
-              onItemClick={(m) => navigate(`/matches/${m.id}`)}
             />
           </div>
         </div>

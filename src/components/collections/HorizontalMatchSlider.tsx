@@ -6,6 +6,8 @@ type Props = {
   matches: Match[];
   currentMatchId?: string;
   onSelect?: (id: string) => void;
+  testIdPrefix?: string;
+  getCardClassName?: (match: Match) => string;
 };
 
 const statusColors: Record<Match["status"], string> = {
@@ -15,7 +17,13 @@ const statusColors: Record<Match["status"], string> = {
   deleted: "bg-slate-700 text-slate-200",
 };
 
-export default function HorizontalMatchSlider({ matches, currentMatchId, onSelect }: Props) {
+export default function HorizontalMatchSlider({
+  matches,
+  currentMatchId,
+  onSelect,
+  testIdPrefix = "poule-slider-card",
+  getCardClassName,
+}: Props) {
   if (!matches || matches.length === 0) return null;
 
   const sliderRef = React.useRef<HTMLDivElement | null>(null);
@@ -39,9 +47,6 @@ export default function HorizontalMatchSlider({ matches, currentMatchId, onSelec
 
   return (
     <div className="relative">
-      <div className="pointer-events-none absolute left-0 top-0 h-full w-12 bg-gradient-to-r from-slate-950 to-transparent" />
-      <div className="pointer-events-none absolute right-0 top-0 h-full w-12 bg-gradient-to-l from-slate-950 to-transparent" />
-
       <div
         ref={sliderRef}
         className="flex gap-3 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory"
@@ -49,13 +54,13 @@ export default function HorizontalMatchSlider({ matches, currentMatchId, onSelec
         {matches.map((m) => (
           <div
             key={m.id}
-            data-testid={`poule-slider-card-${m.id}`}
+            data-testid={`${testIdPrefix}-${m.id}`}
             ref={(el) => {
               cardRefs.current[m.id] = el;
             }}
             className={`snap-center min-w-[220px] max-w-[240px] flex-shrink-0 rounded-2xl border border-slate-800 bg-slate-900/70 p-3 shadow-inner shadow-slate-950 cursor-pointer hover:-translate-y-0.5 transition ${
               m.id === currentMatchId ? selectedBorder(m) : ""
-            } ${m.status === "ongoing" ? "live-pulse-card" : ""}`}
+            } ${m.status === "ongoing" ? "live-pulse-card" : ""} ${getCardClassName ? getCardClassName(m) : ""}`}
             onClick={() => onSelect?.(m.id)}
           >
             <div className="flex items-center justify-end text-xs text-slate-400">

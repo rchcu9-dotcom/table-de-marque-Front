@@ -56,9 +56,6 @@ export default function MatchSummaryGrid({ matches, currentMatchId, onSelect, fo
 
   return (
     <div className="relative" data-testid="summary-grid">
-      <div className="pointer-events-none absolute left-0 top-0 h-full w-6 bg-gradient-to-r from-slate-950 to-transparent" />
-      <div className="pointer-events-none absolute right-0 top-0 h-full w-6 bg-gradient-to-l from-slate-950 to-transparent" />
-
       <div className="flex gap-2 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory justify-center">
         {matches.map((m) => {
           const hasScore =
