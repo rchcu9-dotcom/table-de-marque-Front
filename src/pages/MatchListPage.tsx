@@ -301,6 +301,7 @@ export default function MatchListPage({
               matches={momentumMatches}
               currentMatchId={currentMomentumId}
               testIdPrefix="momentum-match"
+              centered
               onSelect={(id) => navigate(`/matches/${id}`)}
               getCardClassName={(item) =>
                 `${momentumBorderForStatus(item)} ${

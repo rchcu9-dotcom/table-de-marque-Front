@@ -8,6 +8,7 @@ type Props = {
   onSelect?: (id: string) => void;
   testIdPrefix?: string;
   getCardClassName?: (match: Match) => string;
+  centered?: boolean;
 };
 
 const statusColors: Record<Match["status"], string> = {
@@ -23,6 +24,7 @@ export default function HorizontalMatchSlider({
   onSelect,
   testIdPrefix = "poule-slider-card",
   getCardClassName,
+  centered = false,
 }: Props) {
   if (!matches || matches.length === 0) return null;
 
@@ -49,7 +51,7 @@ export default function HorizontalMatchSlider({
     <div className="relative">
       <div
         ref={sliderRef}
-        className="flex gap-3 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory"
+        className={`flex gap-3 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory ${centered ? "justify-center" : ""}`}
       >
         {matches.map((m) => (
           <div
