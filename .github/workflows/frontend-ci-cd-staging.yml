@@ -1,0 +1,62 @@
+name: Frontend CI/CD (staging)
+
+on:
+  push:
+    branches: [ staging ]
+  workflow_dispatch:
+
+env:
+  STORAGE_ACCOUNT: ${{ secrets.AZ_STORAGE_ACCOUNT_STAGING }} # ex: sttablemarque
+  STORAGE_SAS: ${{ secrets.AZ_STORAGE_SAS_STAGING }}         # SAS sur le conteneur $web
+  VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL_STAGING }} # URL back staging
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check env vars
+        run: |
+          if [ -z "$STORAGE_ACCOUNT" ] || [ -z "$STORAGE_SAS" ] || [ -z "$VITE_API_BASE_URL" ]; then
+            echo "Missing STORAGE_ACCOUNT or STORAGE_SAS or VITE_API_BASE_URL";
+            exit 1;
+          fi
+          echo "VITE_API_BASE_URL length: ${#VITE_API_BASE_URL}"
+
+      - name: Clean workspace
+        run: rm -rf dist node_modules .turbo .parcel-cache .cache
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare env for build (staging)
+        run: |
+          rm -f .env .env.local .env.production
+          echo "VITE_API_BASE_URL=$VITE_API_BASE_URL" > .env
+
+      - name: Build (staging)
+        run: pnpm run build
+
+      - name: Upload dist to Azure Storage Static Website ($web)
+        uses: azure/CLI@v1
+        with:
+          inlineScript: |
+            az storage blob upload-batch \
+              --account-name $STORAGE_ACCOUNT \
+              --sas-token "$STORAGE_SAS" \
+              --destination '$web' \
+              --source dist \
+              --overwrite
