@@ -22,6 +22,20 @@ jobs:
         with:
           submodules: true
           lfs: false
+      - name: Setup Node 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+      - name: Install and Build (pnpm)
+        env:
+          VITE_API_BASE_URL: https://table-de-marque-back.wittyrock-6c116ec6.westeurope.azurecontainerapps.io
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
       - name: Install OIDC Client from Core Package
         run: npm install @actions/core@1.6.0 @actions/http-client
       - name: Get Id Token
@@ -35,16 +49,13 @@ jobs:
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
-        env:
-          NODE_VERSION: "20.19.1"
-          VITE_API_BASE_URL: https://table-de-marque-back.wittyrock-6c116ec6.westeurope.azurecontainerapps.io
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_WONDERFUL_MUD_06AA42103_STAGING }}
           action: "upload"
           app_location: "/"
           api_location: ""
           output_location: "dist"
-          app_build_command: "npm install -g pnpm@8 && pnpm install --frozen-lockfile && pnpm run build"
+          skip_app_build: true
           github_id_token: ${{ steps.idtoken.outputs.result }}
 
   close_pull_request_job:
