@@ -54,7 +54,8 @@ jobs:
         uses: azure/cli@v1
         with:
           inlineScript: |
-            # install azcopy (not present in azure/cli image)
+            # install prerequisites + azcopy (azure/cli image n'a pas tar/azcopy)
+            apt-get update && apt-get install -y tar gzip curl
             curl -sL https://aka.ms/downloadazcopy-v10-linux -o azcopy.tgz
             tar -xzf azcopy.tgz --strip-components=1 --wildcards '*/azcopy'
             chmod +x azcopy
