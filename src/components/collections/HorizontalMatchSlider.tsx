@@ -31,6 +31,13 @@ export default function HorizontalMatchSlider({
   const sliderRef = React.useRef<HTMLDivElement | null>(null);
   const cardRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
 
+  const formatDateTime = (iso: string) => {
+    const d = new Date(iso);
+    const day = d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    return `${day} ${time}`;
+  };
+
   const selectedBorder = (m: Match) => {
     if (m.status === "ongoing") return "!border-amber-300/80";
     if (m.status === "finished") return "!border-sky-400/80";
@@ -76,7 +83,7 @@ export default function HorizontalMatchSlider({
               </span>
             </div>
             <div className="mt-2 text-sm font-semibold text-slate-100 text-center">
-              {new Date(m.date).toLocaleString()}
+              {formatDateTime(m.date)}
             </div>
             <div className="mt-3 flex items-center justify-between gap-2">
               <HexBadge name={m.teamA} imageUrl={m.teamALogo ?? undefined} size={40} />
