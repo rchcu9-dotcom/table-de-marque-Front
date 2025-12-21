@@ -8,6 +8,8 @@ vi.mock("../../api/env", () => ({
   getApiBaseUrl: () => "http://localhost:3000",
 }));
 
+vi.stubGlobal("process", { env: { VITE_API_BASE_URL: "http://localhost:3000" } });
+
 let TeamPage: typeof import("../TeamPage").default;
 
 const mockMatches: Match[] = [
@@ -83,7 +85,6 @@ vi.mock("@tanstack/react-query", async (orig) => {
 
 describe("TeamPage", () => {
   beforeAll(async () => {
-    process.env.VITE_API_BASE_URL = "http://localhost:3000";
     TeamPage = (await import("../TeamPage")).default;
   });
 
