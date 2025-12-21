@@ -54,6 +54,11 @@ jobs:
         uses: azure/cli@v1
         with:
           inlineScript: |
+            # install azcopy (not present in azure/cli image)
+            curl -sL https://aka.ms/downloadazcopy-v10-linux -o azcopy.tgz
+            tar -xzf azcopy.tgz --strip-components=1 --wildcards '*/azcopy'
+            chmod +x azcopy
+
             EXPIRY=$(date -u -d "+7 days" +"%Y-%m-%dT%H:%MZ")
             SAS=$(az storage container generate-sas \
               --account-name "$STORAGE_ACCOUNT" \
@@ -64,4 +69,4 @@ jobs:
               --https-only -o tsv)
             echo "SAS=?$SAS" >> $GITHUB_ENV
             DEST="https://${STORAGE_ACCOUNT}.blob.core.windows.net/\$web$SAS"
-            azcopy copy "dist/*" "$DEST" --recursive=true --overwrite=true
+            ./azcopy copy "dist/*" "$DEST" --recursive=true --overwrite=true
