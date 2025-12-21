@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate } from "react-router-dom";
 import LayoutRoot from "../components/layout/LayoutRoot";
 import MatchListPage from "../pages/MatchListPage";
 import MatchDetailPage from "../pages/MatchDetailPage";
+import TeamPage from "../pages/TeamPage";
 import NotFoundPage from "../pages/NotFoundPage";
 import SearchBar from "../components/ds/SearchBar";
 import Button from "../components/ds/Button";
@@ -44,6 +45,14 @@ export default function AppRouter() {
         element={
           <LayoutRoot topBarContent={<BackToListButton />}>
             <MatchDetailPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/teams/:id"
+        element={
+          <LayoutRoot topBarContent={<BackToListButton />}>
+            <TeamPage />
           </LayoutRoot>
         }
       />
