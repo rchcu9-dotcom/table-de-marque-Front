@@ -92,6 +92,15 @@ function focusClass(name: string, focusTeam: string) {
     : "text-slate-400";
 }
 
+function pickTeamLogo(matches: Match[], focusTeam: string, fallback?: string | null) {
+  const needle = normalizeTeamName(focusTeam);
+  for (const m of matches) {
+    if (normalizeTeamName(m.teamA) === needle && m.teamALogo) return m.teamALogo;
+    if (normalizeTeamName(m.teamB) === needle && m.teamBLogo) return m.teamBLogo;
+  }
+  return fallback ?? undefined;
+}
+
 export default function TeamPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -125,6 +134,11 @@ export default function TeamPage() {
       (e) => normalizeTeamName(e.name) === needle,
     );
   }, [classement.data, teamName]);
+
+  const heroLogo = React.useMemo(
+    () => pickTeamLogo(filtered, teamName, sample?.teamALogo ?? sample?.teamBLogo),
+    [filtered, sample, teamName],
+  );
 
   const upcoming = getUpcoming(filtered);
   const recent = getRecent(filtered);
@@ -174,7 +188,7 @@ export default function TeamPage() {
         <div className="relative px-6 pb-8 pt-6 md:px-10 max-w-6xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center gap-4">
-              <HexBadge name={teamName} size={68} imageUrl={sample?.teamALogo ?? sample?.teamBLogo ?? undefined} />
+              <HexBadge name={teamName} size={68} imageUrl={heroLogo} />
               <div>
                 <p className="text-sm uppercase tracking-[0.08em] text-slate-400">Equipe</p>
                 <h1 className="text-3xl md:text-4xl font-bold text-slate-50">
@@ -234,7 +248,10 @@ export default function TeamPage() {
                       <HexBadge name={m.teamB} size={22} imageUrl={m.teamBLogo ?? undefined} />
                       <span className={focusClass(m.teamB, teamName)}>{m.teamB}</span>
                       <span className="ml-auto text-right min-w-[92px]">
-                        <Badge color={resultColor(m, teamName)}>
+                        <Badge
+                          color={resultColor(m, teamName)}
+                          variant={m.status === "ongoing" || m.status === "finished" ? "outline" : "solid"}
+                        >
                           {m.status === "ongoing" || m.status === "finished" ? `${m.scoreA ?? "-"} - ${m.scoreB ?? "-"}` : statusLabel(m.status)}
                         </Badge>
                       </span>
@@ -288,14 +305,14 @@ export default function TeamPage() {
                                   <div className="text-slate-500">vs <span className={focusClass(m.teamB, teamName)}>{m.teamB}</span></div>
                                 </div>
                               </div>
-                              <Badge color={m.status === "ongoing" ? "warning" : m.status === "finished" ? "info" : "muted"}>
+                              <Badge color="muted">
                                 {statusLabel(m.status)}
                               </Badge>
                             </div>
                             <div className="mt-2 text-xs text-slate-400 flex items-center justify-between">
                               <span>{formatDateLabel(m.date)}</span>
                               {(m.status === "ongoing" || m.status === "finished") && (
-                                <Badge color={resultColor(m, teamName)}>
+                                <Badge color={resultColor(m, teamName)} variant="outline">
                                   {m.scoreA ?? "-"} - {m.scoreB ?? "-"}
                                 </Badge>
                               )}
