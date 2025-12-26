@@ -271,7 +271,7 @@ export default function ChallengePage() {
               <img
                 src="https://drive.google.com/thumbnail?id=1BlOlsgBPdgob1SgoN3HXcs-PEcUM8TIh&sz=w64"
                 alt="Challenge"
-                className="h-6 w-6 rounded-full object-cover"
+                className="h-10 w-10 rounded-full object-cover"
                 loading="lazy"
               />
               <h1 className="text-xl font-semibold">Challenge</h1>
