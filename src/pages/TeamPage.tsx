@@ -102,6 +102,15 @@ function focusClass(name: string, focusTeam: string) {
     : "text-slate-400";
 }
 
+function winnerHighlight(match: Match, team: "A" | "B") {
+  if (match.status !== "finished" || match.scoreA === null || match.scoreB === null) {
+    return "text-slate-200";
+  }
+  if (match.scoreA === match.scoreB) return "text-slate-200";
+  const isWinner = team === "A" ? match.scoreA > match.scoreB : match.scoreB > match.scoreA;
+  return isWinner ? "text-emerald-300 font-semibold" : "text-slate-200";
+}
+
 function pickTeamLogo(matches: Match[], focusTeam: string, fallback?: string | null) {
   const needle = normalizeTeamName(focusTeam);
   for (const m of matches) {
@@ -241,18 +250,12 @@ export default function TeamPage() {
               <div className="flex flex-col gap-2 mt-2">
                 {upcoming.length > 0 ? (
                   upcoming.map((m) => (
-                    <div
+                    <InlineMatchCard
                       key={m.id}
-                      className="flex items-center gap-2 text-xs bg-slate-900/70 border border-slate-800 rounded-xl px-2 py-2 cursor-pointer hover:border-slate-600"
-                      onClick={() => navigate(`/matches/${m.id}`)}
-                    >
-                      <HexBadge name={m.teamA} size={22} imageUrl={m.teamALogo ?? undefined} />
-                      <span className={focusClass(m.teamA, teamName)}>{m.teamA}</span>
-                      <span className="text-slate-500 px-1">vs</span>
-                      <HexBadge name={m.teamB} size={22} imageUrl={m.teamBLogo ?? undefined} />
-                      <span className={focusClass(m.teamB, teamName)}>{m.teamB}</span>
-                      <span className="ml-auto text-slate-300 text-[11px] text-right min-w-[110px]">{formatDayTimeLabel(m.date)}</span>
-                    </div>
+                      match={m}
+                      focusTeam={teamName}
+                      onSelect={(id) => navigate(`/matches/${id}`)}
+                    />
                   ))
                 ) : (
                   <span className="text-slate-500 text-sm">Aucun match à venir</span>
@@ -264,22 +267,12 @@ export default function TeamPage() {
               <div className="flex flex-col gap-2 mt-2">
                 {recent.length > 0 ? (
                   recent.map((m) => (
-                    <div
+                    <InlineMatchCard
                       key={m.id}
-                      className={`flex items-center gap-2 text-xs bg-slate-900/70 border border-slate-800 rounded-xl px-2 py-2 cursor-pointer ${m.status === "ongoing" ? "live-pulse-card" : ""}`}
-                      onClick={() => navigate(`/matches/${m.id}`)}
-                    >
-                      <HexBadge name={m.teamA} size={22} imageUrl={m.teamALogo ?? undefined} />
-                      <span className={focusClass(m.teamA, teamName)}>{m.teamA}</span>
-                      <span className="text-slate-500 px-1">vs</span>
-                      <HexBadge name={m.teamB} size={22} imageUrl={m.teamBLogo ?? undefined} />
-                      <span className={focusClass(m.teamB, teamName)}>{m.teamB}</span>
-                      <span className="ml-auto text-right min-w-[92px]">
-                        <Badge color={resultColor(m, teamName)} variant="outline">
-                          {badgeContent(m)}
-                        </Badge>
-                      </span>
-                    </div>
+                      match={m}
+                      focusTeam={teamName}
+                      onSelect={(id) => navigate(`/matches/${id}`)}
+                    />
                   ))
                 ) : (
                   <span className="text-slate-500 text-sm">Pas de match joué</span>
@@ -395,6 +388,74 @@ export default function TeamPage() {
             </div>
           ))}
         </section>
+      </div>
+    </div>
+  );
+}
+
+function InlineMatchCard({
+  match,
+  focusTeam,
+  onSelect,
+}: {
+  match: Match;
+  focusTeam: string;
+  onSelect?: (id: string) => void;
+}) {
+  const isLive = match.status === "ongoing";
+  const isFinished = match.status === "finished" && match.scoreA !== null && match.scoreB !== null;
+  const scoreText =
+    isFinished || isLive
+      ? `${match.scoreA ?? "-"} - ${match.scoreB ?? "-"}`
+      : formatTimeLabel(match.date);
+  const scoreClass = isLive
+    ? "text-amber-300 font-semibold"
+    : isFinished
+      ? "text-slate-100 font-semibold"
+      : "text-slate-200";
+
+  return (
+    <div
+      className={`relative overflow-hidden rounded-xl border ${
+        isLive ? "border-amber-400 ring-1 ring-amber-300/60 live-pulse-card" : "border-slate-800"
+      } bg-slate-900/80 px-3 py-2 cursor-pointer hover:border-slate-600`}
+      onClick={() => onSelect?.(match.id)}
+    >
+      {match.teamALogo && (
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-1/3 opacity-20">
+          <div
+            className="absolute inset-0 -skew-x-12 scale-110"
+            style={{
+              backgroundImage: `url(${match.teamALogo})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          />
+        </div>
+      )}
+      {match.teamBLogo && (
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 opacity-20">
+          <div
+            className="absolute inset-0 skew-x-12 scale-110"
+            style={{
+              backgroundImage: `url(${match.teamBLogo})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          />
+        </div>
+      )}
+
+      <div className="relative flex items-center gap-2">
+        <HexBadge name={match.teamA} size={20} imageUrl={match.teamALogo ?? undefined} />
+        <span className={winnerHighlight(match, "A")}>{match.teamA}</span>
+
+        <div className="flex-1 flex justify-center">
+          <span className={`text-sm ${scoreClass}`}>{scoreText}</span>
+        </div>
+
+        <span className={winnerHighlight(match, "B")}>{match.teamB}</span>
+        <HexBadge name={match.teamB} size={20} imageUrl={match.teamBLogo ?? undefined} />
       </div>
     </div>
   );
