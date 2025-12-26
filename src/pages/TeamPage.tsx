@@ -400,30 +400,31 @@ function InlineMatchCard({
     isFinished || isLive
       ? `${match.scoreA ?? "-"} - ${match.scoreB ?? "-"}`
       : formatTimeLabel(match.date);
-  const scoreClassA =
-    isFinished && match.scoreA !== null && match.scoreB !== null
-      ? match.scoreA > match.scoreB
-        ? "text-emerald-300 font-semibold"
-        : match.scoreA < match.scoreB
-          ? "text-rose-300 font-semibold"
-          : "text-slate-200"
-      : "text-slate-100 font-semibold";
-  const scoreClassB =
-    isFinished && match.scoreA !== null && match.scoreB !== null
-      ? match.scoreB > match.scoreA
-        ? "text-emerald-300 font-semibold"
-        : match.scoreB < match.scoreA
-          ? "text-rose-300 font-semibold"
-          : "text-slate-200"
-      : "text-slate-100 font-semibold";
-  const nameAClass =
-    normalizeTeamName(match.teamA) === normalizeTeamName(focusTeam)
-      ? "text-slate-50 font-semibold"
-      : "text-slate-200";
-  const nameBClass =
-    normalizeTeamName(match.teamB) === normalizeTeamName(focusTeam)
-      ? "text-slate-50 font-semibold"
-      : "text-slate-200";
+  const normalizedFocus = normalizeTeamName(focusTeam);
+  const isFocusA = normalizeTeamName(match.teamA) === normalizedFocus;
+  const isFocusB = normalizeTeamName(match.teamB) === normalizedFocus;
+
+  let focusOutcome: "win" | "lose" | "draw" | undefined = undefined;
+  if (isFinished && match.scoreA !== null && match.scoreB !== null && (isFocusA || isFocusB)) {
+    const diff = isFocusA ? match.scoreA - match.scoreB : match.scoreB - match.scoreA;
+    focusOutcome = diff > 0 ? "win" : diff < 0 ? "lose" : "draw";
+  }
+
+  const scoreColorClass =
+    focusOutcome === "win"
+      ? "text-emerald-300 font-semibold"
+      : focusOutcome === "lose"
+        ? "text-rose-300 font-semibold"
+        : focusOutcome === "draw"
+          ? "text-slate-200 font-semibold"
+          : "text-slate-100 font-semibold";
+  const nameClass = (isFocus: boolean) => {
+    if (!isFocus) return "text-slate-200";
+    if (focusOutcome === "win") return "text-emerald-300 font-semibold";
+    if (focusOutcome === "lose") return "text-rose-300 font-semibold";
+    if (focusOutcome === "draw") return "text-slate-50 font-semibold";
+    return "text-slate-50 font-semibold";
+  };
 
   return (
     <div
@@ -464,15 +465,15 @@ function InlineMatchCard({
           ) : (
             <HexBadge name={match.teamA} size={20} />
           )}
-          <span className={`text-[12px] leading-tight font-normal truncate block whitespace-nowrap ${nameAClass}`}>{match.teamA}</span>
+          <span className={`text-[12px] leading-tight font-normal truncate block whitespace-nowrap ${nameClass(isFocusA)}`}>{match.teamA}</span>
         </div>
 
         <div className="flex-none w-20 text-center">
           {isFinished || isLive ? (
             <span className="text-[12px] leading-tight font-semibold text-slate-100 whitespace-nowrap">
-              <span className={scoreClassA}>{match.scoreA}</span>
+              <span className={scoreColorClass}>{match.scoreA}</span>
               <span className="mx-1 text-slate-400">-</span>
-              <span className={scoreClassB}>{match.scoreB}</span>
+              <span className={scoreColorClass}>{match.scoreB}</span>
             </span>
           ) : (
             <span className="text-[12px] leading-tight font-semibold text-slate-100 whitespace-nowrap">{scoreText}</span>
@@ -481,7 +482,7 @@ function InlineMatchCard({
 
         <div className="flex items-center gap-1 justify-end min-w-0 flex-1">
           <span
-            className={`text-[12px] leading-tight font-normal truncate text-right block whitespace-nowrap ${nameBClass}`}
+            className={`text-[12px] leading-tight font-normal truncate text-right block whitespace-nowrap ${nameClass(isFocusB)}`}
           >
             {match.teamB}
           </span>
