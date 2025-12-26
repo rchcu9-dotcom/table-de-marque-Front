@@ -52,9 +52,24 @@ export default function HomePage() {
           <p className="text-sm text-slate-300">Bienvenue sur l’app du tournoi U11 RCHC 2026.</p>
         </div>
         <div className="mt-3 flex items-center gap-2 flex-wrap">
-          <BadgeToggle label="5v5" active={show5v5} onClick={() => setShow5v5((v) => !v)} />
-          <BadgeToggle label="3v3" active={show3v3} onClick={() => setShow3v3((v) => !v)} />
-          <BadgeToggle label="Challenge" active={showChallenge} onClick={() => setShowChallenge((v) => !v)} />
+          <BadgeToggle
+            label="5v5"
+            iconUrl="https://drive.google.com/thumbnail?id=1vIehJkzRKfVUUxP86EzX7jaTpD2Wr4AO&sz=w96"
+            active={show5v5}
+            onClick={() => setShow5v5((v) => !v)}
+          />
+          <BadgeToggle
+            label="3v3"
+            iconUrl="https://drive.google.com/thumbnail?id=1q2Lqml8IzvI0l348pQnRZb5te4nm4bIh&sz=w96"
+            active={show3v3}
+            onClick={() => setShow3v3((v) => !v)}
+          />
+          <BadgeToggle
+            label="Challenge"
+            iconUrl="https://drive.google.com/thumbnail?id=1BlOlsgBPdgob1SgoN3HXcs-PEcUM8TIh&sz=w96"
+            active={showChallenge}
+            onClick={() => setShowChallenge((v) => !v)}
+          />
         </div>
       </section>
 
@@ -180,17 +195,18 @@ function Logo({ name, url, size = 32 }: { name: string; url?: string | null; siz
   );
 }
 
-function BadgeToggle({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+function BadgeToggle({ label, active, onClick, iconUrl }: { label: string; active: boolean; onClick: () => void; iconUrl?: string }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`px-3 py-1 rounded-full border text-sm font-semibold transition ${
+      className={`px-4 py-2 rounded-full border text-sm font-semibold transition flex items-center gap-2 min-w-[110px] justify-center ${
         active
           ? "bg-emerald-600/20 text-emerald-200 border-emerald-500/60"
           : "bg-slate-800/60 text-slate-200 border-slate-600/60 hover:border-slate-400"
       }`}
     >
+      {iconUrl ? <img src={iconUrl} alt={label} className="h-6 w-6 object-contain" loading="lazy" /> : null}
       {label}
     </button>
   );
