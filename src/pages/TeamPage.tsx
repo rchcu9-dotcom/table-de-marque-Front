@@ -523,7 +523,9 @@ function PlayersGrid({
               {p.numero}
             </span>
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-white truncate">{p.name}</div>
+              <div className="text-sm font-semibold text-white truncate">
+                {p.name?.trim() && p.name.trim().length > 0 ? p.name : `Joueur ${p.numero}`}
+              </div>
               <div className="text-xs uppercase text-slate-400">{p.poste}</div>
             </div>
           </div>
