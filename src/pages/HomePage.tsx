@@ -119,7 +119,7 @@ function TeamGrid({ teams }: { teams: { id: string; name: string; logoUrl?: stri
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/60 to-transparent" />
           <div className="relative flex items-center gap-2">
             <Logo name={team.name} url={team.logoUrl} size={48} />
-            <span className="text-sm font-semibold text-white drop-shadow">{team.name}</span>
+            <span className="text-sm font-semibold text-white drop-shadow">{team.id}</span>
           </div>
         </a>
       ))}

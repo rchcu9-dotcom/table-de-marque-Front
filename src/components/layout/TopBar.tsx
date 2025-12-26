@@ -9,7 +9,18 @@ type Props = {
 
 export default function TopBar({ children }: Props) {
   const [open, setOpen] = React.useState(false);
+  const [menuPos, setMenuPos] = React.useState<{ top: number; left: number }>({ top: 64, left: 12 });
   const navigate = useNavigate();
+  const menuBtnRef = React.useRef<HTMLButtonElement | null>(null);
+
+  const updateMenuPos = React.useCallback(() => {
+    const rect = menuBtnRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setMenuPos({
+      top: rect.bottom + 4,
+      left: rect.left,
+    });
+  }, []);
 
   return (
     <header className="h-14 md:h-16 border-b border-slate-800 flex items-center px-3 md:px-4 bg-slate-950/80 backdrop-blur relative">
@@ -19,7 +30,11 @@ export default function TopBar({ children }: Props) {
             type="button"
             aria-label="Ouvrir le menu"
             className="rounded-lg border border-slate-700 bg-slate-900/80 p-2 text-slate-100 hover:bg-slate-800"
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => {
+              setOpen((v) => !v);
+              updateMenuPos();
+            }}
+            ref={menuBtnRef}
           >
             <span className="block w-5 h-0.5 bg-slate-100 mb-1" />
             <span className="block w-5 h-0.5 bg-slate-100 mb-1" />
@@ -38,6 +53,8 @@ export default function TopBar({ children }: Props) {
       </div>
       {open ? (
         <MobileMenu
+          top={menuPos.top}
+          left={menuPos.left}
           onSelect={(path) => {
             setOpen(false);
             navigate(path);
@@ -48,7 +65,7 @@ export default function TopBar({ children }: Props) {
   );
 }
 
-function MobileMenu({ onSelect }: { onSelect: (path: string) => void }) {
+function MobileMenu({ onSelect, top, left }: { onSelect: (path: string) => void; top: number; left: number }) {
   const [menuWidth, setMenuWidth] = React.useState<number>(360);
 
   React.useEffect(() => {
@@ -64,7 +81,7 @@ function MobileMenu({ onSelect }: { onSelect: (path: string) => void }) {
   }, []);
 
   return (
-    <div className="fixed z-[999] left-3 md:left-4 top-14 md:top-16">
+    <div className="fixed z-[999]" style={{ top: `${top}px`, left: `${left}px` }}>
       <div
         className="border border-slate-800 bg-slate-950/95 backdrop-blur px-4 pb-3 shadow-lg rounded-b-xl max-h-[70vh] overflow-auto"
         style={{ width: `${menuWidth}px` }}
