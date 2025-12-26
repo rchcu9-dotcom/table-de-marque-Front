@@ -105,9 +105,27 @@ export default function ThreeVThreePage() {
       <div className="absolute left-0 right-0 px-4" style={{ top: `${layout.topOffset}px` }}>
         <div
           ref={filterRef}
-          className="max-w-6xl mx-auto rounded-xl border border-slate-800 bg-slate-900/80 p-4 shadow-md shadow-slate-950"
+          className="relative overflow-hidden max-w-6xl mx-auto rounded-xl border border-slate-800 bg-slate-900/85 p-4 shadow-md shadow-slate-950"
         >
-          <h1 className="text-xl font-semibold text-white mb-3">Planning 3v3</h1>
+          <div
+            className="pointer-events-none absolute inset-0 opacity-10"
+            style={{
+              backgroundImage:
+                "url(https://drive.google.com/thumbnail?id=1q2Lqml8IzvI0l348pQnRZb5te4nm4bIh&sz=w256)",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "right center",
+              backgroundSize: "160px",
+            }}
+          />
+          <div className="relative flex items-center gap-3 mb-3">
+            <img
+              src="https://drive.google.com/thumbnail?id=1q2Lqml8IzvI0l348pQnRZb5te4nm4bIh&sz=w64"
+              alt="Tournoi 3v3"
+              className="h-10 w-10 rounded-full object-cover"
+              loading="lazy"
+            />
+            <h1 className="text-xl font-semibold text-white">Tournoi 3v3 FUN</h1>
+          </div>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="flex flex-col gap-1">
               <label className="text-xs text-slate-400">Recherche</label>
