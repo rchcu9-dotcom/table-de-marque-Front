@@ -404,15 +404,23 @@ function InlineMatchCard({
 }) {
   const isLive = match.status === "ongoing";
   const isFinished = match.status === "finished" && match.scoreA !== null && match.scoreB !== null;
+  const outcome = resultColor(match, focusTeam);
   const scoreText =
     isFinished || isLive
       ? `${match.scoreA ?? "-"} - ${match.scoreB ?? "-"}`
       : formatTimeLabel(match.date);
-  const scoreClass = isLive
-    ? "text-amber-300 font-semibold"
-    : isFinished
-      ? "text-slate-100 font-semibold"
-      : "text-slate-200";
+  const scoreClass =
+    outcome === "success"
+      ? "text-emerald-300 font-semibold"
+      : outcome === "danger"
+        ? "text-rose-300 font-semibold"
+        : outcome === "warning"
+          ? "text-amber-300 font-semibold"
+          : "text-slate-200";
+  const nameAClass =
+    `${winnerHighlight(match, "A")} ${normalizeTeamName(match.teamA) === normalizeTeamName(focusTeam) ? "text-slate-50 font-semibold" : ""}`.trim();
+  const nameBClass =
+    `${winnerHighlight(match, "B")} ${normalizeTeamName(match.teamB) === normalizeTeamName(focusTeam) ? "text-slate-50 font-semibold" : ""}`.trim();
 
   return (
     <div
@@ -448,13 +456,13 @@ function InlineMatchCard({
 
       <div className="relative flex items-center gap-2">
         <HexBadge name={match.teamA} size={20} imageUrl={match.teamALogo ?? undefined} />
-        <span className={winnerHighlight(match, "A")}>{match.teamA}</span>
+        <span className={nameAClass}>{match.teamA}</span>
 
         <div className="flex-1 flex justify-center">
           <span className={`text-sm ${scoreClass}`}>{scoreText}</span>
         </div>
 
-        <span className={winnerHighlight(match, "B")}>{match.teamB}</span>
+        <span className={nameBClass}>{match.teamB}</span>
         <HexBadge name={match.teamB} size={20} imageUrl={match.teamBLogo ?? undefined} />
       </div>
     </div>
