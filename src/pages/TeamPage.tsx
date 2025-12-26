@@ -453,8 +453,8 @@ function InlineMatchCard({
         <HexBadge name={match.teamA} size={20} imageUrl={match.teamALogo ?? undefined} />
         <span className={nameAClass}>{match.teamA}</span>
 
-        <div className="flex-1 flex justify-center">
-          <span className={`text-sm ${scoreClass}`}>{scoreText}</span>
+        <div className="flex-1 flex items-center justify-center min-w-[96px]">
+          <span className={`text-sm text-center ${scoreClass}`}>{scoreText}</span>
         </div>
 
         <span className={nameBClass}>{match.teamB}</span>
