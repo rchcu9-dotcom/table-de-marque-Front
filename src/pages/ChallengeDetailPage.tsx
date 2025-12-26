@@ -14,6 +14,8 @@ export default function ChallengeDetailPage() {
   const [showTir, setShowTir] = React.useState(true);
   const [showGlisse, setShowGlisse] = React.useState(true);
   const [selectedPlayers, setSelectedPlayers] = React.useState<string[]>([]);
+  const headerRef = React.useRef<HTMLDivElement | null>(null);
+  const [layout, setLayout] = React.useState<{ topOffset: number; paddingTop: number }>({ topOffset: 64, paddingTop: 240 });
 
   const groupByAtelier = React.useMemo(() => {
     const empty = { vitesse: [] as Attempt[], tir: [] as Attempt[], glisse_crosse: [] as Attempt[] };
@@ -66,7 +68,7 @@ export default function ChallengeDetailPage() {
     return teams?.find((t) => t.name.toLowerCase() === eqName) ?? null;
   }, [teams, id, data]);
 
-  const renderMetrics = (m: any) => {
+  const renderMetrics = (m: Attempt) => {
     if (m.metrics.type === "vitesse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s`;
     if (m.metrics.type === "tir") return `Points: ${m.metrics.totalPoints} (${m.metrics.tirs.join(", ")})`;
     if (m.metrics.type === "glisse_crosse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s, pénalités: ${m.metrics.penalites}`;
@@ -168,10 +170,28 @@ export default function ChallengeDetailPage() {
     return slices;
   }, [finalesByRound.df]);
 
+  React.useLayoutEffect(() => {
+    const updateLayout = () => {
+      const nav = document.querySelector("header");
+      const navH = nav ? nav.getBoundingClientRect().height : 64;
+      const headerH = headerRef.current ? headerRef.current.getBoundingClientRect().height : 170;
+      const gap = 8;
+      const topOffset = navH + gap;
+      const paddingTop = topOffset + headerH + gap;
+      setLayout({ topOffset, paddingTop });
+    };
+    updateLayout();
+    window.addEventListener("resize", updateLayout);
+    return () => window.removeEventListener("resize", updateLayout);
+  }, []);
+
   return (
-    <div className="flex flex-col gap-3">
-      <div className="sticky top-16 md:top-24 left-0 right-0 z-40 border-b border-slate-800 bg-slate-950/90 backdrop-blur">
-        <div className="flex items-center gap-3 p-3">
+    <div className="fixed inset-0 overflow-hidden">
+      <div className="absolute left-0 right-0 px-4" style={{ top: `${layout.topOffset}px` }}>
+        <div
+          ref={headerRef}
+          className="relative max-w-6xl mx-auto rounded-xl border border-slate-800 bg-slate-950/90 backdrop-blur p-3 flex items-center gap-3 shadow-md shadow-slate-950"
+        >
           <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-800 flex items-center justify-center">
             {team?.logoUrl ? (
               <img src={team.logoUrl} alt={team.name} className="h-full w-full object-cover" />
@@ -186,134 +206,139 @@ export default function ChallengeDetailPage() {
         </div>
       </div>
 
-      {isLoading && <p className="text-slate-300 text-sm">Chargement...</p>}
-      {isError && <p className="text-red-400 text-sm">Erreur lors du chargement.</p>}
-      {data && (
-        <div className="grid gap-4">
-          <section className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-col">
-                <h2 className="text-base font-semibold text-white">
-                  {slotLabel ? `Évaluation ${slotLabel}` : "Évaluation"}
-                </h2>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-                <button
-                  className={`rounded-full border px-3 py-1 ${showTop3 ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-200 border-slate-600"}`}
-                  onClick={() => setShowTop3((v) => !v)}
-                >
-                  Top 3
-                </button>
-                <button
-                  className={`rounded-full border px-3 py-1 ${showVitesse ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-300 border-slate-700"}`}
-                  onClick={() => setShowVitesse((v) => !v)}
-                >
-                  Vitesse
-                </button>
-                <button
-                  className={`rounded-full border px-3 py-1 ${showTir ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-300 border-slate-700"}`}
-                  onClick={() => setShowTir((v) => !v)}
-                >
-                  Tir
-                </button>
-                <button
-                  className={`rounded-full border px-3 py-1 ${showGlisse ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-300 border-slate-700"}`}
-                  onClick={() => setShowGlisse((v) => !v)}
-                >
-                  Glisse & Crosse
-                </button>
-                <select
-                  className="rounded-md border border-slate-700 bg-slate-900/80 px-2 py-1 text-slate-100 min-w-[160px]"
-                  value={selectedPlayers[0] ?? ""}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setSelectedPlayers(value ? [value] : []);
-                  }}
-                >
-                  <option value="">Tous les joueurs</option>
-                  {uniquePlayers.map((name) => (
-                    <option key={name} value={name}>
-                      {name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {showVitesse &&
-                renderTable(
-                  "Atelier Vitesse",
-                  applyFilters(groupByAtelier.jour1.vitesse, "vitesse", { top3: showTop3, players: selectedPlayers }),
-                )}
-              {showTir &&
-                renderTable(
-                  "Atelier Adresse au tir",
-                  applyFilters(groupByAtelier.jour1.tir, "tir", { top3: showTop3, players: selectedPlayers }),
-                )}
-              {showGlisse &&
-                renderTable(
-                  "Atelier Glisse & Crosse",
-                  applyFilters(groupByAtelier.jour1.glisse_crosse, "glisse_crosse", { top3: showTop3, players: selectedPlayers }),
-                )}
-            </div>
-          </section>
-
-          <section className="space-y-3">
-            <h2 className="text-base font-semibold text-white">
-              {finalsLabel ? `Finale Vitesse ${finalsLabel}` : "Finale Vitesse"}
-            </h2>
-
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-slate-200">Quarts de finale</h3>
-              <div className="grid gap-3 md:grid-cols-2">
-                {qfSlices
-                  .filter((slice) => slice.length > 0)
-                  .map((slice, idx) =>
-                    renderTable(
-                      `Quart de finale ${idx + 1}`,
-                      applyFilters(slice, "vitesse", { top3: false, players: [] }),
-                      { highlightTop: 2, rankOnly: true },
-                    ),
-                  )}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <h3 className="text-sm font-semibold text-slate-200">Demi-finales</h3>
-              <div className="grid gap-3 md:grid-cols-2">
-                {dfSlices
-                  .filter((slice) => slice.length > 0)
-                  .map((slice, idx) =>
-                    renderTable(
-                      `Demi-finale ${idx + 1}`,
-                      applyFilters(slice, "vitesse", { top3: false, players: [] }),
-                      { highlightTop: 2, rankOnly: true },
-                    ),
-                  )}
-              </div>
-            </div>
-
-            {finalesByRound.finale.length > 0 && (
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-slate-200">Finale</h3>
-                <div className="grid gap-3 md:grid-cols-2">
-                  {renderTable(
-                    "Finale",
-                    applyFilters(finalesByRound.finale, "vitesse", { top3: false, players: [] }),
-                    { highlightTop: 1, rankOnly: true },
-                  )}
+      <div
+        className="absolute inset-x-4 bottom-4"
+        style={{ top: `${layout.paddingTop}px`, height: `calc(100vh - ${layout.paddingTop}px - 24px)` }}
+      >
+        <div className="max-w-6xl mx-auto h-full rounded-xl border border-slate-800 bg-slate-900/70 p-4 overflow-y-auto space-y-4">
+          {isLoading && <p className="text-slate-300 text-sm">Chargement...</p>}
+          {isError && <p className="text-red-400 text-sm">Erreur lors du chargement.</p>}
+          {data && (
+            <div className="grid gap-4">
+              <section className="space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-col">
+                    <h2 className="text-base font-semibold text-white">
+                      {slotLabel ? `Évaluation ${slotLabel}` : "Évaluation"}
+                    </h2>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                    <button
+                      className={`rounded-full border px-3 py-1 ${showTop3 ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-200 border-slate-600"}`}
+                      onClick={() => setShowTop3((v) => !v)}
+                    >
+                      Top 3
+                    </button>
+                    <button
+                      className={`rounded-full border px-3 py-1 ${showVitesse ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-300 border-slate-700"}`}
+                      onClick={() => setShowVitesse((v) => !v)}
+                    >
+                      Vitesse
+                    </button>
+                    <button
+                      className={`rounded-full border px-3 py-1 ${showTir ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-300 border-slate-700"}`}
+                      onClick={() => setShowTir((v) => !v)}
+                    >
+                      Tir
+                    </button>
+                    <button
+                      className={`rounded-full border px-3 py-1 ${showGlisse ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-300 border-slate-700"}`}
+                      onClick={() => setShowGlisse((v) => !v)}
+                    >
+                      Glisse & Crosse
+                    </button>
+                    <select
+                      className="rounded-md border border-slate-700 bg-slate-900/80 px-2 py-1 text-slate-100 min-w-[160px]"
+                      value={selectedPlayers[0] ?? ""}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSelectedPlayers(value ? [value] : []);
+                      }}
+                    >
+                      <option value="">Tous les joueurs</option>
+                      {uniquePlayers.map((name) => (
+                        <option key={name} value={name}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-              </div>
-            )}
-          </section>
+
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {showVitesse &&
+                    renderTable(
+                      "Atelier Vitesse",
+                      applyFilters(groupByAtelier.jour1.vitesse, "vitesse", { top3: showTop3, players: selectedPlayers }),
+                    )}
+                  {showTir &&
+                    renderTable(
+                      "Atelier Adresse au tir",
+                      applyFilters(groupByAtelier.jour1.tir, "tir", { top3: showTop3, players: selectedPlayers }),
+                    )}
+                  {showGlisse &&
+                    renderTable(
+                      "Atelier Glisse & Crosse",
+                      applyFilters(groupByAtelier.jour1.glisse_crosse, "glisse_crosse", { top3: showTop3, players: selectedPlayers }),
+                    )}
+                </div>
+              </section>
+
+              <section className="space-y-3">
+                <h2 className="text-base font-semibold text-white">{finalsLabel ? `Finale Vitesse ${finalsLabel}` : "Finale Vitesse"}</h2>
+
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold text-slate-200">Quarts de finale</h3>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {qfSlices
+                      .filter((slice) => slice.length > 0)
+                      .map((slice, idx) =>
+                        renderTable(
+                          `Quart de finale ${idx + 1}`,
+                          applyFilters(slice, "vitesse", { top3: false, players: [] }),
+                          { highlightTop: 2, rankOnly: true },
+                        ),
+                      )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold text-slate-200">Demi-finales</h3>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {dfSlices
+                      .filter((slice) => slice.length > 0)
+                      .map((slice, idx) =>
+                        renderTable(
+                          `Demi-finale ${idx + 1}`,
+                          applyFilters(slice, "vitesse", { top3: false, players: [] }),
+                          { highlightTop: 2, rankOnly: true },
+                        ),
+                      )}
+                  </div>
+                </div>
+
+                {finalesByRound.finale.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-slate-200">Finale</h3>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {renderTable(
+                        "Finale",
+                        applyFilters(finalesByRound.finale, "vitesse", { top3: false, players: [] }),
+                        { highlightTop: 1, rankOnly: true },
+                      )}
+                    </div>
+                  </div>
+                )}
+              </section>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
 
-function applyFilters(attempts: any[], type: "vitesse" | "tir" | "glisse_crosse", options: { top3: boolean; players: string[] }) {
+function applyFilters(attempts: Attempt[], type: "vitesse" | "tir" | "glisse_crosse", options: { top3: boolean; players: string[] }) {
   const { top3, players } = options;
   let filtered = attempts;
   if (players.length > 0) {
@@ -324,7 +349,25 @@ function applyFilters(attempts: any[], type: "vitesse" | "tir" | "glisse_crosse"
 
   const scorer =
     type === "tir"
-      ? (a: any, b: any) => (b.metrics.totalPoints ?? 0) - (a.metrics.totalPoints ?? 0)
-      : (a: any, b: any) => (a.metrics.tempsMs ?? 0) - (b.metrics.tempsMs ?? 0);
+      ? (a: Attempt, b: Attempt) => {
+          const pa = a.metrics.type === "tir" ? a.metrics.totalPoints : -Infinity;
+          const pb = b.metrics.type === "tir" ? b.metrics.totalPoints : -Infinity;
+          return pb - pa;
+        }
+      : (a: Attempt, b: Attempt) => {
+          const ta =
+            a.metrics.type === "vitesse"
+              ? a.metrics.tempsMs
+              : a.metrics.type === "glisse_crosse"
+              ? a.metrics.tempsMs
+              : Number.MAX_SAFE_INTEGER;
+          const tb =
+            b.metrics.type === "vitesse"
+              ? b.metrics.tempsMs
+              : b.metrics.type === "glisse_crosse"
+              ? b.metrics.tempsMs
+              : Number.MAX_SAFE_INTEGER;
+          return ta - tb;
+        };
   return [...filtered].sort(scorer).slice(0, 3);
 }
