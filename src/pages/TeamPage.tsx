@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import HexBadge from "../components/ds/HexBadge";
@@ -7,8 +7,10 @@ import Card from "../components/ds/Card";
 import Spinner from "../components/ds/Spinner";
 import MatchSummaryGrid from "../components/collections/MatchSummaryGrid";
 import { useMatches } from "../hooks/useMatches";
+import { useTeams } from "../hooks/useTeams";
 import type { Match } from "../api/match";
 import { fetchClassementByPoule, type ClassementEntry } from "../api/classement";
+import { usePlayersByEquipe } from "../hooks/usePlayers";
 
 function formatDateLabel(date: string) {
   const d = new Date(date);
@@ -114,6 +116,7 @@ export default function TeamPage() {
   const navigate = useNavigate();
   const teamName = decodeURIComponent(id ?? "").trim();
   const { data: matches, isLoading, isError } = useMatches();
+  const { data: allTeams } = useTeams();
 
   const filtered = React.useMemo(() => {
     if (!matches) return [];
@@ -151,6 +154,15 @@ export default function TeamPage() {
   const upcoming = getUpcoming(filtered);
   const recent = getRecent(filtered);
   const form = computeForm(filtered, teamName);
+  const equipeKey = React.useMemo(() => {
+    const needle = normalizeTeamName(teamName);
+    const found = allTeams?.find(
+      (t) => normalizeTeamName(t.name) === needle || normalizeTeamName(t.id) === needle,
+    );
+    // On interroge l'API joueurs avec l'id court (nom court) pour matcher le seeder mock.
+    return found?.id ?? teamName;
+  }, [allTeams, teamName]);
+  const players = usePlayersByEquipe(equipeKey || undefined);
 
   const grouped = React.useMemo(() => {
     const groups = groupByDay(filtered);
@@ -281,6 +293,13 @@ export default function TeamPage() {
       <div className="px-6 md:px-10 pb-12 space-y-10 max-w-6xl mx-auto">
         <section className="space-y-3">
           <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-slate-50">Effectif</h3>
+          </div>
+          <PlayersGrid players={players.data} loading={players.isLoading} />
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold text-slate-50">Planning</h3>
           </div>
           {grouped.map(([day, dayMatches]) => (
@@ -380,3 +399,33 @@ export default function TeamPage() {
     </div>
   );
 }
+
+function PlayersGrid({
+  players,
+  loading,
+}: {
+  players?: { id: string; name: string; numero: number; poste: string }[];
+  loading: boolean;
+}) {
+  if (loading) {
+    return <p className="text-slate-300 text-sm">Chargement…</p>;
+  }
+  if (!players || players.length === 0) {
+    return <p className="text-slate-300 text-sm">Aucun joueur disponible.</p>;
+  }
+  const sorted = [...players].sort((a, b) => a.numero - b.numero);
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+      {sorted.map((p) => (
+        <div key={p.id} className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+          <div className="flex items-center justify-between text-slate-100">
+            <span className="text-lg font-bold">#{p.numero}</span>
+            <span className="text-xs uppercase text-slate-400">{p.poste}</span>
+          </div>
+          <div className="mt-1 text-sm font-semibold text-white">{p.name}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+

@@ -5,6 +5,13 @@ import MatchListPage from "../pages/MatchListPage";
 import MatchDetailPage from "../pages/MatchDetailPage";
 import TeamPage from "../pages/TeamPage";
 import NotFoundPage from "../pages/NotFoundPage";
+import HomePage from "../pages/HomePage";
+import TeamsPage from "../pages/TeamsPage";
+import Tournament5v5Page from "../pages/Tournament5v5Page";
+import ChallengePage from "../pages/ChallengePage";
+import ThreeVThreePage from "../pages/ThreeVThreePage";
+import ChallengeDetailPage from "../pages/ChallengeDetailPage";
+import PlanningPage from "../pages/PlanningPage";
 import SearchBar from "../components/ds/SearchBar";
 import Button from "../components/ds/Button";
 import type { SortConfig } from "../components/collections/List";
@@ -21,6 +28,62 @@ export default function AppRouter() {
     <Routes>
       <Route
         path="/"
+        element={
+          <LayoutRoot>
+            <HomePage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/planning"
+        element={
+          <LayoutRoot>
+            <PlanningPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/teams"
+        element={
+          <LayoutRoot>
+            <TeamsPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/tournament/5v5"
+        element={
+          <LayoutRoot>
+            <Tournament5v5Page />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/challenge"
+        element={
+          <LayoutRoot>
+            <ChallengePage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/challenge/:id"
+        element={
+          <LayoutRoot topBarContent={<BackToListButton />}>
+            <ChallengeDetailPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/tournament/3v3"
+        element={
+          <LayoutRoot>
+            <ThreeVThreePage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/matches"
         element={
           <LayoutRoot
             topBarContent={
@@ -72,7 +135,7 @@ function BackToListButton() {
   const navigate = useNavigate();
   return (
     <Button variant="ghost" onClick={() => navigate("/")}>
-      Retour aux matchs
+      Retour
     </Button>
   );
 }

@@ -1,11 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Match } from "../api/match";
+import type { Match, MatchFilters } from "../api/match";
 import { fetchMatches, fetchMatchById, fetchMomentumMatches } from "../api/match";
 
 export function useMatches() {
   return useQuery<Match[]>({
     queryKey: ["matches"],
-    queryFn: fetchMatches,
+    queryFn: () => fetchMatches(),
     staleTime: 60_000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -29,11 +29,21 @@ export function useMatch(id: string | undefined) {
   });
 }
 
-export function useMomentumMatches() {
+export function useMomentumMatches(filters: MatchFilters = {}) {
   return useQuery<Match[]>({
-    queryKey: ["matches", "momentum"],
-    queryFn: fetchMomentumMatches,
+    queryKey: ["matches", "momentum", filters],
+    queryFn: () => fetchMomentumMatches(filters),
     staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
+export function useMatchesFiltered(filters: MatchFilters) {
+  return useQuery<Match[]>({
+    queryKey: ["matches", filters],
+    queryFn: () => fetchMatches(filters),
+    staleTime: 30_000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });

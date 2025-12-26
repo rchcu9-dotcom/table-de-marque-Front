@@ -88,7 +88,13 @@ export default function MatchSummaryGrid({ matches, currentMatchId, onSelect, fo
                   <span>{m.scoreB}</span>
                 </span>
               ) : (
-                <Badge color={statusBadgeColor[m.status]}>A jouer</Badge>
+                <Badge color={statusBadgeColor[m.status]}>
+                  {m.status === "planned"
+                    ? "A venir"
+                    : m.status === "ongoing"
+                    ? "En cours"
+                    : "Terminé"}
+                </Badge>
               )}
             </div>
           );

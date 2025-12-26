@@ -9,6 +9,7 @@ type Props = {
   testIdPrefix?: string;
   getCardClassName?: (match: Match) => string;
   centered?: boolean;
+  withDiagonalBg?: boolean;
 };
 
 const statusColors: Record<Match["status"], string> = {
@@ -18,6 +19,14 @@ const statusColors: Record<Match["status"], string> = {
   deleted: "bg-slate-700 text-slate-200",
 };
 
+function winnerClass(match: Match, side: "A" | "B") {
+  if (match.status !== "finished") return "text-slate-100";
+  if (match.scoreA === null || match.scoreB === null) return "text-slate-100";
+  if (match.scoreA === match.scoreB) return "text-slate-100";
+  const isWinner = side === "A" ? match.scoreA > match.scoreB : match.scoreB > match.scoreA;
+  return isWinner ? "text-emerald-300" : "text-slate-100";
+}
+
 export default function HorizontalMatchSlider({
   matches,
   currentMatchId,
@@ -25,17 +34,22 @@ export default function HorizontalMatchSlider({
   testIdPrefix = "poule-slider-card",
   getCardClassName,
   centered = false,
+  withDiagonalBg = false,
 }: Props) {
   if (!matches || matches.length === 0) return null;
 
   const sliderRef = React.useRef<HTMLDivElement | null>(null);
   const cardRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
 
-  const formatDateTime = (iso: string) => {
-    const d = new Date(iso);
-    const day = d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const formatInfo = (match: Match) => {
+    const d = new Date(match.date);
+    const day = d.toLocaleDateString("fr-FR", { weekday: "short" });
     const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-    return `${day} ${time}`;
+    const label = match.pouleName || match.pouleCode || "";
+    const isScored = (match.status === "finished" || match.status === "ongoing") && match.scoreA !== null && match.scoreB !== null;
+    const headerPrimary = isScored ? `${match.scoreA} - ${match.scoreB}` : time;
+    const headerSecondary = isScored ? "" : label ? `${label} • ${day}` : day;
+    return { headerPrimary, headerSecondary };
   };
 
   const selectedBorder = (m: Match) => {
@@ -67,44 +81,55 @@ export default function HorizontalMatchSlider({
             ref={(el) => {
               cardRefs.current[m.id] = el;
             }}
-            className={`snap-center min-w-[220px] max-w-[240px] flex-shrink-0 rounded-2xl border border-slate-800 bg-slate-900/70 p-3 shadow-inner shadow-slate-950 cursor-pointer hover:-translate-y-0.5 transition ${
+            className={`relative overflow-hidden snap-center min-w-[220px] max-w-[240px] flex-shrink-0 rounded-2xl border border-slate-800 bg-slate-900/70 p-3 shadow-inner shadow-slate-950 cursor-pointer hover:-translate-y-0.5 transition ${
               m.id === currentMatchId ? selectedBorder(m) : ""
             } ${m.status === "ongoing" ? "live-pulse-card" : ""} ${getCardClassName ? getCardClassName(m) : ""}`}
             onClick={() => onSelect?.(m.id)}
           >
-            <div className="flex items-center justify-end text-xs text-slate-400">
-              <span
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] ${statusColors[m.status]}`}
-              >
-                {m.status === "planned" && "Planifie"}
-                {m.status === "ongoing" && "En cours"}
-                {m.status === "finished" && "Termine"}
-                {m.status === "deleted" && "Supprime"}
-              </span>
+            {withDiagonalBg && (
+              <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+                <div
+                  className="absolute inset-y-0 left-0 w-1/3 opacity-20"
+                  style={{
+                    backgroundImage: m.teamALogo ? `url(${m.teamALogo})` : undefined,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    maskImage: "linear-gradient(90deg, rgba(0,0,0,0.75), rgba(0,0,0,0))",
+                    WebkitMaskImage: "linear-gradient(90deg, rgba(0,0,0,0.75), rgba(0,0,0,0))",
+                    transform: "skewX(-10deg)",
+                    transformOrigin: "left",
+                  }}
+                />
+                <div className="absolute inset-y-0 left-1/3 right-1/3 pointer-events-none" />
+                <div
+                  className="absolute inset-y-0 right-0 w-1/3 opacity-20"
+                  style={{
+                    backgroundImage: m.teamBLogo ? `url(${m.teamBLogo})` : undefined,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    maskImage: "linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,0.75))",
+                    WebkitMaskImage: "linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,0.75))",
+                    transform: "skewX(-10deg)",
+                    transformOrigin: "right",
+                  }}
+                />
+              </div>
+            )}
+            <div className="text-sm font-semibold text-slate-100 text-center">
+              {formatInfo(m).headerPrimary}
             </div>
-            <div className="mt-2 text-sm font-semibold text-slate-100 text-center">
-              {formatDateTime(m.date)}
-            </div>
+            {formatInfo(m).headerSecondary && (
+              <div className="text-xs text-slate-400 text-center">{formatInfo(m).headerSecondary}</div>
+            )}
             <div className="mt-3 flex items-center justify-between gap-2">
               <HexBadge name={m.teamA} imageUrl={m.teamALogo ?? undefined} size={40} />
               <div className="flex-1 text-center">
-                <div className="text-[13px] font-semibold text-slate-100">{m.teamA}</div>
+                <div className={`text-[13px] font-semibold ${winnerClass(m, "A")}`}>{m.teamA}</div>
                 <div className="text-[11px] text-slate-500">vs</div>
-                <div className="text-[13px] font-semibold text-slate-100">{m.teamB}</div>
+                <div className={`text-[13px] font-semibold ${winnerClass(m, "B")}`}>{m.teamB}</div>
               </div>
               <HexBadge name={m.teamB} imageUrl={m.teamBLogo ?? undefined} size={40} />
             </div>
-            {(m.status === "ongoing" || m.status === "finished") &&
-              m.scoreA !== null &&
-              m.scoreB !== null && (
-              <div className="mt-3 flex items-center justify-center">
-                  <span className={`inline-flex items-center gap-1 rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-100 ${m.status === "ongoing" ? "live-pulse-card" : ""}`}>
-                    <span>{m.scoreA}</span>
-                    <span className="text-slate-500">-</span>
-                    <span>{m.scoreB}</span>
-                  </span>
-                </div>
-              )}
           </div>
         ))}
       </div>

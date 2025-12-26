@@ -1,28 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  fetchClassementByMatch,
-  fetchClassementByPoule,
-  type PouleClassement,
-} from "../api/classement";
+import type { PouleClassement } from "../api/classement";
+import { fetchClassementByMatch, fetchClassementByPoule } from "../api/classement";
 
-const REFRESH_MS = 60_000;
-
-export function useClassementByPoule(code: string | undefined) {
+export function useClassement(code: string, phase?: string) {
   return useQuery<PouleClassement>({
-    queryKey: ["classement", "poule", code],
-    queryFn: () => fetchClassementByPoule(code!),
+    queryKey: ["classement", code, phase],
+    queryFn: () => fetchClassementByPoule(code, phase),
     enabled: !!code,
-    staleTime: REFRESH_MS,
-    refetchInterval: REFRESH_MS,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 }
 
-export function useClassementForMatch(id: string | undefined) {
+export function useClassementForMatch(matchId: string | undefined) {
   return useQuery<PouleClassement>({
-    queryKey: ["classement", "match", id],
-    queryFn: () => fetchClassementByMatch(id!),
-    enabled: !!id,
-    staleTime: REFRESH_MS,
-    refetchInterval: REFRESH_MS,
+    queryKey: ["classement", "match", matchId],
+    queryFn: () => fetchClassementByMatch(matchId!),
+    enabled: !!matchId,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
   });
 }

@@ -8,18 +8,22 @@ import HexBadge from "../components/ds/HexBadge";
 import DataTable from "../components/collections/DataTable";
 import HorizontalMatchSlider from "../components/collections/HorizontalMatchSlider";
 import MatchSummaryGrid from "../components/collections/MatchSummaryGrid";
-import { useClassementForMatch } from "../hooks/useClassement";
+import { useClassement } from "../hooks/useClassement";
 
 export default function MatchDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data, isLoading, isError } = useMatch(id);
   const { data: allMatches } = useMatches();
+  const classementKey = React.useMemo(
+    () => (data?.pouleCode || data?.pouleName || "").trim(),
+    [data],
+  );
   const {
     data: classement,
     isLoading: isClassementLoading,
     isError: isClassementError,
-  } = useClassementForMatch(id);
+  } = useClassement(classementKey);
 
   const pouleKey = (data?.pouleName || data?.pouleCode || "").trim().toLowerCase();
   const pouleMatches = React.useMemo(() => {
@@ -54,9 +58,9 @@ export default function MatchDetailPage() {
       : null;
 
   const statusLabels: Record<typeof data.status, string> = {
-    planned: "Planifie",
+    planned: "A venir",
     ongoing: "En cours",
-    finished: "Termine",
+    finished: "Terminé",
     deleted: "Supprime",
   };
   const statusColors: Record<typeof data.status, "success" | "muted" | "warning" | "default" | "info"> =
@@ -69,25 +73,69 @@ export default function MatchDetailPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-center gap-6">
-        <HexBadge name={data.teamA} imageUrl={data.teamALogo ?? undefined} size={64} />
+      <div className="sticky top-16 md:top-24 z-40 bg-slate-950/90 backdrop-blur border-b border-slate-800 py-3">
+        <div className="flex items-center justify-center gap-6">
+          <button
+            className="transition hover:-translate-y-0.5"
+            onClick={() => navigate(`/teams/${data.teamA}`)}
+          >
+            <HexBadge name={data.teamA} imageUrl={data.teamALogo ?? undefined} size={64} />
+        </button>
         <div className="flex flex-col items-center text-center">
           <div className="text-xs uppercase text-slate-500">Match</div>
           <div className="text-2xl font-semibold">
-            <span className={winner === "A" ? "text-emerald-300 font-semibold" : ""}>
+            <button
+              className={`hover:underline transition ${winner === "A" ? "text-emerald-300 font-semibold" : ""}`}
+              onClick={() => navigate(`/teams/${data.teamA}`)}
+            >
               {data.teamA}
-            </span>{" "}
+            </button>{" "}
             vs{" "}
-            <span className={winner === "B" ? "text-emerald-300 font-semibold" : ""}>
+            <button
+              className={`hover:underline transition ${winner === "B" ? "text-emerald-300 font-semibold" : ""}`}
+              onClick={() => navigate(`/teams/${data.teamB}`)}
+            >
               {data.teamB}
-            </span>
+            </button>
           </div>
         </div>
-        <HexBadge name={data.teamB} imageUrl={data.teamBLogo ?? undefined} size={64} />
+        <button
+          className="transition hover:-translate-y-0.5"
+          onClick={() => navigate(`/teams/${data.teamB}`)}
+          >
+            <HexBadge name={data.teamB} imageUrl={data.teamBLogo ?? undefined} size={64} />
+          </button>
+        </div>
       </div>
 
       <Card className={data.status === "ongoing" ? "live-pulse-card" : ""}>
-        <div className="space-y-3 text-sm text-slate-200 flex flex-col items-center text-center">
+        <div className="relative overflow-hidden space-y-3 text-sm text-slate-200 flex flex-col items-center text-center">
+          <div className="absolute inset-0 pointer-events-none">
+            <div
+              className="absolute inset-y-0 left-0 w-1/3 opacity-15"
+              style={{
+                backgroundImage: data.teamALogo ? `url(${data.teamALogo})` : undefined,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                maskImage: "linear-gradient(90deg, rgba(0,0,0,0.75), rgba(0,0,0,0))",
+                WebkitMaskImage: "linear-gradient(90deg, rgba(0,0,0,0.75), rgba(0,0,0,0))",
+                transform: "skewX(-10deg)",
+                transformOrigin: "left",
+              }}
+            />
+            <div
+              className="absolute inset-y-0 right-0 w-1/3 opacity-15"
+              style={{
+                backgroundImage: data.teamBLogo ? `url(${data.teamBLogo})` : undefined,
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                maskImage: "linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,0.75))",
+                WebkitMaskImage: "linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,0.75))",
+                transform: "skewX(-10deg)",
+                transformOrigin: "right",
+              }}
+            />
+          </div>
           <div className="text-base">{new Date(data.date).toLocaleString()}</div>
           {(data.pouleName || data.pouleCode) && (
             <div className="text-xs text-slate-400">
@@ -156,11 +204,8 @@ export default function MatchDetailPage() {
 
       <Card data-testid="classement-section">
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="text-base font-semibold text-slate-100">Classement</div>
-            <div className="text-xs text-slate-500">
-              Actualisation auto (60s)
-            </div>
+          <div className="text-base font-semibold text-slate-100">
+            Classement {classement?.pouleName ? `- ${classement.pouleName}` : ""}
           </div>
 
           {isClassementLoading && (
@@ -184,20 +229,26 @@ export default function MatchDetailPage() {
                 {
                   key: "name",
                   label: "Equipe",
-                  render: (_value, item) => (
-                    <div className="flex items-center gap-3">
-                      {item.logoUrl ? (
-                        <img
-                          src={item.logoUrl}
-                          alt={item.name}
-                          className="h-6 w-6 rounded-full object-cover bg-slate-800"
-                        />
-                      ) : (
-                        <div className="h-6 w-6 rounded-full bg-slate-800" />
-                      )}
-                      <span>{item.name}</span>
-                    </div>
-                  ),
+                  render: (_value, item) => {
+                    const target = (item as any).id ?? item.name;
+                    return (
+                      <button
+                        onClick={() => navigate(`/teams/${target}`)}
+                        className="flex items-center gap-3 hover:underline transition text-left"
+                      >
+                        {item.logoUrl ? (
+                          <img
+                            src={item.logoUrl}
+                            alt={item.name}
+                            className="h-6 w-6 rounded-full object-cover bg-slate-800"
+                          />
+                        ) : (
+                          <div className="h-6 w-6 rounded-full bg-slate-800" />
+                        )}
+                        <span>{item.name}</span>
+                      </button>
+                    );
+                  },
                 },
                 { key: "points", label: "Pts" },
                 { key: "victoires", label: "V" },
@@ -224,6 +275,7 @@ export default function MatchDetailPage() {
               matches={pouleMatches}
               currentMatchId={data.id}
               onSelect={(targetId) => navigate(`/matches/${targetId}`)}
+              withDiagonalBg
             />
           </div>
         </Card>
