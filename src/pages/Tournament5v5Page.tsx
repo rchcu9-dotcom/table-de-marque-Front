@@ -111,9 +111,27 @@ export default function Tournament5v5Page() {
         style={{ top: `${layout.topOffset}px` }}
       >
         <div className="max-w-6xl mx-auto space-y-3" ref={topBlockRef}>
-          <section className="rounded-xl border border-slate-800 bg-slate-900 p-4 shadow-md shadow-slate-950">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <h2 className="text-lg font-semibold text-white">Tournoi 5v5</h2>
+          <section className="relative overflow-hidden rounded-xl border border-slate-800 bg-slate-900 p-4 shadow-md shadow-slate-950">
+            <div
+              className="pointer-events-none absolute inset-0 opacity-10"
+              style={{
+                backgroundImage:
+                  "url(https://drive.google.com/thumbnail?id=1vIehJkzRKfVUUxP86EzX7jaTpD2Wr4AO&sz=w256)",
+                backgroundRepeat: "no-repeat",
+                backgroundPosition: "right center",
+                backgroundSize: "160px",
+              }}
+            />
+            <div className="flex items-center justify-between flex-wrap gap-3 relative">
+              <div className="flex items-center gap-2">
+                <img
+                  src="https://drive.google.com/thumbnail?id=1vIehJkzRKfVUUxP86EzX7jaTpD2Wr4AO&sz=w64"
+                  alt="Tournoi 5v5"
+                  className="h-10 w-10 rounded-full object-cover"
+                  loading="lazy"
+                />
+                <h2 className="text-lg font-semibold text-white">Tournoi 5v5</h2>
+              </div>
               <div className="flex items-center gap-2 text-xs font-semibold">
                 <button
                   className={`rounded-full border px-3 py-1 ${
