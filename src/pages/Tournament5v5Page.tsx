@@ -122,7 +122,7 @@ export default function Tournament5v5Page() {
                 backgroundSize: "160px",
               }}
             />
-            <div className="flex items-center justify-between flex-wrap gap-3 relative">
+            <div className="flex flex-col items-start gap-3 relative">
               <div className="flex items-center gap-2">
                 <img
                   src="https://drive.google.com/thumbnail?id=1vIehJkzRKfVUUxP86EzX7jaTpD2Wr4AO&sz=w64"
@@ -132,7 +132,7 @@ export default function Tournament5v5Page() {
                 />
                 <h2 className="text-lg font-semibold text-white">Tournoi 5v5</h2>
               </div>
-              <div className="flex items-center gap-2 text-xs font-semibold">
+              <div className="flex items-center gap-2 text-xs font-semibold flex-wrap">
                 <button
                   className={`rounded-full border px-3 py-1 ${
                     showBrassage

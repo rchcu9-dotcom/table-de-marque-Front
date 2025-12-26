@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { useChallengeAll } from "../hooks/useChallengeAll";
 import { useTeams } from "../hooks/useTeams";
 import type { ChallengeAttempt as Attempt } from "../api/challenge";
@@ -75,7 +75,7 @@ export default function ChallengePage() {
   const renderMetrics = (m: Attempt) => {
     if (m.metrics.type === "vitesse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s`;
     if (m.metrics.type === "tir") return `Points: ${m.metrics.totalPoints} (${m.metrics.tirs.join(", ")})`;
-    if (m.metrics.type === "glisse_crosse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s, pénalités: ${m.metrics.penalites}`;
+    if (m.metrics.type === "glisse_crosse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s, penalites: ${m.metrics.penalites}`;
     return "";
   };
 
@@ -132,14 +132,14 @@ export default function ChallengePage() {
           <span>{title}</span>
         </h2>
         {attempts.length === 0 ? (
-          <p className="text-slate-300 text-xs">Aucune donnée.</p>
+          <p className="text-slate-300 text-xs">Aucune donnee.</p>
         ) : (
           <div className="overflow-auto">
             <table className="min-w-full text-xs text-slate-100">
               <thead className="text-[11px] uppercase text-slate-400">
                 <tr>
                   <th className="py-1 pr-3 text-left">Joueur</th>
-                  <th className="py-1 text-right">Résultat</th>
+                <th className="py-1 text-right">Resultat</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 text-[12px]">
@@ -254,7 +254,7 @@ export default function ChallengePage() {
       <div className="absolute left-0 right-0 px-4" style={{ top: `${layout.topOffset}px` }}>
         <div
           ref={headerCardRef}
-          className="relative overflow-hidden max-w-6xl mx-auto rounded-xl border border-slate-800 bg-slate-900/90 p-3 flex flex-wrap items-center justify-between gap-2 shadow-md shadow-slate-950"
+          className="relative overflow-hidden max-w-6xl mx-auto rounded-xl border border-slate-800 bg-slate-900/90 p-4 shadow-md shadow-slate-950"
         >
           <div
             className="pointer-events-none absolute inset-0 opacity-10"
@@ -266,7 +266,7 @@ export default function ChallengePage() {
               backgroundSize: "160px",
             }}
           />
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="relative flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <img
                 src="https://drive.google.com/thumbnail?id=1BlOlsgBPdgob1SgoN3HXcs-PEcUM8TIh&sz=w64"
@@ -274,29 +274,31 @@ export default function ChallengePage() {
                 className="h-10 w-10 rounded-full object-cover"
                 loading="lazy"
               />
-              <h1 className="text-xl font-semibold">Challenge</h1>
+              <h1 className="text-xl font-semibold text-white">Challenge</h1>
             </div>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Recherche joueur/équipe"
-              className="rounded-md border border-slate-700 bg-slate-900/80 px-3 py-1 text-sm text-slate-100"
-            />
-          </div>
-          <div className="flex items-center gap-2 text-xs font-semibold">
-            <button
-              className={`rounded-full border px-3 py-1 ${showEvaluation ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-200 border-slate-600"}`}
-              onClick={() => setShowEvaluation((v) => !v)}
-            >
-              Évaluation
-            </button>
-            <button
-              className={`rounded-full border px-3 py-1 ${showFinale ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-200 border-slate-600"}`}
-              onClick={() => setShowFinale((v) => !v)}
-            >
-              Finale
-            </button>
+            <div className="flex flex-col gap-2 max-w-xl">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Recherche joueur/equipe"
+                className="rounded-md border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm text-slate-100 w-full"
+              />
+              <div className="flex items-center gap-2 text-xs font-semibold flex-wrap">
+                <button
+                  className={`rounded-full border px-3 py-1 ${showEvaluation ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-200 border-slate-600"}`}
+                  onClick={() => setShowEvaluation((v) => !v)}
+                >
+                  Evaluation
+                </button>
+                <button
+                  className={`rounded-full border px-3 py-1 ${showFinale ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-200 border-slate-600"}`}
+                  onClick={() => setShowFinale((v) => !v)}
+                >
+                  Finale
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -313,10 +315,10 @@ export default function ChallengePage() {
             <>
               {showEvaluation && (
                 <section className="space-y-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-col">
-                      <h2 className="text-base font-semibold text-white">{evalLabel ? `Évaluation ${evalLabel}` : "Évaluation"}</h2>
-                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-col">
+                        <h2 className="text-base font-semibold text-white">{evalLabel ? `Evaluation ${evalLabel}` : "Evaluation"}</h2>
+                      </div>
                     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
                       <button
                         className={`rounded-full border px-3 py-1 ${showTop3 ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-200 border-slate-600"}`}
@@ -411,3 +413,6 @@ export default function ChallengePage() {
     </div>
   );
 }
+
+
+
