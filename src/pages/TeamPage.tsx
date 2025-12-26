@@ -400,14 +400,22 @@ function InlineMatchCard({
     isFinished || isLive
       ? `${match.scoreA ?? "-"} - ${match.scoreB ?? "-"}`
       : formatTimeLabel(match.date);
-  const scoreClass =
-    outcome === "success"
-      ? "text-emerald-300 font-semibold"
-      : outcome === "danger"
-        ? "text-rose-300 font-semibold"
-        : outcome === "warning"
-          ? "text-amber-300 font-semibold"
-          : "text-slate-200";
+  const scoreClassA =
+    isFinished && match.scoreA !== null && match.scoreB !== null
+      ? match.scoreA > match.scoreB
+        ? "text-emerald-300 font-semibold"
+        : match.scoreA < match.scoreB
+          ? "text-rose-300 font-semibold"
+          : "text-slate-200"
+      : "text-slate-100 font-semibold";
+  const scoreClassB =
+    isFinished && match.scoreA !== null && match.scoreB !== null
+      ? match.scoreB > match.scoreA
+        ? "text-emerald-300 font-semibold"
+        : match.scoreB < match.scoreA
+          ? "text-rose-300 font-semibold"
+          : "text-slate-200"
+      : "text-slate-100 font-semibold";
   const nameAClass =
     normalizeTeamName(match.teamA) === normalizeTeamName(focusTeam)
       ? "text-slate-50 font-semibold"
@@ -450,15 +458,39 @@ function InlineMatchCard({
       )}
 
       <div className="relative flex items-center gap-2">
-        <HexBadge name={match.teamA} size={20} imageUrl={match.teamALogo ?? undefined} />
-        <span className={nameAClass}>{match.teamA}</span>
-
-        <div className="flex-1 flex items-center justify-center min-w-[96px]">
-          <span className={`text-sm text-center ${scoreClass}`}>{scoreText}</span>
+        <div className="flex items-center gap-1 min-w-0 justify-start flex-1">
+          {match.teamALogo ? (
+            <img src={match.teamALogo} alt={match.teamA} className="h-5 w-5 rounded-full object-cover" />
+          ) : (
+            <HexBadge name={match.teamA} size={20} />
+          )}
+          <span className={`text-[12px] leading-tight font-normal truncate block whitespace-nowrap ${nameAClass}`}>{match.teamA}</span>
         </div>
 
-        <span className={nameBClass}>{match.teamB}</span>
-        <HexBadge name={match.teamB} size={20} imageUrl={match.teamBLogo ?? undefined} />
+        <div className="flex-none w-20 text-center">
+          {isFinished || isLive ? (
+            <span className="text-[12px] leading-tight font-semibold text-slate-100 whitespace-nowrap">
+              <span className={scoreClassA}>{match.scoreA}</span>
+              <span className="mx-1 text-slate-400">-</span>
+              <span className={scoreClassB}>{match.scoreB}</span>
+            </span>
+          ) : (
+            <span className="text-[12px] leading-tight font-semibold text-slate-100 whitespace-nowrap">{scoreText}</span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1 justify-end min-w-0 flex-1">
+          <span
+            className={`text-[12px] leading-tight font-normal truncate text-right block whitespace-nowrap ${nameBClass}`}
+          >
+            {match.teamB}
+          </span>
+          {match.teamBLogo ? (
+            <img src={match.teamBLogo} alt={match.teamB} className="h-5 w-5 rounded-full object-cover" />
+          ) : (
+            <HexBadge name={match.teamB} size={20} />
+          )}
+        </div>
       </div>
     </div>
   );
