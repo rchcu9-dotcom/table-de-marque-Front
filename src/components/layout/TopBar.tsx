@@ -75,9 +75,17 @@ function MobileMenu({ onSelect }: { onSelect: (path: string) => void }) {
               key={tab.id}
               type="button"
               onClick={() => onSelect(tab.path)}
-              className="text-left rounded-lg px-3 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-800/70 border border-slate-800"
+              className="text-left rounded-lg px-3 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-800/70 border border-slate-800 flex items-center gap-2"
             >
-              {tab.label}
+              {tab.iconUrl ? (
+                <img
+                  src={tab.iconUrl}
+                  alt={tab.label}
+                  className="h-5 w-5 object-contain"
+                  loading="lazy"
+                />
+              ) : null}
+              <span>{tab.label}</span>
             </button>
           ))}
         </nav>

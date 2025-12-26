@@ -81,6 +81,9 @@ export default function ChallengePage() {
 
   const renderTable = (title: string, attempts: Attempt[], opts?: { highlightTop?: number; rankOnly?: boolean }) => {
     const needsRanking = Boolean(opts?.highlightTop || opts?.rankOnly);
+    const isVitesse = title.toLowerCase().includes("vitesse");
+    const isTir = title.toLowerCase().includes("tir");
+    const isGlisse = title.toLowerCase().includes("glisse");
     const rows = needsRanking
       ? [...attempts].sort((a, b) => {
           const va =
@@ -101,7 +104,33 @@ export default function ChallengePage() {
 
     return (
       <section className="rounded-lg border border-slate-800 bg-slate-900/70 p-3">
-        <h2 className="text-sm font-semibold mb-2 text-white">{title}</h2>
+        <h2 className="text-sm font-semibold mb-2 text-white flex items-center gap-2">
+          {isVitesse ? (
+            <img
+              src="https://drive.google.com/thumbnail?id=1rg6fHxVUWLBB5N5B27lTDW8gp0Pl9bxj&sz=w64"
+              alt="Vitesse"
+              className="h-5 w-5 object-contain"
+              loading="lazy"
+            />
+          ) : null}
+          {isTir ? (
+            <img
+              src="https://drive.google.com/thumbnail?id=1Q5PEpy7rvatLWo9thWj9TFuyjJqEFqRx&sz=w64"
+              alt="Adresse au tir"
+              className="h-5 w-5 object-contain"
+              loading="lazy"
+            />
+          ) : null}
+          {isGlisse ? (
+            <img
+              src="https://drive.google.com/thumbnail?id=188Qsqx1zJv0WdYqJzrVCCIN-ufK6MkQe&sz=w64"
+              alt="Glisse & Crosse"
+              className="h-5 w-5 object-contain"
+              loading="lazy"
+            />
+          ) : null}
+          <span>{title}</span>
+        </h2>
         {attempts.length === 0 ? (
           <p className="text-slate-300 text-xs">Aucune donnée.</p>
         ) : (
@@ -225,10 +254,28 @@ export default function ChallengePage() {
       <div className="absolute left-0 right-0 px-4" style={{ top: `${layout.topOffset}px` }}>
         <div
           ref={headerCardRef}
-          className="max-w-6xl mx-auto rounded-xl border border-slate-800 bg-slate-900/90 p-3 flex flex-wrap items-center justify-between gap-2 shadow-md shadow-slate-950"
+          className="relative overflow-hidden max-w-6xl mx-auto rounded-xl border border-slate-800 bg-slate-900/90 p-3 flex flex-wrap items-center justify-between gap-2 shadow-md shadow-slate-950"
         >
+          <div
+            className="pointer-events-none absolute inset-0 opacity-10"
+            style={{
+              backgroundImage:
+                "url(https://drive.google.com/thumbnail?id=1BlOlsgBPdgob1SgoN3HXcs-PEcUM8TIh&sz=w256)",
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "right center",
+              backgroundSize: "160px",
+            }}
+          />
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-xl font-semibold">Challenge</h1>
+            <div className="flex items-center gap-2">
+              <img
+                src="https://drive.google.com/thumbnail?id=1BlOlsgBPdgob1SgoN3HXcs-PEcUM8TIh&sz=w64"
+                alt="Challenge"
+                className="h-6 w-6 rounded-full object-cover"
+                loading="lazy"
+              />
+              <h1 className="text-xl font-semibold">Challenge</h1>
+            </div>
             <input
               type="text"
               value={searchTerm}
