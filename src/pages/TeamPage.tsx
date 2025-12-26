@@ -512,14 +512,21 @@ function PlayersGrid({
   }
   const sorted = [...players].sort((a, b) => a.numero - b.numero);
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+    <div className="space-y-2">
       {sorted.map((p) => (
-        <div key={p.id} className="rounded-lg border border-slate-800 bg-slate-950/60 p-3">
-          <div className="flex items-center justify-between text-slate-100">
-            <span className="text-lg font-bold">#{p.numero}</span>
-            <span className="text-xs uppercase text-slate-400">{p.poste}</span>
+        <div
+          key={p.id}
+          className="rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 flex items-center justify-between gap-3"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-800 text-white font-bold text-sm">
+              {p.numero}
+            </span>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-white truncate">{p.name}</div>
+              <div className="text-xs uppercase text-slate-400">{p.poste}</div>
+            </div>
           </div>
-          <div className="mt-1 text-sm font-semibold text-white">{p.name}</div>
         </div>
       ))}
     </div>
