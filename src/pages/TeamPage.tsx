@@ -102,15 +102,6 @@ function focusClass(name: string, focusTeam: string) {
     : "text-slate-400";
 }
 
-function winnerHighlight(match: Match, team: "A" | "B") {
-  if (match.status !== "finished" || match.scoreA === null || match.scoreB === null) {
-    return "text-slate-200";
-  }
-  if (match.scoreA === match.scoreB) return "text-slate-200";
-  const isWinner = team === "A" ? match.scoreA > match.scoreB : match.scoreB > match.scoreA;
-  return isWinner ? "text-emerald-300 font-semibold" : "text-slate-200";
-}
-
 function pickTeamLogo(matches: Match[], focusTeam: string, fallback?: string | null) {
   const needle = normalizeTeamName(focusTeam);
   for (const m of matches) {
@@ -418,9 +409,13 @@ function InlineMatchCard({
           ? "text-amber-300 font-semibold"
           : "text-slate-200";
   const nameAClass =
-    `${winnerHighlight(match, "A")} ${normalizeTeamName(match.teamA) === normalizeTeamName(focusTeam) ? "text-slate-50 font-semibold" : ""}`.trim();
+    normalizeTeamName(match.teamA) === normalizeTeamName(focusTeam)
+      ? "text-slate-50 font-semibold"
+      : "text-slate-200";
   const nameBClass =
-    `${winnerHighlight(match, "B")} ${normalizeTeamName(match.teamB) === normalizeTeamName(focusTeam) ? "text-slate-50 font-semibold" : ""}`.trim();
+    normalizeTeamName(match.teamB) === normalizeTeamName(focusTeam)
+      ? "text-slate-50 font-semibold"
+      : "text-slate-200";
 
   return (
     <div
