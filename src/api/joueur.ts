@@ -4,6 +4,8 @@ export type Joueur = {
   id: string;
   equipeId: string;
   name: string;
+  prenom?: string;
+  nom?: string;
   numero: number;
   poste: "Att" | "Def" | "Gar";
 };

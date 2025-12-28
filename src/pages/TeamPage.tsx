@@ -26,6 +26,10 @@ const ICONS = {
   classe: "https://drive.google.com/thumbnail?id=1S3WIVUjU9DA0-4eHOg2tEIjBtAmcK9Dr&sz=w64",
 };
 
+function displayName(p: { prenom?: string; nom?: string; name?: string; id?: string }) {
+  return `${p.prenom ?? ""} ${p.nom ?? ""}`.trim() || p.name || p.id || "Joueur";
+}
+
 function normalizeTeamName(team?: string) {
   return (team ?? "").trim().toLowerCase();
 }
@@ -282,7 +286,7 @@ export default function TeamPage() {
                   title="Vitesse (2 meilleurs)"
                   icon={ICONS.vitesse}
                   players={players.data?.slice(0, 2).map((p, idx) => ({
-                    name: p.name ?? p.id ?? "Joueur",
+                    name: displayName(p),
                     numero: p.numero,
                     poste: p.poste,
                     resultLabel: `${27 + idx * 0.4}s`,
@@ -293,7 +297,7 @@ export default function TeamPage() {
                   title="Adresse au tir (2 meilleurs)"
                   icon={ICONS.tir}
                   players={players.data?.slice(0, 2).map((p, idx) => ({
-                    name: p.name ?? p.id ?? "Joueur",
+                    name: displayName(p),
                     numero: p.numero,
                     poste: p.poste,
                     resultLabel: `${20 - idx * 3} pts`,
@@ -304,7 +308,7 @@ export default function TeamPage() {
                   title="Glisse & agilité (2 meilleurs)"
                   icon={ICONS.glisse}
                   players={players.data?.slice(0, 2).map((p, idx) => ({
-                    name: p.name ?? p.id ?? "Joueur",
+                    name: displayName(p),
                     numero: p.numero,
                     poste: p.poste,
                     resultLabel: `${30 + idx * 0.8}s`,
@@ -416,7 +420,7 @@ function PlayersGrid({ players, loading }: { players?: any[]; loading: boolean }
             {p.numero ?? "?"}
           </div>
           <div className="flex flex-col">
-            <span className="text-slate-100 font-semibold text-sm">{`${p.prenom ?? ""} ${p.nom ?? ""}`.trim() || p.id || "Joueur"}</span>
+            <span className="text-slate-100 font-semibold text-sm">{displayName(p)}</span>
             <span className="text-xs text-slate-400">{p.poste ?? "N/A"}</span>
           </div>
         </Card>
@@ -510,6 +514,8 @@ function HighlightBlock({ title, icon, players }: { title: string; icon?: string
     </Card>
   );
 }
+
+
 
 
 
