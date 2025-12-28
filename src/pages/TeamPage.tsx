@@ -367,41 +367,89 @@ function InlineMatchCard({
   focusTeam: string;
   onSelect: (id: string) => void;
 }) {
-  const winner = computeWinner(match);
+  const d = new Date(match.date);
+  const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const isScored =
+    (match.status === "finished" || match.status === "ongoing") &&
+    match.scoreA !== null &&
+    match.scoreB !== null;
+
+  const winnerClass = (side: "A" | "B") => {
+    if (match.status !== "finished" || match.scoreA === null || match.scoreB === null) return "text-slate-200";
+    if (match.scoreA === match.scoreB) return "text-slate-200";
+    const win = side === "A" ? match.scoreA > match.scoreB : match.scoreB > match.scoreA;
+    return win ? "text-emerald-300" : "text-slate-300";
+  };
+
+  const focusHighlight = (team: string) => (normalizeTeamName(team) === normalizeTeamName(focusTeam) ? "font-semibold" : "");
+
   return (
-    <button
-      type="button"
-      className={`w-full rounded-lg border px-3 py-2 text-left hover:border-slate-500 transition ${match.status === "ongoing" ? "border-yellow-400 bg-yellow-500/10 animate-pulse" : "border-slate-800 bg-slate-900/70"}`}
+    <div
+      className={`relative overflow-hidden rounded-lg border bg-slate-900/80 px-3 py-1 shadow-inner shadow-slate-950 cursor-pointer transition ${
+        match.status === "ongoing" ? "border-amber-400 live-pulse-card ring-2 ring-amber-300/60" : "border-slate-800"
+      }`}
       onClick={() => onSelect(match.id)}
     >
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <HexBadge name={match.teamA} imageUrl={match.teamALogo ?? undefined} size={28} />
-          <span className={`${focusClass(match.teamA, focusTeam)} text-sm truncate`}>{match.teamA}</span>
-        </div>
-        {formatScore(match, focusTeam)}
-        <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-          <span className={`${focusClass(match.teamB, focusTeam)} text-sm truncate text-right`}>{match.teamB}</span>
-          <HexBadge name={match.teamB} imageUrl={match.teamBLogo ?? undefined} size={28} />
-        </div>
+      <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-lg opacity-25">
+        <div
+          className="absolute inset-y-0 left-0 w-1/3"
+          style={{
+            backgroundImage: match.teamALogo ? `url(${match.teamALogo})` : undefined,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            maskImage: "linear-gradient(90deg, rgba(0,0,0,0.75), rgba(0,0,0,0))",
+            WebkitMaskImage: "linear-gradient(90deg, rgba(0,0,0,0.75), rgba(0,0,0,0))",
+            transform: "skewX(-10deg)",
+            transformOrigin: "left",
+          }}
+        />
+        <div className="absolute inset-y-0 left-1/3 right-1/3" />
+        <div
+          className="absolute inset-y-0 right-0 w-1/3"
+          style={{
+            backgroundImage: match.teamBLogo ? `url(${match.teamBLogo})` : undefined,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            maskImage: "linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,0.75))",
+            WebkitMaskImage: "linear-gradient(90deg, rgba(0,0,0,0), rgba(0,0,0,0.75))",
+            transform: "skewX(-10deg)",
+            transformOrigin: "right",
+          }}
+        />
       </div>
-      <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1">
-        <span>{match.pouleName ?? match.pouleCode ?? "Poule"}</span>
-        <span>
-          {match.status === "planned"
-            ? formatDateTime(match.date)
-            : winner
-              ? "TerminÃ©"
-              : match.status === "ongoing"
-                ? "En cours"
-                : "PlannifiÃ©"}
-        </span>
-      </div>
-    </button>
-  );
-}
 
-function PlayersGrid({ players, loading }: { players?: any[]; loading: boolean }) {
+      <div className="relative flex items-center gap-2">
+        <div className="flex items-center gap-1 min-w-0 justify-start flex-1">
+          {match.teamALogo && <img src={match.teamALogo} alt={match.teamA} className="h-5 w-5 rounded-full object-cover" />}
+          <span
+            className={`text-[12px] leading-tight font-normal truncate block whitespace-nowrap ${winnerClass("A")} ${focusHighlight(match.teamA)}`}
+          >
+            {match.teamA}
+          </span>
+        </div>
+        <div className="flex-none w-20 text-center">
+          {isScored ? (
+            <span className="text-[12px] leading-tight font-semibold text-slate-100 whitespace-nowrap">
+              <span className={winnerClass("A")}>{match.scoreA}</span>
+              <span className="mx-1 text-slate-400">-</span>
+              <span className={winnerClass("B")}>{match.scoreB}</span>
+            </span>
+          ) : (
+            <span className="text-[12px] leading-tight font-semibold text-slate-100 whitespace-nowrap">{time}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-1 justify-end min-w-0 flex-1">
+          <span
+            className={`text-[12px] leading-tight font-normal truncate text-right block whitespace-nowrap ${winnerClass("B")} ${focusHighlight(match.teamB)}`}
+          >
+            {match.teamB}
+          </span>
+          {match.teamBLogo && <img src={match.teamBLogo} alt={match.teamB} className="h-5 w-5 rounded-full object-cover" />}
+        </div>
+      </div>
+    </div>
+  );
+}function PlayersGrid({ players, loading }: { players?: any[]; loading: boolean }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -514,6 +562,9 @@ function HighlightBlock({ title, icon, players }: { title: string; icon?: string
     </Card>
   );
 }
+
+
+
 
 
 
