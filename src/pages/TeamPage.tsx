@@ -5,51 +5,45 @@ import HexBadge from "../components/ds/HexBadge";
 import Badge from "../components/ds/Badge";
 import Card from "../components/ds/Card";
 import Spinner from "../components/ds/Spinner";
-import MatchSummaryGrid from "../components/collections/MatchSummaryGrid";
 import { useMatches } from "../hooks/useMatches";
 import { useTeams } from "../hooks/useTeams";
 import type { Match } from "../api/match";
 import { fetchClassementByPoule, type ClassementEntry } from "../api/classement";
 import { usePlayersByEquipe } from "../hooks/usePlayers";
 
-function formatDateLabel(date: string) {
-  const d = new Date(date);
-  return d.toLocaleDateString("fr-FR", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-}
+type RankedPlayer = {
+  name: string;
+  numero?: number | null;
+  poste?: string | null;
+  resultLabel: string;
+  icon?: string;
+};
 
-function formatDayTimeLabel(date: string) {
-  const d = new Date(date);
-  return d.toLocaleString("fr-FR", {
-    weekday: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function formatTimeLabel(date: string) {
-  const d = new Date(date);
-  return d.toLocaleTimeString("fr-FR", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+const ICONS = {
+  vitesse: "https://drive.google.com/thumbnail?id=1rg6fHxVUWLBB5N5B27lTDW8gp0Pl9bxj&sz=w64",
+  tir: "https://drive.google.com/thumbnail?id=1Q5PEpy7rvatLWo9thWj9TFuyjJqEFqRx&sz=w64",
+  glisse: "https://drive.google.com/thumbnail?id=188Qsqx1zJv0WdYqJzrVCCIN-ufK6MkQe&sz=w64",
+  classe: "https://drive.google.com/thumbnail?id=1S3WIVUjU9DA0-4eHOg2tEIjBtAmcK9Dr&sz=w64",
+};
 
 function normalizeTeamName(team?: string) {
   return (team ?? "").trim().toLowerCase();
 }
 
+function formatDay(date: string) {
+  return new Date(date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" });
+}
+
+function focusClass(name: string, focusTeam: string) {
+  return normalizeTeamName(name) === normalizeTeamName(focusTeam) ? "font-semibold text-slate-50" : "text-slate-400";
+}
+
 function computeForm(matches: Match[], team: string) {
   const finished = matches.filter((m) => m.status === "finished" && m.scoreA !== null && m.scoreB !== null);
   const ordered = [...finished].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
   let wins = 0;
   let losses = 0;
   let draws = 0;
-
   ordered.forEach((m) => {
     const isTeamA = normalizeTeamName(m.teamA) === normalizeTeamName(team);
     const scoreFor = isTeamA ? m.scoreA! : m.scoreB!;
@@ -58,22 +52,7 @@ function computeForm(matches: Match[], team: string) {
     else if (scoreFor < scoreAgainst) losses += 1;
     else draws += 1;
   });
-
   return { wins, losses, draws };
-}
-
-function getUpcoming(matches: Match[]) {
-  return [...matches]
-    .filter((m) => m.status === "planned")
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 5);
-}
-
-function getRecent(matches: Match[]) {
-  return [...matches]
-    .filter((m) => m.status === "ongoing" || m.status === "finished")
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 5);
 }
 
 function groupByDay(matches: Match[]) {
@@ -84,24 +63,6 @@ function groupByDay(matches: Match[]) {
   }, {});
 }
 
-function resultColor(match: Match, focusTeam: string): "success" | "danger" | "muted" | "warning" {
-  if (match.status === "ongoing") return "warning";
-  if (match.status !== "finished") return "muted";
-  if (match.scoreA === null || match.scoreB === null) return "muted";
-  const isTeamA = normalizeTeamName(match.teamA) === normalizeTeamName(focusTeam);
-  const scoreFor = isTeamA ? match.scoreA : match.scoreB;
-  const scoreAgainst = isTeamA ? match.scoreB : match.scoreA;
-  if (scoreFor > scoreAgainst) return "success";
-  if (scoreFor < scoreAgainst) return "danger";
-  return "muted";
-}
-
-function focusClass(name: string, focusTeam: string) {
-  return normalizeTeamName(name) === normalizeTeamName(focusTeam)
-    ? "font-semibold text-slate-50"
-    : "text-slate-400";
-}
-
 function pickTeamLogo(matches: Match[], focusTeam: string, fallback?: string | null) {
   const needle = normalizeTeamName(focusTeam);
   for (const m of matches) {
@@ -109,6 +70,33 @@ function pickTeamLogo(matches: Match[], focusTeam: string, fallback?: string | n
     if (normalizeTeamName(m.teamB) === needle && m.teamBLogo) return m.teamBLogo;
   }
   return fallback ?? undefined;
+}
+
+function formatScore(match: Match, focusTeam: string) {
+  const winner = computeWinner(match);
+  const loseColor = winner && normalizeTeamName(winner) !== normalizeTeamName(focusTeam) ? "text-red-300" : "";
+  const winColor = winner && normalizeTeamName(winner) === normalizeTeamName(focusTeam) ? "text-emerald-300" : "";
+  return match.scoreA !== null && match.scoreB !== null ? (
+    <div className="flex items-center gap-1 text-sm font-semibold text-slate-100 justify-center w-20">
+      <span className={normalizeTeamName(match.teamA) === normalizeTeamName(winner ?? "") ? winColor : loseColor}>{match.scoreA}</span>
+      <span className="text-slate-500">-</span>
+      <span className={normalizeTeamName(match.teamB) === normalizeTeamName(winner ?? "") ? winColor : loseColor}>{match.scoreB}</span>
+    </div>
+  ) : (
+    <div className="text-xs text-slate-300 w-20 text-center">
+      {new Date(match.date).toLocaleTimeString("fr-FR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}
+    </div>
+  );
+}
+
+function computeWinner(match: Match) {
+  if (match.status !== "finished") return null;
+  if (match.scoreA == null || match.scoreB == null) return null;
+  if (match.scoreA === match.scoreB) return null;
+  return match.scoreA > match.scoreB ? match.teamA : match.teamB;
 }
 
 export default function TeamPage() {
@@ -121,11 +109,7 @@ export default function TeamPage() {
   const filtered = React.useMemo(() => {
     if (!matches) return [];
     const needle = normalizeTeamName(teamName);
-    return matches.filter(
-      (m) =>
-        normalizeTeamName(m.teamA) === needle ||
-        normalizeTeamName(m.teamB) === needle,
-    );
+    return matches.filter((m) => normalizeTeamName(m.teamA) === needle || normalizeTeamName(m.teamB) === needle);
   }, [matches, teamName]);
 
   const sample = filtered[0];
@@ -141,9 +125,7 @@ export default function TeamPage() {
   const teamEntry: ClassementEntry | undefined = React.useMemo(() => {
     if (!classement.data) return undefined;
     const needle = normalizeTeamName(teamName);
-    return classement.data.equipes.find(
-      (e) => normalizeTeamName(e.name) === needle,
-    );
+    return classement.data.equipes.find((e) => normalizeTeamName(e.name) === needle);
   }, [classement.data, teamName]);
 
   const heroLogo = React.useMemo(
@@ -151,33 +133,21 @@ export default function TeamPage() {
     [filtered, sample, teamName],
   );
 
-  const upcoming = getUpcoming(filtered);
-  const recent = getRecent(filtered);
   const form = computeForm(filtered, teamName);
+
   const equipeKey = React.useMemo(() => {
     const needle = normalizeTeamName(teamName);
     const found = allTeams?.find(
       (t) => normalizeTeamName(t.name) === needle || normalizeTeamName(t.id) === needle,
     );
-    // On interroge l'API joueurs avec l'id court (nom court) pour matcher le seeder mock.
     return found?.id ?? teamName;
   }, [allTeams, teamName]);
   const players = usePlayersByEquipe(equipeKey || undefined);
 
   const grouped = React.useMemo(() => {
     const groups = groupByDay(filtered);
-    return Object.entries(groups).sort((a, b) => b[0].localeCompare(a[0]));
+    return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
   }, [filtered]);
-
-  const badgeContent = (match: Match) => {
-    if (match.status === "planned") {
-      return formatDayTimeLabel(match.date);
-    }
-    if (match.status === "finished" || match.status === "ongoing") {
-      return `${match.scoreA ?? "-"} - ${match.scoreB ?? "-"}`;
-    }
-    return "Indisponible";
-  };
 
   if (!teamName) {
     return (
@@ -198,7 +168,7 @@ export default function TeamPage() {
   if (isError || filtered.length === 0) {
     return (
       <div className="p-6 text-slate-100 space-y-4">
-        <p>Impossible de charger les données pour {teamName}.</p>
+        <p>Impossible de charger les donnÃ©es pour {teamName}.</p>
         <button
           className="text-sky-400 underline"
           onClick={() => navigate(-1)}
@@ -209,6 +179,14 @@ export default function TeamPage() {
       </div>
     );
   }
+
+  const rankingByPoule = classement.data?.equipes ?? [];
+  const logoFor = (name: string) => allTeams?.find((t) => normalizeTeamName(t.name) === normalizeTeamName(name))?.logoUrl;
+
+  const dayKeys = grouped.map(([day]) => day);
+  const jour1 = dayKeys[0];
+  const jour2 = dayKeys[1];
+  const jour3 = dayKeys[2];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100">
@@ -232,15 +210,17 @@ export default function TeamPage() {
 
           <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <Card className="bg-white/5 border-slate-800 backdrop-blur">
-              <p className="text-xs text-slate-400">Forme (tous terminés)</p>
-              <p className="text-lg font-semibold text-slate-50">{form.wins}G / {form.draws}N / {form.losses}P</p>
-              <p className="text-xs text-slate-500">Basée sur tous les matchs terminés</p>
+              <p className="text-xs text-slate-400">Forme (tous terminÃ©s)</p>
+              <p className="text-lg font-semibold text-slate-50">
+                {form.wins}G / {form.draws}N / {form.losses}P
+              </p>
+              <p className="text-xs text-slate-500">BasÃ©e sur tous les matchs terminÃ©s</p>
             </Card>
             <Card className="bg-white/5 border-slate-800 backdrop-blur">
               <p className="text-xs text-slate-400">Prochains matchs</p>
               <div className="flex flex-col gap-2 mt-2">
-                {upcoming.length > 0 ? (
-                  upcoming.map((m) => (
+                {getUpcoming(filtered).length > 0 ? (
+                  getUpcoming(filtered).map((m) => (
                     <InlineMatchCard
                       key={m.id}
                       match={m}
@@ -249,15 +229,15 @@ export default function TeamPage() {
                     />
                   ))
                 ) : (
-                  <span className="text-slate-500 text-sm">Aucun match à venir</span>
+                  <span className="text-slate-500 text-sm">Aucun match Ã  venir</span>
                 )}
               </div>
             </Card>
             <Card className="bg-white/5 border-slate-800 backdrop-blur">
               <p className="text-xs text-slate-400">Derniers matchs</p>
               <div className="flex flex-col gap-2 mt-2">
-                {recent.length > 0 ? (
-                  recent.map((m) => (
+                {getRecent(filtered).length > 0 ? (
+                  getRecent(filtered).map((m) => (
                     <InlineMatchCard
                       key={m.id}
                       match={m}
@@ -266,7 +246,7 @@ export default function TeamPage() {
                     />
                   ))
                 ) : (
-                  <span className="text-slate-500 text-sm">Pas de match joué</span>
+                  <span className="text-slate-500 text-sm">Pas de match jouÃ©</span>
                 )}
               </div>
             </Card>
@@ -276,108 +256,98 @@ export default function TeamPage() {
 
       <div className="px-6 md:px-10 pb-12 space-y-10 max-w-6xl mx-auto">
         <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-slate-50">Effectif</h3>
-          </div>
+          <h3 className="text-lg font-semibold text-slate-50">Effectif</h3>
           <PlayersGrid players={players.data} loading={players.isLoading} />
         </section>
 
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-slate-50">Planning</h3>
-          </div>
-          {grouped.map(([day, dayMatches]) => (
-            <div key={day} className="space-y-3">
-              <Card className="bg-white/5 border-slate-800 backdrop-blur">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold text-slate-200">
-                    {new Date(day).toLocaleDateString("fr-FR", {
-                      weekday: "long",
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </p>
-                  <Badge color="muted">{dayMatches.length} match(s)</Badge>
-                </div>
-                <div className="space-y-3 mt-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.08em] text-slate-400 mb-2">Calendrier</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {dayMatches
-                        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                        .map((m) => (
-                          <Card
-                            key={m.id}
-                            className={`bg-slate-900/80 border-slate-800 hover:border-slate-600 transition cursor-pointer ${m.status === "ongoing" ? "live-pulse-card" : ""}`}
-                            onClick={() => navigate(`/matches/${m.id}`)}
-                          >
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-3">
-                                <HexBadge name={m.teamA} size={26} imageUrl={m.teamALogo ?? undefined} />
-                                <div className="text-xs text-slate-200">
-                                  <div className={focusClass(m.teamA, teamName)}>{m.teamA}</div>
-                                  <div className="text-slate-500">
-                                    vs <span className={focusClass(m.teamB, teamName)}>{m.teamB}</span>
-                                  </div>
-                                </div>
-                                <HexBadge name={m.teamB} size={26} imageUrl={m.teamBLogo ?? undefined} />
-                              </div>
-                              <Badge color="muted" variant="solid">
-                                {formatTimeLabel(m.date)}
-                              </Badge>
-                            </div>
-                            <div className="mt-2 text-xs text-slate-400 flex items-center justify-end">
-                              <Badge color={resultColor(m, teamName)} variant="outline">
-                                {m.status === "finished" || m.status === "ongoing"
-                                  ? `${m.scoreA ?? "-"} - ${m.scoreB ?? "-"}`
-                                  : formatDayTimeLabel(m.date)}
-                              </Badge>
-                            </div>
-                          </Card>
-                        ))}
-                    </div>
-                  </div>
+        <section className="space-y-4">
+          <h3 className="text-lg font-semibold text-slate-50">Classements & highlights par jour</h3>
 
-                  {classement.data && (
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.08em] text-slate-400 mb-2">Classement</p>
-                      <div className="divide-y divide-slate-800 text-sm text-slate-200">
-                        {classement.data.equipes.slice(0, 6).map((e) => (
-                          <div
-                            key={e.id ?? e.name}
-                            className={`flex items-center justify-between py-1.5 ${
-                              normalizeTeamName(e.name) === normalizeTeamName(teamName)
-                                ? "text-slate-50 font-semibold"
-                                : "text-slate-400"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="w-6">{e.rang}</span>
-                              <span className={focusClass(e.name, teamName)}>{e.name}</span>
-                            </div>
-                            <div className="flex items-center gap-3 text-xs">
-                              <span
-                                className={`${
-                                  normalizeTeamName(e.name) === normalizeTeamName(teamName)
-                                    ? "font-semibold text-slate-100"
-                                    : "font-normal text-slate-300"
-                                }`}
-                              >
-                                {e.points} pts
-                              </span>
-                              <span>{e.victoires}G</span>
-                              <span>{e.nuls}N</span>
-                              <span>{e.defaites}P</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </Card>
-            </div>
-          ))}
+          {jour1 && (
+            <Card className="bg-white/5 border-slate-800 backdrop-blur space-y-3">
+              <div className="flex items-center gap-3">
+                <HexBadge name="Jour 1" size={36} imageUrl={ICONS.classe} />
+                <div className="text-sm font-semibold text-slate-100">Jour 1 Â· {formatDay(jour1)}</div>
+              </div>
+              <DayClassement
+                title="Classement 5v5"
+                icon={ICONS.classe}
+                classement={rankingByPoule}
+                focusTeam={teamName}
+                logoFor={logoFor}
+                navigate={navigate}
+              />
+              <div className="grid gap-3 md:grid-cols-2">
+                <HighlightBlock
+                  title="Vitesse (2 meilleurs)"
+                  icon={ICONS.vitesse}
+                  players={players.data?.slice(0, 2).map((p, idx) => ({
+                    name: p.name ?? p.id ?? "Joueur",
+                    numero: p.numero,
+                    poste: p.poste,
+                    resultLabel: `${27 + idx * 0.4}s`,
+                    icon: heroLogo,
+                  })) ?? []}
+                />
+                <HighlightBlock
+                  title="Adresse au tir (2 meilleurs)"
+                  icon={ICONS.tir}
+                  players={players.data?.slice(0, 2).map((p, idx) => ({
+                    name: p.name ?? p.id ?? "Joueur",
+                    numero: p.numero,
+                    poste: p.poste,
+                    resultLabel: `${20 - idx * 3} pts`,
+                    icon: heroLogo,
+                  })) ?? []}
+                />
+                <HighlightBlock
+                  title="Glisse & agilité (2 meilleurs)"
+                  icon={ICONS.glisse}
+                  players={players.data?.slice(0, 2).map((p, idx) => ({
+                    name: p.name ?? p.id ?? "Joueur",
+                    numero: p.numero,
+                    poste: p.poste,
+                    resultLabel: `${30 + idx * 0.8}s`,
+                    icon: heroLogo,
+                  })) ?? []}
+                />
+              </div>
+            </Card>
+          )}
+
+          {jour2 && (
+            <Card className="bg-white/5 border-slate-800 backdrop-blur space-y-3">
+              <div className="flex items-center gap-3">
+                <HexBadge name="Jour 2" size={36} imageUrl={ICONS.classe} />
+                <div className="text-sm font-semibold text-slate-100">Jour 2 · {formatDay(jour2)}</div>
+              </div>
+              <DayClassement
+                title="Classement 5v5"
+                icon={ICONS.classe}
+                classement={rankingByPoule}
+                focusTeam={teamName}
+                logoFor={logoFor}
+                navigate={navigate}
+              />
+            </Card>
+          )}
+
+          {jour3 && (
+            <Card className="bg-white/5 border-slate-800 backdrop-blur space-y-3">
+              <div className="flex items-center gap-3">
+                <HexBadge name="Jour 3" size={36} imageUrl={ICONS.classe} />
+                <div className="text-sm font-semibold text-slate-100">Jour 3 · {formatDay(jour3)}</div>
+              </div>
+              <DayClassement
+                title="Classement CarrÃ©"
+                icon={ICONS.classe}
+                classement={rankingByPoule}
+                focusTeam={teamName}
+                logoFor={logoFor}
+                navigate={navigate}
+              />
+            </Card>
+          )}
         </section>
       </div>
     </div>
@@ -391,147 +361,158 @@ function InlineMatchCard({
 }: {
   match: Match;
   focusTeam: string;
-  onSelect?: (id: string) => void;
+  onSelect: (id: string) => void;
 }) {
-  const isLive = match.status === "ongoing";
-  const isFinished = match.status === "finished" && match.scoreA !== null && match.scoreB !== null;
-  const outcome = resultColor(match, focusTeam);
-  const scoreText =
-    isFinished || isLive
-      ? `${match.scoreA ?? "-"} - ${match.scoreB ?? "-"}`
-      : formatTimeLabel(match.date);
-  const normalizedFocus = normalizeTeamName(focusTeam);
-  const isFocusA = normalizeTeamName(match.teamA) === normalizedFocus;
-  const isFocusB = normalizeTeamName(match.teamB) === normalizedFocus;
-
-  let focusOutcome: "win" | "lose" | "draw" | undefined = undefined;
-  if (isFinished && match.scoreA !== null && match.scoreB !== null && (isFocusA || isFocusB)) {
-    const diff = isFocusA ? match.scoreA - match.scoreB : match.scoreB - match.scoreA;
-    focusOutcome = diff > 0 ? "win" : diff < 0 ? "lose" : "draw";
-  }
-
-  const scoreColorClass =
-    focusOutcome === "win"
-      ? "text-emerald-300 font-semibold"
-      : focusOutcome === "lose"
-        ? "text-rose-300 font-semibold"
-        : focusOutcome === "draw"
-          ? "text-slate-200 font-semibold"
-          : "text-slate-100 font-semibold";
-  const nameClass = (isFocus: boolean) => {
-    if (!isFocus) return "text-slate-200";
-    if (focusOutcome === "win") return "text-emerald-300 font-semibold";
-    if (focusOutcome === "lose") return "text-rose-300 font-semibold";
-    if (focusOutcome === "draw") return "text-slate-50 font-semibold";
-    return "text-slate-50 font-semibold";
-  };
-
+  const winner = computeWinner(match);
   return (
-    <div
-      className={`relative overflow-hidden rounded-xl border ${
-        isLive ? "border-amber-400 ring-1 ring-amber-300/60 live-pulse-card" : "border-slate-800"
-      } bg-slate-900/80 px-3 py-2 cursor-pointer hover:border-slate-600`}
-      onClick={() => onSelect?.(match.id)}
+    <button
+      type="button"
+      className={`w-full rounded-lg border px-3 py-2 text-left hover:border-slate-500 transition ${match.status === "ongoing" ? "border-yellow-400 bg-yellow-500/10 animate-pulse" : "border-slate-800 bg-slate-900/70"}`}
+      onClick={() => onSelect(match.id)}
     >
-      {match.teamALogo && (
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-1/3 opacity-20">
-          <div
-            className="absolute inset-0 -skew-x-12 scale-110"
-            style={{
-              backgroundImage: `url(${match.teamALogo})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }}
-          />
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <HexBadge name={match.teamA} imageUrl={match.teamALogo ?? undefined} size={28} />
+          <span className={`${focusClass(match.teamA, focusTeam)} text-sm truncate`}>{match.teamA}</span>
         </div>
-      )}
-      {match.teamBLogo && (
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 opacity-20">
-          <div
-            className="absolute inset-0 skew-x-12 scale-110"
-            style={{
-              backgroundImage: `url(${match.teamBLogo})`,
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }}
-          />
+        {formatScore(match, focusTeam)}
+        <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+          <span className={`${focusClass(match.teamB, focusTeam)} text-sm truncate text-right`}>{match.teamB}</span>
+          <HexBadge name={match.teamB} imageUrl={match.teamBLogo ?? undefined} size={28} />
         </div>
-      )}
+      </div>
+      <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1">
+        <span>{match.pouleName ?? match.pouleCode ?? "Poule"}</span>
+        <span>
+          {match.status === "planned"
+            ? formatDateTime(match.date)
+            : winner
+              ? "TerminÃ©"
+              : match.status === "ongoing"
+                ? "En cours"
+                : "PlannifiÃ©"}
+        </span>
+      </div>
+    </button>
+  );
+}
 
-      <div className="relative flex items-center gap-2">
-        <div className="flex items-center gap-1 min-w-0 justify-start flex-1">
-          {match.teamALogo ? (
-            <img src={match.teamALogo} alt={match.teamA} className="h-5 w-5 rounded-full object-cover" />
-          ) : (
-            <HexBadge name={match.teamA} size={20} />
-          )}
-          <span className={`text-[12px] leading-tight font-normal truncate block whitespace-nowrap ${nameClass(isFocusA)}`}>{match.teamA}</span>
-        </div>
+function PlayersGrid({ players, loading }: { players?: any[]; loading: boolean }) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Spinner />
+      </div>
+    );
+  }
+  if (!players || players.length === 0) {
+    return <p className="text-slate-400 text-sm">Aucun joueur disponible.</p>;
+  }
+  return (
+    <div className="grid gap-3 md:grid-cols-2">
+      {players.map((p) => (
+        <Card key={p.id ?? p.name} className="bg-white/5 border-slate-800 backdrop-blur flex items-center gap-4">
+          <div className="h-10 w-10 rounded-full bg-slate-800 text-slate-100 flex items-center justify-center text-sm font-semibold">
+            {p.numero ?? "?"}
+          </div>
+          <div className="flex flex-col">
+            <span className="text-slate-100 font-semibold text-sm">{`${p.prenom ?? ""} ${p.nom ?? ""}`.trim() || p.id || "Joueur"}</span>
+            <span className="text-xs text-slate-400">{p.poste ?? "N/A"}</span>
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
 
-        <div className="flex-none w-20 text-center">
-          {isFinished || isLive ? (
-            <span className="text-[12px] leading-tight font-semibold text-slate-100 whitespace-nowrap">
-              <span className={scoreColorClass}>{match.scoreA}</span>
-              <span className="mx-1 text-slate-400">-</span>
-              <span className={scoreColorClass}>{match.scoreB}</span>
-            </span>
-          ) : (
-            <span className="text-[12px] leading-tight font-semibold text-slate-100 whitespace-nowrap">{scoreText}</span>
-          )}
-        </div>
+function formatDateTime(date: string) {
+  const d = new Date(date);
+  return d.toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
 
-        <div className="flex items-center gap-1 justify-end min-w-0 flex-1">
-          <span
-            className={`text-[12px] leading-tight font-normal truncate text-right block whitespace-nowrap ${nameClass(isFocusB)}`}
+function getUpcoming(matches: Match[]) {
+  return [...matches]
+    .filter((m) => m.status === "planned")
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .slice(0, 5);
+}
+
+function getRecent(matches: Match[]) {
+  return [...matches]
+    .filter((m) => m.status === "ongoing" || m.status === "finished")
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 5);
+}
+
+function DayClassement({
+  title,
+  icon,
+  classement,
+  focusTeam,
+  logoFor,
+  navigate,
+}: {
+  title: string;
+  icon?: string;
+  classement: ClassementEntry[];
+  focusTeam: string;
+  logoFor: (name: string) => string | undefined | null;
+  navigate: (path: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        {icon && <span className="h-6 w-6 rounded-full bg-cover bg-center" style={{ backgroundImage: `url(${icon})` }} />}
+        <p className="text-sm font-semibold text-slate-100">{title}</p>
+      </div>
+      <div className="grid gap-2 md:grid-cols-2">
+        {classement.map((entry) => (
+          <button
+            key={entry.name}
+            type="button"
+            onClick={() => navigate(`/teams/${encodeURIComponent(entry.name)}`)}
+            className={`w-full rounded-lg border px-3 py-2 flex items-center gap-2 text-left ${normalizeTeamName(entry.name) === normalizeTeamName(focusTeam) ? "border-emerald-400/70 bg-emerald-500/10" : "border-slate-800 bg-slate-900/70"}`}
           >
-            {match.teamB}
-          </span>
-          {match.teamBLogo ? (
-            <img src={match.teamBLogo} alt={match.teamB} className="h-5 w-5 rounded-full object-cover" />
-          ) : (
-            <HexBadge name={match.teamB} size={20} />
-          )}
-        </div>
+            <HexBadge name={entry.name} size={28} imageUrl={logoFor(entry.name) ?? undefined} />
+            <div className="flex-1 flex items-center justify-between gap-2">
+              <span className={`${focusClass(entry.name, focusTeam)} text-sm truncate`}>{entry.name}</span>
+              <span className="text-xs text-slate-400">Rang {entry.rang ?? "-"}</span>
+            </div>
+          </button>
+        ))}
       </div>
     </div>
   );
 }
 
-function PlayersGrid({
-  players,
-  loading,
-}: {
-  players?: { id: string; name: string; numero: number; poste: string }[];
-  loading: boolean;
-}) {
-  if (loading) {
-    return <p className="text-slate-300 text-sm">Chargement…</p>;
-  }
-  if (!players || players.length === 0) {
-    return <p className="text-slate-300 text-sm">Aucun joueur disponible.</p>;
-  }
-  const sorted = [...players].sort((a, b) => a.numero - b.numero);
+function HighlightBlock({ title, icon, players }: { title: string; icon?: string; players: RankedPlayer[] }) {
+  if (!players || players.length === 0) return null;
   return (
-    <div className="space-y-2">
-      {sorted.map((p) => (
-        <div
-          key={p.id}
-          className="rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 flex items-center justify-between gap-3"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-800 text-white font-bold text-sm">
-              {p.numero}
-            </span>
-            <div className="min-w-0">
-              <div className="text-sm font-semibold text-white truncate">
-                {p.name?.trim() && p.name.trim().length > 0 ? p.name : `Joueur ${p.numero}`}
-              </div>
-              <div className="text-xs uppercase text-slate-400">{p.poste}</div>
+    <Card className="bg-white/5 border-slate-800 backdrop-blur space-y-2">
+      <div className="flex items-center gap-2">
+        {icon && <span className="h-6 w-6 rounded-full bg-cover bg-center" style={{ backgroundImage: `url(${icon})` }} />}
+        <p className="text-sm font-semibold text-slate-100">{title}</p>
+      </div>
+      <div className="space-y-2">
+        {players.map((p) => (
+          <div key={p.name} className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-slate-800 text-slate-100 flex items-center justify-center text-xs font-semibold">
+              {p.numero ?? "?"}
             </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-slate-100 truncate">{p.name}</p>
+              <p className="text-xs text-slate-400">{p.poste ?? ""}</p>
+            </div>
+            <div className="text-sm font-semibold text-emerald-200">{p.resultLabel}</div>
           </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </Card>
   );
 }
+
+
+
+
+
 
