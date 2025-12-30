@@ -6,6 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 import HorizontalMatchSlider from "../components/collections/HorizontalMatchSlider";
 import HexBadge from "../components/ds/HexBadge";
 import fiveV5Icon from "../assets/icons/nav/fivev5.png";
+import { useSelectedTeam } from "../providers/SelectedTeamProvider";
 
 const BRASSAGE = [
   { code: "A", title: "Sam - Brassage Poule A", phase: "Brassage" },
@@ -30,8 +31,17 @@ const FINALES = [
 
 export default function Tournament5v5Page() {
   const navigate = useNavigate();
-  const { data: momentum5v5 } = useMomentumMatches({ competitionType: "5v5", surface: "GG" });
-  const { data: matches5v5 } = useMatchesFiltered({ competitionType: "5v5" });
+  const { selectedTeam } = useSelectedTeam();
+  const { data: momentum5v5 } = useMomentumMatches({
+    competitionType: "5v5",
+    surface: "GG",
+    teamId: selectedTeam?.id,
+  });
+  const { data: matches5v5 } = useMatchesFiltered({
+    competitionType: "5v5",
+    surface: "GG",
+    teamId: selectedTeam?.id,
+  });
   const [showBrassage, setShowBrassage] = React.useState(true);
   const [showQualif, setShowQualif] = React.useState(true);
   const [showFinales, setShowFinales] = React.useState(true);
@@ -197,6 +207,7 @@ export default function Tournament5v5Page() {
                     matchRefMap={matchRefs}
                     highlightTeams={highlightPoule === p.code ? highlightTeams : undefined}
                     matches={matches5v5}
+                    selectedTeamId={selectedTeam?.id}
                     onSelectMatch={(id) => navigate(`/matches/${id}`)}
                   />
                 ))}
@@ -218,6 +229,7 @@ export default function Tournament5v5Page() {
                     matchRefMap={matchRefs}
                     highlightTeams={highlightPoule === p.code ? highlightTeams : undefined}
                     matches={matches5v5}
+                    selectedTeamId={selectedTeam?.id}
                     onSelectMatch={(id) => navigate(`/matches/${id}`)}
                   />
                 ))}
@@ -240,6 +252,7 @@ export default function Tournament5v5Page() {
                     highlightTeams={highlightPoule === p.code ? highlightTeams : undefined}
                     hidePoints
                     matches={matches5v5}
+                    selectedTeamId={selectedTeam?.id}
                     onSelectMatch={(id) => navigate(`/matches/${id}`)}
                   />
                 ))}
@@ -262,6 +275,7 @@ type ClassementCardProps = {
   hidePoints?: boolean;
   matches?: Match[];
   onSelectMatch?: (id: string) => void;
+  selectedTeamId?: string;
 };
 
 function ClassementCard({
@@ -274,7 +288,8 @@ function ClassementCard({
   hidePoints,
   matches,
   onSelectMatch,
-}: ClassementCardProps) {
+  selectedTeamId,
+}: ClassementCardProps & { selectedTeamId?: string }) {
   const { data, isLoading, isError } = useClassement(code, phase);
 
   if (isLoading) return <div className="text-sm text-slate-300">Chargement poule {code}…</div>;
@@ -290,6 +305,11 @@ function ClassementCard({
         return mCode === codeLower || mName === nameLower || mName === codeLower;
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) ?? [];
+
+  if (selectedTeamId) {
+    const inPoule = data.equipes.some((eq) => (eq.id ?? "").toLowerCase() === selectedTeamId.toLowerCase());
+    if (!inPoule) return null;
+  }
 
   return (
     <div
