@@ -1,58 +1,39 @@
 import React from "react";
 import threeV3Icon from "../assets/icons/nav/threev3.png";
-import { useMatches } from "../hooks/useMatches";
-import { useTeams } from "../hooks/useTeams";
 import { useNavigate } from "react-router-dom";
 import type { Match } from "../api/match";
 import HexBadge from "../components/ds/HexBadge";
+import { useSelectedTeam } from "../providers/SelectedTeamProvider";
+import { useMatchesFiltered } from "../hooks/useMatches";
 
 function normalize(value?: string | null) {
   return (value ?? "").trim().toLowerCase();
 }
 
 export default function ThreeVThreePage() {
-  const { data: matches } = useMatches();
-  const { data: teams } = useTeams();
+  const { selectedTeam } = useSelectedTeam();
+  const { data: matches } = useMatchesFiltered({
+    competitionType: "3v3",
+    surface: "PG",
+    teamId: selectedTeam?.id || undefined,
+  });
   const navigate = useNavigate();
   const itemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const filterRef = React.useRef<HTMLDivElement | null>(null);
   const [layout, setLayout] = React.useState<{ topOffset: number; paddingTop: number }>({ topOffset: 64, paddingTop: 240 });
 
-  const [teamFilter, setTeamFilter] = React.useState<string>("");
   const [search, setSearch] = React.useState<string>("");
-
-  const teamOptions = React.useMemo(() => {
-    const opts: Array<{ value: string; label: string }> = [];
-    const seen = new Set<string>();
-    (teams ?? []).forEach((t) => {
-      const val = t.id ?? t.name;
-      if (val && !seen.has(val)) {
-        seen.add(val);
-        opts.push({ value: val, label: t.name ?? t.id ?? val });
-      }
-    });
-    if (opts.length === 0) {
-      (matches ?? []).forEach((m) => {
-        [m.teamA, m.teamB].forEach((team) => {
-          if (team && !seen.has(team)) {
-            seen.add(team);
-            opts.push({ value: team, label: team });
-          }
-        });
-      });
-    }
-    return opts.sort((a, b) => a.label.localeCompare(b.label));
-  }, [teams, matches]);
 
   const filtered = React.useMemo(() => {
     if (!matches) return [];
     const q = normalize(search);
+    const selectedId = normalize(selectedTeam?.id);
     return [...matches]
-      .filter((m) => m.competitionType === "3v3")
       .filter((m) => {
-        if (teamFilter) {
-          const needle = normalize(teamFilter);
-          if (normalize(m.teamA) !== needle && normalize(m.teamB) !== needle) return false;
+        if (selectedId) {
+          const a = normalize(m.teamA);
+          const b = normalize(m.teamB);
+          if (a !== selectedId && b !== selectedId) return false;
         }
         if (q) {
           const haystacks = [m.teamA, m.teamB, m.pouleName, m.pouleCode].map(normalize);
@@ -61,12 +42,16 @@ export default function ThreeVThreePage() {
         return true;
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [matches, teamFilter, search]);
+  }, [matches, selectedTeam, search]);
 
   React.useEffect(() => {
     if (!filtered.length) return;
     const ongoing = filtered.find((m) => m.status === "ongoing");
-    const targetId = ongoing?.id;
+    const lastFinished = [...filtered]
+      .filter((m) => m.status === "finished")
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .at(-1);
+    const targetId = ongoing?.id ?? lastFinished?.id ?? filtered[0]?.id;
     if (targetId && itemRefs.current[targetId]) {
       itemRefs.current[targetId]?.scrollIntoView({ block: "center", behavior: "smooth" });
     }
@@ -124,7 +109,7 @@ export default function ThreeVThreePage() {
             </div>
             <h1 className="text-xl font-semibold text-white">Tournoi 3v3 FUN</h1>
           </div>
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="grid gap-3">
             <div className="flex flex-col gap-1">
               <label className="text-xs text-slate-400">Recherche</label>
               <input
@@ -134,21 +119,6 @@ export default function ThreeVThreePage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-400">Equipe</label>
-              <select
-                className="rounded-md border border-slate-700 bg-slate-950 text-slate-100 px-2 py-1 text-sm"
-                value={teamFilter}
-                onChange={(e) => setTeamFilter(e.target.value)}
-              >
-                <option value="">Toutes</option>
-                {teamOptions.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
         </div>

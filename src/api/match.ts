@@ -26,6 +26,7 @@ export type MatchFilters = {
   competitionType?: "5v5" | "3v3" | "challenge";
   surface?: "GG" | "PG";
   status?: MatchStatus;
+  teamId?: string;
 };
 
 export async function fetchMatches(filters: MatchFilters = {}): Promise<Match[]> {
@@ -33,6 +34,7 @@ export async function fetchMatches(filters: MatchFilters = {}): Promise<Match[]>
   if (filters.competitionType) params.set("competition", filters.competitionType);
   if (filters.surface) params.set("surface", filters.surface);
   if (filters.status) params.set("status", filters.status);
+  if (filters.teamId) params.set("teamId", filters.teamId);
   const url = `${API_BASE_URL}/matches${params.toString() ? `?${params.toString()}` : ""}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Erreur lors du chargement des matchs");
