@@ -27,6 +27,7 @@ export type MatchFilters = {
   surface?: "GG" | "PG";
   status?: MatchStatus;
   teamId?: string;
+  jour?: string;
 };
 
 export async function fetchMatches(filters: MatchFilters = {}): Promise<Match[]> {
@@ -35,6 +36,7 @@ export async function fetchMatches(filters: MatchFilters = {}): Promise<Match[]>
   if (filters.surface) params.set("surface", filters.surface);
   if (filters.status) params.set("status", filters.status);
   if (filters.teamId) params.set("teamId", filters.teamId);
+  if (filters.jour) params.set("jour", filters.jour);
   const url = `${API_BASE_URL}/matches${params.toString() ? `?${params.toString()}` : ""}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Erreur lors du chargement des matchs");

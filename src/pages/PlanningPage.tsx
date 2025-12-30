@@ -1,10 +1,10 @@
 import React from "react";
-import { useMatches } from "../hooks/useMatches";
-import { useTeams } from "../hooks/useTeams";
+import { useMatchesFiltered } from "../hooks/useMatches";
 import type { Match } from "../api/match";
 import HexBadge from "../components/ds/HexBadge";
 import { useNavigate } from "react-router-dom";
 import planningIcon from "../assets/icons/nav/planning.png";
+import { useSelectedTeam } from "../providers/SelectedTeamProvider";
 
 function normalize(value?: string | null) {
   return (value ?? "").trim().toLowerCase();
@@ -16,41 +16,17 @@ function formatDateTime(date: string) {
 }
 
 export default function PlanningPage() {
-  const { data: matches } = useMatches();
-  const { data: teams } = useTeams();
+  const { selectedTeam } = useSelectedTeam();
+  const { data: matches } = useMatchesFiltered({ teamId: selectedTeam?.id });
   const navigate = useNavigate();
   const listRef = React.useRef<HTMLDivElement | null>(null);
   const itemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
 
-  const [teamFilter, setTeamFilter] = React.useState<string>("");
   const [competitionFilter, setCompetitionFilter] = React.useState<Set<string>>(new Set(["5v5"]));
   const [dayFilter, setDayFilter] = React.useState<Set<string>>(new Set());
   const [search, setSearch] = React.useState<string>("");
   const filterRef = React.useRef<HTMLDivElement | null>(null);
   const [layout, setLayout] = React.useState<{ topOffset: number; paddingTop: number }>({ topOffset: 64, paddingTop: 320 });
-
-  const teamOptions = React.useMemo(() => {
-    const opts: Array<{ value: string; label: string }> = [];
-    const seen = new Set<string>();
-    (teams ?? []).forEach((t) => {
-      const val = t.id ?? t.name;
-      if (val && !seen.has(val)) {
-        seen.add(val);
-        opts.push({ value: val, label: t.name ?? t.id ?? val });
-      }
-    });
-    if (opts.length === 0) {
-      (matches ?? []).forEach((m) => {
-        [m.teamA, m.teamB].forEach((team) => {
-          if (team && !seen.has(team)) {
-            seen.add(team);
-            opts.push({ value: team, label: team });
-          }
-        });
-      });
-    }
-    return opts.sort((a, b) => a.label.localeCompare(b.label));
-  }, [teams, matches]);
 
   const dayOptions = React.useMemo(() => {
     const uniques = Array.from(new Set((matches ?? []).map((m) => new Date(m.date).toISOString().split("T")[0]))).sort();
@@ -74,8 +50,8 @@ export default function PlanningPage() {
         if (competitionFilter.size > 0 && !competitionFilter.has(m.competitionType ?? "")) return false;
         const matchDay = new Date(m.date).toISOString().split("T")[0];
         if (dayFilter.size > 0 && !dayFilter.has(matchDay)) return false;
-        if (teamFilter) {
-          const needle = normalize(teamFilter);
+        if (selectedTeam?.id) {
+          const needle = normalize(selectedTeam.id);
           if (normalize(m.teamA) !== needle && normalize(m.teamB) !== needle) return false;
         }
         if (q) {
@@ -85,7 +61,7 @@ export default function PlanningPage() {
         return true;
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [matches, competitionFilter, dayFilter, teamFilter, search]);
+  }, [matches, competitionFilter, dayFilter, selectedTeam?.id, search]);
 
   const buildCardClasses = (status: Match["status"]) => {
     if (status === "ongoing") {
@@ -138,7 +114,7 @@ export default function PlanningPage() {
             </div>
             <h1 className="text-xl font-semibold text-white">Planning</h1>
           </div>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             <div className="flex flex-col gap-1">
               <label className="text-xs text-slate-400">Recherche</label>
               <input
@@ -148,21 +124,6 @@ export default function PlanningPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-400">Equipe</label>
-              <select
-                className="rounded-md border border-slate-700 bg-slate-950 text-slate-100 px-2 py-1 text-sm"
-                value={teamFilter}
-                onChange={(e) => setTeamFilter(e.target.value)}
-              >
-                <option value="">Toutes</option>
-                {teamOptions.map((t) => (
-                  <option key={t.value} value={t.value}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
             </div>
             <div className="flex flex-col gap-1">
               <div className="flex flex-wrap gap-2">
