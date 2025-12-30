@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { useChallengeAll } from "../hooks/useChallengeAll";
 import { useTeams } from "../hooks/useTeams";
 import type { ChallengeAttempt as Attempt } from "../api/challenge";
@@ -8,7 +9,6 @@ export default function ChallengePage() {
   const { data, isLoading, isError } = useChallengeAll();
   const { data: teams } = useTeams();
 
-  const [showTop3, setShowTop3] = React.useState(true);
   const [showVitesse, setShowVitesse] = React.useState(true);
   const [showTir, setShowTir] = React.useState(true);
   const [showGlisse, setShowGlisse] = React.useState(true);
@@ -84,7 +84,8 @@ export default function ChallengePage() {
     const needsRanking = Boolean(opts?.highlightTop || opts?.rankOnly);
     const isVitesse = title.toLowerCase().includes("vitesse");
     const isTir = title.toLowerCase().includes("tir");
-    const isGlisse = title.toLowerCase().includes("glisse");
+    const lower = title.toLowerCase();
+    const isGlisse = lower.includes("glisse") || lower.includes("agil");
     const rows = needsRanking
       ? [...attempts].sort((a, b) => {
           const va =
@@ -178,7 +179,7 @@ export default function ChallengePage() {
     );
   };
 
-  const applyFilters = (attempts: Attempt[], type: "vitesse" | "tir" | "glisse_crosse") => {
+  const applyFilters = (attempts: Attempt[], type: "vitesse" | "tir" | "glisse_crosse", opts?: { limitTop?: number }) => {
     let filtered = attempts;
     const term = searchTerm.trim().toLowerCase();
     if (term) {
@@ -193,7 +194,7 @@ export default function ChallengePage() {
       const key = selectedPlayer.toLowerCase();
       filtered = filtered.filter((a) => (a.joueurName ?? "").toLowerCase() === key);
     }
-    if (!showTop3) return filtered;
+    if (!opts?.limitTop) return filtered;
     const scorer =
       type === "tir"
         ? (a: Attempt, b: Attempt) => {
@@ -216,7 +217,7 @@ export default function ChallengePage() {
                 : Number.MAX_SAFE_INTEGER;
             return ta - tb;
           };
-    return [...filtered].sort(scorer).slice(0, 3);
+    return [...filtered].sort(scorer).slice(0, opts.limitTop);
   };
 
   const qfSlices = React.useMemo(() => {
@@ -319,12 +320,6 @@ export default function ChallengePage() {
                       </div>
                     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
                       <button
-                        className={`rounded-full border px-3 py-1 ${showTop3 ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-200 border-slate-600"}`}
-                        onClick={() => setShowTop3((v) => !v)}
-                      >
-                        Top 3
-                      </button>
-                      <button
                         className={`rounded-full border px-3 py-1 ${showVitesse ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-300 border-slate-700"}`}
                         onClick={() => setShowVitesse((v) => !v)}
                       >
@@ -342,26 +337,46 @@ export default function ChallengePage() {
                       >
                         Glisse & Crosse
                       </button>
-                      <select
-                        className="rounded-md border border-slate-700 bg-slate-900/80 px-2 py-1 text-slate-100 min-w-[160px]"
-                        value={selectedPlayer}
-                        onChange={(e) => setSelectedPlayer(e.target.value)}
-                      >
-                        <option value="">Tous les joueurs</option>
-                        {uniquePlayers.map((name) => (
-                          <option key={name} value={name}>
-                            {name}
-                          </option>
-                        ))}
-                      </select>
                     </div>
                   </div>
 
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {showVitesse && renderTable("Atelier Vitesse", applyFilters(groupByAtelier.jour1.vitesse, "vitesse"))}
-                    {showTir && renderTable("Atelier Adresse au tir", applyFilters(groupByAtelier.jour1.tir, "tir"))}
-                    {showGlisse &&
-                      renderTable("Atelier Glisse & Crosse", applyFilters(groupByAtelier.jour1.glisse_crosse, "glisse_crosse"))}
+                    {showVitesse && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs text-slate-200">
+                          <span className="font-semibold uppercase tracking-wide">Top 3</span>
+                          <Link to="/challenge/atelier/vitesse" className="text-emerald-300 hover:text-emerald-200 font-semibold">
+                            Voir tout
+                          </Link>
+                        </div>
+                        {renderTable("Atelier Vitesse", applyFilters(groupByAtelier.jour1.vitesse, "vitesse", { limitTop: 3 }))}
+                      </div>
+                    )}
+                    {showTir && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs text-slate-200">
+                          <span className="font-semibold uppercase tracking-wide">Top 3</span>
+                      <Link to="/challenge/atelier/tir" className="text-emerald-300 hover:text-emerald-200 font-semibold">
+                        Voir tout
+                      </Link>
+                    </div>
+                    {renderTable("Atelier Tir", applyFilters(groupByAtelier.jour1.tir, "tir", { limitTop: 3 }))}
+                  </div>
+                )}
+                    {showGlisse && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs text-slate-200">
+                          <span className="font-semibold uppercase tracking-wide">Top 3</span>
+                          <Link to="/challenge/atelier/glisse_crosse" className="text-emerald-300 hover:text-emerald-200 font-semibold">
+                            Voir tout
+                          </Link>
+                        </div>
+                        {renderTable(
+                          "Atelier Agilité",
+                          applyFilters(groupByAtelier.jour1.glisse_crosse, "glisse_crosse", { limitTop: 3 })
+                        )}
+                      </div>
+                    )}
                   </div>
                 </section>
               )}

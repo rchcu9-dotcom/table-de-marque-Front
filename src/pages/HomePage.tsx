@@ -55,7 +55,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      <div className="flex-1 overflow-y-auto pb-6 space-y-6" style={{ maxHeight: "calc(100vh - 5.5rem)" }}>
+      <div
+        className="flex-1 overflow-y-auto space-y-6"
+        style={{ maxHeight: "calc(100vh - 5.5rem)", paddingBottom: "7rem" }}
+      >
         <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
           <h2 className="text-lg font-semibold mb-3">{momentumTitle}</h2>
           <HorizontalMatchSlider
@@ -125,7 +128,13 @@ export default function HomePage() {
   );
 }
 
-function TeamGrid({ teams, onSelect }: { teams: { id: string; name: string; logoUrl?: string | null }[]; onSelect: (team: { id: string; name: string; logoUrl?: string | null }) => void }) {
+function TeamGrid({
+  teams,
+  onSelect,
+}: {
+  teams: { id: string; name: string; logoUrl?: string | null }[];
+  onSelect: (team: { id: string; name: string; logoUrl?: string | null }) => void;
+}) {
   if (!teams || teams.length === 0) {
     return <p className="text-slate-300 text-sm">Aucune équipe.</p>;
   }

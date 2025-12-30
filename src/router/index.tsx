@@ -12,6 +12,7 @@ import ChallengePage from "../pages/ChallengePage";
 import ThreeVThreePage from "../pages/ThreeVThreePage";
 import ChallengeDetailPage from "../pages/ChallengeDetailPage";
 import PlanningPage from "../pages/PlanningPage";
+import ChallengeAtelierPage from "../pages/ChallengeAtelierPage";
 import SearchBar from "../components/ds/SearchBar";
 import Button from "../components/ds/Button";
 import type { SortConfig } from "../components/collections/List";
@@ -63,6 +64,14 @@ export default function AppRouter() {
         element={
           <LayoutRoot>
             <ChallengePage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/challenge/atelier/:type"
+        element={
+          <LayoutRoot>
+            <ChallengeAtelierPage />
           </LayoutRoot>
         }
       />
