@@ -47,21 +47,20 @@ export default function Tournament5v5Page() {
     return current?.pouleCode;
   }, [momentum5v5]);
   const listRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const matchRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!momentum5v5?.length) return;
-    const current = momentum5v5.find((m) => m.status === "ongoing");
-    const targetCode = current?.pouleCode;
-    if (targetCode && listRefs.current[targetCode] && scrollAreaRef.current) {
-      const el = listRefs.current[targetCode];
+    const current = momentum5v5.find((m) => m.status === "ongoing") ?? momentum5v5[0];
+    const targetEl = current ? matchRefs.current[current.id] : null;
+    if (targetEl && scrollAreaRef.current) {
       const container = scrollAreaRef.current;
-      // calc position inside scroll container, clamp to avoid jumping to bottom
       const rawOffset =
-        el.getBoundingClientRect().top -
+        targetEl.getBoundingClientRect().top -
         container.getBoundingClientRect().top +
         container.scrollTop -
-        12; // small padding
+        12;
       const maxOffset = Math.max(0, container.scrollHeight - container.clientHeight);
       const offset = Math.min(Math.max(rawOffset, 0), maxOffset);
       requestAnimationFrame(() => {
@@ -195,6 +194,7 @@ export default function Tournament5v5Page() {
                     phase={p.phase}
                     title={p.title}
                     refMap={listRefs}
+                    matchRefMap={matchRefs}
                     highlightTeams={highlightPoule === p.code ? highlightTeams : undefined}
                     matches={matches5v5}
                     onSelectMatch={(id) => navigate(`/matches/${id}`)}
@@ -215,6 +215,7 @@ export default function Tournament5v5Page() {
                     phase={p.phase}
                     title={p.title}
                     refMap={listRefs}
+                    matchRefMap={matchRefs}
                     highlightTeams={highlightPoule === p.code ? highlightTeams : undefined}
                     matches={matches5v5}
                     onSelectMatch={(id) => navigate(`/matches/${id}`)}
@@ -235,6 +236,7 @@ export default function Tournament5v5Page() {
                     phase={p.phase}
                     title={p.title}
                     refMap={listRefs}
+                    matchRefMap={matchRefs}
                     highlightTeams={highlightPoule === p.code ? highlightTeams : undefined}
                     hidePoints
                     matches={matches5v5}
@@ -255,13 +257,24 @@ type ClassementCardProps = {
   phase?: string;
   title?: string;
   refMap?: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
+  matchRefMap?: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
   highlightTeams?: Set<string>;
   hidePoints?: boolean;
   matches?: Match[];
   onSelectMatch?: (id: string) => void;
 };
 
-function ClassementCard({ code, phase, title, refMap, highlightTeams, hidePoints, matches, onSelectMatch }: ClassementCardProps) {
+function ClassementCard({
+  code,
+  phase,
+  title,
+  refMap,
+  matchRefMap,
+  highlightTeams,
+  hidePoints,
+  matches,
+  onSelectMatch,
+}: ClassementCardProps) {
   const { data, isLoading, isError } = useClassement(code, phase);
 
   if (isLoading) return <div className="text-sm text-slate-300">Chargement poule {code}…</div>;
@@ -303,13 +316,14 @@ function ClassementCard({ code, phase, title, refMap, highlightTeams, hidePoints
           <tbody className="divide-y divide-slate-800">
             {data.equipes.map((eq) => {
               const highlight = highlightTeams?.has(eq.id);
+              const displayName = (eq as any).shortName ?? (eq as any).nameShort ?? eq.id ?? eq.name;
               return (
                 <tr key={eq.id} className={`text-slate-100 ${highlight ? "bg-amber-500/10 animate-pulse" : ""}`}>
                   <td className="py-1 pr-2">{eq.rang}</td>
                   <td className="py-1 pr-2">
                     <Link to={`/teams/${eq.id}`} className="flex items-center gap-2 hover:underline">
-                      <Logo name={eq.name} url={eq.logoUrl} size={28} />
-                      <span>{eq.name}</span>
+                      <Logo name={displayName} url={eq.logoUrl} size={28} />
+                      <span>{displayName}</span>
                     </Link>
                   </td>
                   {!hidePoints && <td className="py-1 pr-2 text-right font-semibold">{eq.points}</td>}
@@ -323,7 +337,7 @@ function ClassementCard({ code, phase, title, refMap, highlightTeams, hidePoints
       {pouleMatches.length > 0 && (
         <div className="mt-3 flex flex-col gap-2">
           {pouleMatches.map((m) => (
-            <SmallMatchCard key={m.id} match={m} onSelect={onSelectMatch} />
+            <SmallMatchCard key={m.id} match={m} onSelect={onSelectMatch} refMap={matchRefMap} />
           ))}
         </div>
       )}
@@ -352,7 +366,15 @@ function Logo({ name, url, size = 32 }: { name: string; url?: string | null; siz
   );
 }
 
-function SmallMatchCard({ match, onSelect }: { match: Match; onSelect?: (id: string) => void }) {
+function SmallMatchCard({
+  match,
+  onSelect,
+  refMap,
+}: {
+  match: Match;
+  onSelect?: (id: string) => void;
+  refMap?: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
+}) {
   const d = new Date(match.date);
   const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   const isScored =
@@ -374,6 +396,11 @@ function SmallMatchCard({ match, onSelect }: { match: Match; onSelect?: (id: str
           ? "border-amber-400 live-pulse-card ring-2 ring-amber-300/60"
           : "border-slate-800"
       }`}
+      ref={(el) => {
+        if (refMap) {
+          refMap.current[match.id] = el;
+        }
+      }}
       onClick={() => onSelect?.(match.id)}
     >
       <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-lg opacity-25">
