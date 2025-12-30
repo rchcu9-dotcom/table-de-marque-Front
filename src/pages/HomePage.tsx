@@ -7,7 +7,6 @@ import homeIcon from "../assets/icons/nav/home.png";
 import fiveV5Icon from "../assets/icons/nav/fivev5.png";
 import threeV3Icon from "../assets/icons/nav/threev3.png";
 import challengeIcon from "../assets/icons/nav/challenge.png";
-import { useSelectedTeam } from "../providers/SelectedTeamProvider";
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -15,7 +14,6 @@ export default function HomePage() {
   const { data: momentumPG } = useMomentumMatches({ surface: "PG", competitionType: "3v3" });
   const { data: momentumChallenge } = useMomentumMatches({ surface: "PG", competitionType: "challenge" });
   const { data: teams } = useTeams();
-  const { setSelectedTeam } = useSelectedTeam();
 
   const [show5v5, setShow5v5] = React.useState(true);
   const [show3v3, setShow3v3] = React.useState(false);
@@ -102,10 +100,10 @@ export default function HomePage() {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold">Équipes</h2>
           </div>
-          <TeamGrid teams={(teams ?? []).slice(0, 16)} onSelect={(team) => {
-            setSelectedTeam({ id: team.id, name: team.name, logoUrl: team.logoUrl ?? undefined, muted: false });
-            navigate(`/teams/${encodeURIComponent(team.id)}`);
-          }} />
+          <TeamGrid
+            teams={(teams ?? []).slice(0, 16)}
+            onSelect={(team) => navigate(`/teams/${encodeURIComponent(team.id)}`)}
+          />
         </section>
 
         {show3v3 && (
