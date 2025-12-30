@@ -1,4 +1,5 @@
 import React from "react";
+import threeV3Icon from "../assets/icons/nav/threev3.png";
 import { useMatches } from "../hooks/useMatches";
 import { useTeams } from "../hooks/useTeams";
 import { useNavigate } from "react-router-dom";
@@ -118,12 +119,9 @@ export default function ThreeVThreePage() {
             }}
           />
           <div className="relative flex items-center gap-3 mb-3">
-            <img
-              src="https://drive.google.com/thumbnail?id=1q2Lqml8IzvI0l348pQnRZb5te4nm4bIh&sz=w64"
-              alt="Tournoi 3v3"
-              className="h-10 w-10 rounded-full object-cover"
-              loading="lazy"
-            />
+            <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-800/80 flex-shrink-0">
+              <img src={threeV3Icon} alt="Tournoi 3v3" className="h-full w-full object-cover scale-150" loading="lazy" />
+            </div>
             <h1 className="text-xl font-semibold text-white">Tournoi 3v3 FUN</h1>
           </div>
           <div className="grid gap-3 md:grid-cols-2">

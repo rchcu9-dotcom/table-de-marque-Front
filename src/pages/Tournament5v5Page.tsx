@@ -5,6 +5,7 @@ import type { Match } from "../api/match";
 import { Link, useNavigate } from "react-router-dom";
 import HorizontalMatchSlider from "../components/collections/HorizontalMatchSlider";
 import HexBadge from "../components/ds/HexBadge";
+import fiveV5Icon from "../assets/icons/nav/fivev5.png";
 
 const BRASSAGE = [
   { code: "A", title: "Sam - Brassage Poule A", phase: "Brassage" },
@@ -124,12 +125,9 @@ export default function Tournament5v5Page() {
             />
             <div className="flex flex-col items-start gap-3 relative">
               <div className="flex items-center gap-2">
-                <img
-                  src="https://drive.google.com/thumbnail?id=1vIehJkzRKfVUUxP86EzX7jaTpD2Wr4AO&sz=w64"
-                  alt="Tournoi 5v5"
-                  className="h-10 w-10 rounded-full object-cover"
-                  loading="lazy"
-                />
+                <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-800/80 flex-shrink-0">
+                  <img src={fiveV5Icon} alt="Tournoi 5v5" className="h-full w-full object-cover scale-150" loading="lazy" />
+                </div>
                 <h2 className="text-lg font-semibold text-white">Tournoi 5v5</h2>
               </div>
               <div className="flex items-center gap-2 text-xs font-semibold flex-wrap">

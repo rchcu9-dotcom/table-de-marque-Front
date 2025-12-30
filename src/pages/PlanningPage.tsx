@@ -4,6 +4,7 @@ import { useTeams } from "../hooks/useTeams";
 import type { Match } from "../api/match";
 import HexBadge from "../components/ds/HexBadge";
 import { useNavigate } from "react-router-dom";
+import planningIcon from "../assets/icons/nav/planning.png";
 
 function normalize(value?: string | null) {
   return (value ?? "").trim().toLowerCase();
@@ -137,7 +138,12 @@ export default function PlanningPage() {
           className="max-w-6xl mx-auto rounded-xl border border-slate-800 bg-slate-900 p-4 shadow-md shadow-slate-950"
           ref={filterRef}
         >
-          <h1 className="text-xl font-semibold text-white mb-3">Planning</h1>
+          <div className="flex items-center gap-3 mb-3">
+            <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-800/80 flex-shrink-0">
+              <img src={planningIcon} alt="Planning" className="h-full w-full object-cover scale-150" loading="lazy" />
+            </div>
+            <h1 className="text-xl font-semibold text-white">Planning</h1>
+          </div>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             <div className="flex flex-col gap-1">
               <label className="text-xs text-slate-400">Recherche</label>

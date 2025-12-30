@@ -1,3 +1,9 @@
+﻿import homeIcon from "../../assets/icons/nav/home.png";
+import planningIcon from "../../assets/icons/nav/planning.png";
+import fiveV5Icon from "../../assets/icons/nav/fivev5.png";
+import challengeIcon from "../../assets/icons/nav/challenge.png";
+import threeV3Icon from "../../assets/icons/nav/threev3.png";
+
 export type TabItem = {
   id: string;
   label: string;
@@ -6,43 +12,41 @@ export type TabItem = {
   iconUrl?: string;
 };
 
-const thumb = (id: string) => `https://drive.google.com/thumbnail?id=${id}&sz=w64`;
-
 export const tabsConfig: TabItem[] = [
   {
     id: "home",
     label: "Accueil",
     shortLabel: "Accueil",
     path: "/",
-    iconUrl: thumb("13IXHpThb7IO2QK8O4IHEwzBa0RZ5_StS"),
+    iconUrl: homeIcon,
   },
   {
     id: "planning",
     label: "Planning",
     shortLabel: "Planning",
     path: "/planning",
-    iconUrl: thumb("1kjp7e88EhKzGLjPntCXuk7i602uHOMZz"),
+    iconUrl: planningIcon,
   },
   {
     id: "tournament",
     label: "Tournoi 5v5",
     shortLabel: "5v5",
     path: "/tournament/5v5",
-    iconUrl: thumb("1vIehJkzRKfVUUxP86EzX7jaTpD2Wr4AO"),
+    iconUrl: fiveV5Icon,
   },
   {
     id: "challenge",
     label: "Challenge",
     shortLabel: "Challenge",
     path: "/challenge",
-    iconUrl: thumb("1BlOlsgBPdgob1SgoN3HXcs-PEcUM8TIh"),
+    iconUrl: challengeIcon,
   },
   {
     id: "threevthree",
     label: "Tournoi 3v3",
     shortLabel: "3v3",
     path: "/tournament/3v3",
-    iconUrl: thumb("1q2Lqml8IzvI0l348pQnRZb5te4nm4bIh"),
+    iconUrl: threeV3Icon,
   },
 ];
 

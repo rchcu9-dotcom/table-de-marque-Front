@@ -1,7 +1,8 @@
-﻿import React from "react";
+import React from "react";
 import { useChallengeAll } from "../hooks/useChallengeAll";
 import { useTeams } from "../hooks/useTeams";
 import type { ChallengeAttempt as Attempt } from "../api/challenge";
+import challengeIcon from "../assets/icons/nav/challenge.png";
 
 export default function ChallengePage() {
   const { data, isLoading, isError } = useChallengeAll();
@@ -268,12 +269,9 @@ export default function ChallengePage() {
           />
           <div className="relative flex flex-col gap-3">
             <div className="flex items-center gap-2">
-              <img
-                src="https://drive.google.com/thumbnail?id=1BlOlsgBPdgob1SgoN3HXcs-PEcUM8TIh&sz=w64"
-                alt="Challenge"
-                className="h-10 w-10 rounded-full object-cover"
-                loading="lazy"
-              />
+              <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-800/80 flex-shrink-0">
+                <img src={challengeIcon} alt="Challenge" className="h-full w-full object-cover scale-150" loading="lazy" />
+              </div>
               <h1 className="text-xl font-semibold text-white">Challenge</h1>
             </div>
             <div className="flex flex-col gap-2 max-w-xl">
