@@ -6,6 +6,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import App from './App';
 import './styles/global.css';
 import { MatchStreamListener } from './providers/MatchStreamListener';
+import { SelectedTeamProvider } from './providers/SelectedTeamProvider';
 
 const queryClient = new QueryClient();
 
@@ -17,10 +18,12 @@ if (import.meta.env.DEV) {
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <MatchStreamListener />
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <SelectedTeamProvider>
+        <MatchStreamListener />
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </SelectedTeamProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   </React.StrictMode>,

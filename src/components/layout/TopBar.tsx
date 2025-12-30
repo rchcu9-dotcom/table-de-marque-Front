@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import Tabs from "../navigation/Tabs";
 import { tabsConfig as tabs } from "../navigation/tabsConfig";
+import { useSelectedTeam } from "../../providers/SelectedTeamProvider";
 
 type Props = {
   children?: React.ReactNode;
@@ -12,6 +13,7 @@ export default function TopBar({ children }: Props) {
   const [menuPos, setMenuPos] = React.useState<{ top: number; left: number }>({ top: 64, left: 12 });
   const navigate = useNavigate();
   const menuBtnRef = React.useRef<HTMLButtonElement | null>(null);
+  const { selectedTeam, toggleMuted } = useSelectedTeam();
 
   const updateMenuPos = React.useCallback(() => {
     const rect = menuBtnRef.current?.getBoundingClientRect();
@@ -46,6 +48,27 @@ export default function TopBar({ children }: Props) {
         </div>
         <div className="flex items-center gap-3 min-w-0">
           {children ?? null}
+          {selectedTeam ? (
+            <button
+              type="button"
+              onClick={toggleMuted}
+              className="h-10 w-10 rounded-full overflow-hidden border border-slate-700 bg-slate-800/70 hover:border-slate-400 transition"
+              title={`Équipe sélectionnée : ${selectedTeam.name}`}
+            >
+              {selectedTeam.logoUrl ? (
+                <img
+                  src={selectedTeam.logoUrl}
+                  alt={selectedTeam.name}
+                  className={`h-full w-full object-cover ${selectedTeam.muted ? "grayscale opacity-70" : ""}`}
+                  loading="lazy"
+                />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center text-xs font-semibold text-white">
+                  {selectedTeam.name.slice(0, 2).toUpperCase()}
+                </div>
+              )}
+            </button>
+          ) : null}
           <div className="hidden md:flex">
             <Tabs variant="top" />
           </div>

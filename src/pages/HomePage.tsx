@@ -7,6 +7,7 @@ import homeIcon from "../assets/icons/nav/home.png";
 import fiveV5Icon from "../assets/icons/nav/fivev5.png";
 import threeV3Icon from "../assets/icons/nav/threev3.png";
 import challengeIcon from "../assets/icons/nav/challenge.png";
+import { useSelectedTeam } from "../providers/SelectedTeamProvider";
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ export default function HomePage() {
   const { data: momentumPG } = useMomentumMatches({ surface: "PG", competitionType: "3v3" });
   const { data: momentumChallenge } = useMomentumMatches({ surface: "PG", competitionType: "challenge" });
   const { data: teams } = useTeams();
+  const { setSelectedTeam } = useSelectedTeam();
 
   const [show5v5, setShow5v5] = React.useState(true);
   const [show3v3, setShow3v3] = React.useState(false);
@@ -100,7 +102,10 @@ export default function HomePage() {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-semibold">Équipes</h2>
           </div>
-          <TeamGrid teams={(teams ?? []).slice(0, 16)} />
+          <TeamGrid teams={(teams ?? []).slice(0, 16)} onSelect={(team) => {
+            setSelectedTeam({ id: team.id, name: team.name, logoUrl: team.logoUrl ?? undefined, muted: false });
+            navigate(`/teams/${encodeURIComponent(team.id)}`);
+          }} />
         </section>
 
         {show3v3 && (
@@ -155,15 +160,16 @@ export default function HomePage() {
   );
 }
 
-function TeamGrid({ teams }: { teams: { id: string; name: string; logoUrl?: string | null }[] }) {
+function TeamGrid({ teams, onSelect }: { teams: { id: string; name: string; logoUrl?: string | null }[]; onSelect: (team: { id: string; name: string; logoUrl?: string | null }) => void }) {
   if (!teams || teams.length === 0) {
     return <p className="text-slate-300 text-sm">Aucune équipe.</p>;
   }
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
       {teams.map((team) => (
-        <a
-          href={`/teams/${encodeURIComponent(team.id)}`}
+        <button
+          type="button"
+          onClick={() => onSelect(team)}
           key={team.id}
           className="relative rounded-xl overflow-hidden border border-slate-800 bg-slate-900/70 aspect-[8/3] flex items-end p-3 shadow-inner hover:-translate-y-0.5 transition"
         >
@@ -179,7 +185,7 @@ function TeamGrid({ teams }: { teams: { id: string; name: string; logoUrl?: stri
             <Logo name={team.name} url={team.logoUrl} size={48} />
             <span className="text-sm font-semibold text-white drop-shadow">{team.id}</span>
           </div>
-        </a>
+        </button>
       ))}
     </div>
   );
