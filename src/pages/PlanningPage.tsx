@@ -29,12 +29,6 @@ export default function PlanningPage() {
   const filterRef = React.useRef<HTMLDivElement | null>(null);
   const [layout, setLayout] = React.useState<{ topOffset: number; paddingTop: number }>({ topOffset: 64, paddingTop: 320 });
 
-  const COMPETITION_ICONS: Record<string, string> = {
-    "5v5": "https://drive.google.com/thumbnail?id=1vIehJkzRKfVUUxP86EzX7jaTpD2Wr4AO&sz=w96",
-    "3v3": "https://drive.google.com/thumbnail?id=1q2Lqml8IzvI0l348pQnRZb5te4nm4bIh&sz=w96",
-    challenge: "https://drive.google.com/thumbnail?id=1BlOlsgBPdgob1SgoN3HXcs-PEcUM8TIh&sz=w96",
-  };
-
   const teamOptions = React.useMemo(() => {
     const opts: Array<{ value: string; label: string }> = [];
     const seen = new Set<string>();
@@ -175,7 +169,6 @@ export default function PlanningPage() {
                 {["5v5", "3v3", "challenge"].map((c) => {
                   const active = competitionFilter.has(c);
                   const label = c === "challenge" ? "Challenge" : c;
-                  const icon = COMPETITION_ICONS[c];
                   return (
                     <button
                       key={c}
@@ -189,19 +182,13 @@ export default function PlanningPage() {
                         }
                         setCompetitionFilter(next);
                       }}
-                      className={`rounded-full border px-3 py-1 text-xs font-semibold flex items-center gap-2 ${
+                      className={`rounded-full border px-3 py-1 text-xs font-semibold ${
                         active
                           ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60"
                           : "bg-slate-800 text-slate-200 border-slate-600"
                       }`}
                     >
-                      {icon && (
-                        <span
-                          className="h-5 w-5 rounded-full bg-cover bg-center"
-                          style={{ backgroundImage: `url(${icon})` }}
-                        />
-                      )}
-                      <span>{label}</span>
+                      {label}
                     </button>
                   );
                 })}
