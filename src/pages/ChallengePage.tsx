@@ -40,15 +40,29 @@ export default function ChallengePage() {
     };
   }, [data]);
 
+  const selectedTeamId = React.useMemo(() => selectedTeam?.id?.toLowerCase(), [selectedTeam]);
+
   const finalesByRound = React.useMemo(() => {
     const jour3 = data?.jour3 ?? [];
     const byId = (id: string): Attempt[] => jour3.filter((a) => a.atelierId === id);
+    const qf = byId("finale-vitesse-qf");
+    const df = byId("finale-vitesse-df");
+    const finale = byId("finale-vitesse-finale");
+
+    if (!selectedTeamId) {
+      return { qf, df, finale };
+    }
+
+    const filterTeam = (arr: Attempt[]) => arr.filter((a) => (a.equipeId ?? "").toLowerCase() === selectedTeamId);
     return {
-      qf: byId("finale-vitesse-qf"),
-      df: byId("finale-vitesse-df"),
-      finale: byId("finale-vitesse-finale"),
+      qf: filterTeam(qf),
+      df: filterTeam(df),
+      finale: filterTeam(finale),
     };
-  }, [data]);
+  }, [data, selectedTeamId]);
+  const hasFinales = React.useMemo(() => {
+    return finalesByRound.qf.length > 0 || finalesByRound.df.length > 0 || finalesByRound.finale.length > 0;
+  }, [finalesByRound]);
 
   const uniquePlayers = React.useMemo(() => {
     return (data?.jour1 ?? [])
@@ -82,7 +96,7 @@ export default function ChallengePage() {
     return "";
   };
 
-  const renderTable = (title: string, attempts: Attempt[], opts?: { highlightTop?: number; rankOnly?: boolean }) => {
+  const renderTable = (title: string, attempts: Attempt[], opts?: { highlightTop?: number; rankOnly?: boolean; hideTitle?: boolean }) => {
     const needsRanking = Boolean(opts?.highlightTop || opts?.rankOnly);
     const isVitesse = title.toLowerCase().includes("vitesse");
     const isTir = title.toLowerCase().includes("tir");
@@ -108,33 +122,35 @@ export default function ChallengePage() {
 
     return (
       <section className="rounded-lg border border-slate-800 bg-slate-900/70 p-3">
-        <h2 className="text-sm font-semibold mb-2 text-white flex items-center gap-2">
-          {isVitesse ? (
-            <img
-              src="https://drive.google.com/thumbnail?id=1rg6fHxVUWLBB5N5B27lTDW8gp0Pl9bxj&sz=w64"
-              alt="Vitesse"
-              className="h-5 w-5 object-contain"
-              loading="lazy"
-            />
-          ) : null}
-          {isTir ? (
-            <img
-              src="https://drive.google.com/thumbnail?id=1Q5PEpy7rvatLWo9thWj9TFuyjJqEFqRx&sz=w64"
-              alt="Adresse au tir"
-              className="h-5 w-5 object-contain"
-              loading="lazy"
-            />
-          ) : null}
-          {isGlisse ? (
-            <img
-              src="https://drive.google.com/thumbnail?id=188Qsqx1zJv0WdYqJzrVCCIN-ufK6MkQe&sz=w64"
-              alt="Glisse & Crosse"
-              className="h-5 w-5 object-contain"
-              loading="lazy"
-            />
-          ) : null}
-          <span>{title}</span>
-        </h2>
+        {!opts?.hideTitle && (
+          <h2 className="text-sm font-semibold mb-2 text-white flex items-center gap-2">
+            {isVitesse ? (
+              <img
+                src="https://drive.google.com/thumbnail?id=1rg6fHxVUWLBB5N5B27lTDW8gp0Pl9bxj&sz=w64"
+                alt="Vitesse"
+                className="h-5 w-5 object-contain"
+                loading="lazy"
+              />
+            ) : null}
+            {isTir ? (
+              <img
+                src="https://drive.google.com/thumbnail?id=1Q5PEpy7rvatLWo9thWj9TFuyjJqEFqRx&sz=w64"
+                alt="Adresse au tir"
+                className="h-5 w-5 object-contain"
+                loading="lazy"
+              />
+            ) : null}
+            {isGlisse ? (
+              <img
+                src="https://drive.google.com/thumbnail?id=188Qsqx1zJv0WdYqJzrVCCIN-ufK6MkQe&sz=w64"
+                alt="Glisse & Crosse"
+                className="h-5 w-5 object-contain"
+                loading="lazy"
+              />
+            ) : null}
+            <span>{title}</span>
+          </h2>
+        )}
         {attempts.length === 0 ? (
           <p className="text-slate-300 text-xs">Aucune donnee.</p>
         ) : (
@@ -229,18 +245,22 @@ export default function ChallengePage() {
   const qfSlices = React.useMemo(() => {
     const slices: Attempt[][] = [];
     for (let i = 0; i < 8; i++) {
-      slices.push(finalesByRound.qf.slice(i * 4, (i + 1) * 4));
+      const slice = finalesByRound.qf.slice(i * 4, (i + 1) * 4);
+      slices.push(slice);
     }
-    return slices;
-  }, [finalesByRound.qf]);
+    if (!selectedTeamId) return slices;
+    return slices.filter((slice) => slice.some((a) => (a.equipeId ?? "").toLowerCase() === selectedTeamId));
+  }, [finalesByRound.qf, selectedTeamId]);
 
   const dfSlices = React.useMemo(() => {
     const slices: Attempt[][] = [];
     for (let i = 0; i < 4; i++) {
-      slices.push(finalesByRound.df.slice(i * 4, (i + 1) * 4));
+      const slice = finalesByRound.df.slice(i * 4, (i + 1) * 4);
+      slices.push(slice);
     }
-    return slices;
-  }, [finalesByRound.df]);
+    if (!selectedTeamId) return slices;
+    return slices.filter((slice) => slice.some((a) => (a.equipeId ?? "").toLowerCase() === selectedTeamId));
+  }, [finalesByRound.df, selectedTeamId]);
 
   React.useLayoutEffect(() => {
     const updateLayout = () => {
@@ -350,36 +370,63 @@ export default function ChallengePage() {
                     {showVitesse && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-xs text-slate-200">
-                          <span className="font-semibold uppercase tracking-wide">Top 3</span>
+                          <div className="flex items-center gap-2">
+                            <img
+                              src="https://drive.google.com/thumbnail?id=1rg6fHxVUWLBB5N5B27lTDW8gp0Pl9bxj&sz=w64"
+                              alt="Vitesse"
+                              className="h-5 w-5 object-contain"
+                            />
+                            <span className="text-sm font-semibold text-white">Atelier Vitesse</span>
+                          </div>
                           <Link to="/challenge/atelier/vitesse" className="text-emerald-300 hover:text-emerald-200 font-semibold">
                             Voir tout
                           </Link>
                         </div>
-                        {renderTable("Atelier Vitesse", applyFilters(groupByAtelier.jour1.vitesse, "vitesse", { limitTop: 3 }))}
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
+                        {renderTable("Atelier Vitesse", applyFilters(groupByAtelier.jour1.vitesse, "vitesse", { limitTop: 3 }), {
+                          hideTitle: true,
+                        })}
                       </div>
                     )}
                     {showTir && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-xs text-slate-200">
-                          <span className="font-semibold uppercase tracking-wide">Top 3</span>
-                      <Link to="/challenge/atelier/tir" className="text-emerald-300 hover:text-emerald-200 font-semibold">
-                        Voir tout
-                      </Link>
-                    </div>
-                    {renderTable("Atelier Tir", applyFilters(groupByAtelier.jour1.tir, "tir", { limitTop: 3 }))}
-                  </div>
-                )}
+                          <div className="flex items-center gap-2">
+                            <img
+                              src="https://drive.google.com/thumbnail?id=1Q5PEpy7rvatLWo9thWj9TFuyjJqEFqRx&sz=w64"
+                              alt="Tir"
+                              className="h-5 w-5 object-contain"
+                            />
+                            <span className="text-sm font-semibold text-white">Atelier Tir</span>
+                          </div>
+                          <Link to="/challenge/atelier/tir" className="text-emerald-300 hover:text-emerald-200 font-semibold">
+                            Voir tout
+                          </Link>
+                        </div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
+                        {renderTable("Atelier Tir", applyFilters(groupByAtelier.jour1.tir, "tir", { limitTop: 3 }), { hideTitle: true })}
+                      </div>
+                    )}
                     {showGlisse && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-xs text-slate-200">
-                          <span className="font-semibold uppercase tracking-wide">Top 3</span>
+                          <div className="flex items-center gap-2">
+                            <img
+                              src="https://drive.google.com/thumbnail?id=188Qsqx1zJv0WdYqJzrVCCIN-ufK6MkQe&sz=w64"
+                              alt="Agilite"
+                              className="h-5 w-5 object-contain"
+                            />
+                            <span className="text-sm font-semibold text-white">Atelier Agilite</span>
+                          </div>
                           <Link to="/challenge/atelier/glisse_crosse" className="text-emerald-300 hover:text-emerald-200 font-semibold">
                             Voir tout
                           </Link>
                         </div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
                         {renderTable(
-                          "Atelier Agilité",
-                          applyFilters(groupByAtelier.jour1.glisse_crosse, "glisse_crosse", { limitTop: 3 })
+                          "Atelier Agilite",
+                          applyFilters(groupByAtelier.jour1.glisse_crosse, "glisse_crosse", { limitTop: 3 }),
+                          { hideTitle: true }
                         )}
                       </div>
                     )}
@@ -387,7 +434,7 @@ export default function ChallengePage() {
                 </section>
               )}
 
-              {showFinale && (
+              {showFinale && hasFinales && (
                 <section className="space-y-3">
                   <h2 className="text-base font-semibold text-white">{finaleLabel ? `Finale Vitesse ${finaleLabel}` : "Finale Vitesse"}</h2>
 
@@ -419,9 +466,11 @@ export default function ChallengePage() {
 
                   <div className="space-y-2">
                     <h3 className="text-sm font-semibold text-slate-200">Finale</h3>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      {renderTable("Finale", finalesByRound.finale, { highlightTop: 1, rankOnly: true })}
-                    </div>
+                    {finalesByRound.finale.length > 0 ? (
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {renderTable("Finale", finalesByRound.finale, { highlightTop: 1, rankOnly: true })}
+                      </div>
+                    ) : null}
                   </div>
                 </section>
               )}
