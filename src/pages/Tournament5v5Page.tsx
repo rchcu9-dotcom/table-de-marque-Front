@@ -192,7 +192,7 @@ export default function Tournament5v5Page() {
           height: `calc(100vh - ${layout.paddingTop}px - 24px)`,
         }}
       >
-        <div className="max-w-6xl mx-auto h-full overflow-y-auto space-y-6" ref={scrollAreaRef}>
+        <div className="max-w-6xl mx-auto h-full overflow-y-auto space-y-6 pb-24 md:pb-6" ref={scrollAreaRef}>
           {showBrassage && (
             <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
               <h2 className="text-lg font-semibold mb-3">Classements Sam (Brassage)</h2>

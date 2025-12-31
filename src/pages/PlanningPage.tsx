@@ -196,7 +196,7 @@ export default function PlanningPage() {
         }}
       >
         <div
-          className="max-w-6xl mx-auto h-full rounded-xl border border-slate-800 bg-slate-900/60 p-4 overflow-y-auto"
+          className="max-w-6xl mx-auto h-full rounded-xl border border-slate-800 bg-slate-900/60 p-4 overflow-y-auto pb-24 md:pb-6"
           ref={listRef}
         >
           {filtered.length === 0 ? (

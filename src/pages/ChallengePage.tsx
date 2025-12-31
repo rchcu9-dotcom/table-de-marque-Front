@@ -306,7 +306,7 @@ export default function ChallengePage() {
         className="absolute inset-x-4 bottom-4"
         style={{ top: `${layout.paddingTop}px`, height: `calc(100vh - ${layout.paddingTop}px - 24px)` }}
       >
-        <div className="max-w-6xl mx-auto h-full rounded-xl border border-slate-800 bg-slate-900/70 p-4 overflow-y-auto space-y-4">
+        <div className="max-w-6xl mx-auto h-full rounded-xl border border-slate-800 bg-slate-900/70 p-4 overflow-y-auto space-y-4 pb-24 md:pb-6">
           {isLoading && <p className="text-slate-300 text-sm">Chargement...</p>}
           {isError && <p className="text-red-400 text-sm">Erreur lors du chargement.</p>}
 
