@@ -4,10 +4,12 @@ import { useChallengeAll } from "../hooks/useChallengeAll";
 import { useTeams } from "../hooks/useTeams";
 import type { ChallengeAttempt as Attempt } from "../api/challenge";
 import challengeIcon from "../assets/icons/nav/challenge.png";
+import { useSelectedTeam } from "../providers/SelectedTeamProvider";
 
 export default function ChallengePage() {
   const { data, isLoading, isError } = useChallengeAll();
   const { data: teams } = useTeams();
+  const { selectedTeam } = useSelectedTeam();
 
   const [showVitesse, setShowVitesse] = React.useState(true);
   const [showTir, setShowTir] = React.useState(true);
@@ -181,6 +183,10 @@ export default function ChallengePage() {
 
   const applyFilters = (attempts: Attempt[], type: "vitesse" | "tir" | "glisse_crosse", opts?: { limitTop?: number }) => {
     let filtered = attempts;
+    const selectedTeamId = selectedTeam?.id?.toLowerCase();
+    if (selectedTeamId) {
+      filtered = filtered.filter((a) => (a.equipeId ?? "").toLowerCase() === selectedTeamId);
+    }
     const term = searchTerm.trim().toLowerCase();
     if (term) {
       filtered = filtered.filter((a) => {

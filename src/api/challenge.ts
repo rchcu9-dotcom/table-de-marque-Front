@@ -51,8 +51,9 @@ export async function fetchChallengeByEquipe(equipeId: string): Promise<Challeng
   return res.json();
 }
 
-export async function fetchChallengeAll(): Promise<ChallengeAllResponse> {
-  const res = await fetch(`${API_BASE_URL}/challenge/all`);
+export async function fetchChallengeAll(params?: { teamId?: string | null }): Promise<ChallengeAllResponse> {
+  const query = params?.teamId ? `?teamId=${encodeURIComponent(params.teamId)}` : "";
+  const res = await fetch(`${API_BASE_URL}/challenge/all${query}`);
   if (!res.ok) throw new Error("Erreur lors du chargement du challenge");
   return res.json();
 }
