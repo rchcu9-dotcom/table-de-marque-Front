@@ -11,6 +11,7 @@ import HorizontalMatchSlider from "../components/collections/HorizontalMatchSlid
 type Props = {
   searchQuery?: string;
   sort?: SortConfig<Match>;
+  onSortChange?: (sort: SortConfig<Match>) => void;
 };
 
 function computeMomentum(source: Match[]): Match[] {
@@ -246,14 +247,19 @@ export default function MatchListPage({
       label: "Date",
       secondary: true,
       hideLabel: true,
-      render: (value) => new Date(value).toLocaleString(),
+      render: (_value, item) => {
+        if (!item.date) return "";
+        const dateValue = new Date(item.date);
+        return Number.isNaN(dateValue.getTime()) ? "" : dateValue.toLocaleString();
+      },
     },
     {
       key: "status",
       label: "Statut",
       secondary: true,
       hideLabel: true,
-      render: (value: Match["status"]) => {
+      render: (_value, item) => {
+        const value = item.status;
         const map: Record<
           Match["status"],
           { label: string; color: "success" | "muted" | "warning" | "default" | "info" }
