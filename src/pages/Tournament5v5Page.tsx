@@ -1,10 +1,10 @@
+/* eslint-disable react-hooks/set-state-in-effect, react-hooks/immutability, @typescript-eslint/no-explicit-any */
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useMatchesFiltered, useMomentumMatches } from "../hooks/useMatches";
 import { useClassement } from "../hooks/useClassement";
 import type { Match } from "../api/match";
 import { Link, useNavigate } from "react-router-dom";
 import HorizontalMatchSlider from "../components/collections/HorizontalMatchSlider";
-import HexBadge from "../components/ds/HexBadge";
 import fiveV5Icon from "../assets/icons/nav/fivev5.png";
 import { useSelectedTeam } from "../providers/SelectedTeamProvider";
 
@@ -494,22 +494,4 @@ function SmallMatchCard({
   );
 }
 
-function StatusBadge({ status }: { status: Match["status"] }) {
-  const map: Record<Match["status"], string> = {
-    ongoing: "En cours",
-    planned: "À venir",
-    finished: "Terminé",
-    deleted: "Annulé",
-  };
-  const color =
-    status === "ongoing"
-      ? "bg-amber-500/20 text-amber-300 border-amber-400/60"
-      : status === "planned"
-        ? "bg-slate-700/50 text-slate-100 border-slate-500/60"
-        : "bg-emerald-500/20 text-emerald-200 border-emerald-400/60";
-  return (
-    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${color}`}>
-      {map[status]}
-    </span>
-  );
-}
+

@@ -11,7 +11,6 @@ import HorizontalMatchSlider from "../components/collections/HorizontalMatchSlid
 type Props = {
   searchQuery?: string;
   sort?: SortConfig<Match>;
-  onSortChange?: (sort: SortConfig<Match>) => void;
 };
 
 function computeMomentum(source: Match[]): Match[] {
@@ -68,7 +67,6 @@ function computeMomentum(source: Match[]): Match[] {
 export default function MatchListPage({
   searchQuery = "",
   sort,
-  onSortChange: _onSortChange,
 }: Props) {
   const formatCountdown = React.useCallback((target: Date | null) => {
     if (!target) return "";
@@ -271,11 +269,11 @@ export default function MatchListPage({
     },
   ];
 
-  const fields = renderFields(false);
-  const renderLeading = (_item: Match) => (
-    <div className="flex w-full items-center justify-center gap-3" />
-  );
+  const renderLeading = React.useCallback(() => {
+    return <div className="flex w-full items-center justify-center gap-3" />;
+  }, []);
 
+  const fields = renderFields(false);
   return (
     <div className="space-y-4">
       {isPlanningLoading && (

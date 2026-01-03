@@ -2,7 +2,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import HexBadge from "../components/ds/HexBadge";
-import Badge from "../components/ds/Badge";
 import Card from "../components/ds/Card";
 import Spinner from "../components/ds/Spinner";
 import { useMatches } from "../hooks/useMatches";
@@ -76,33 +75,6 @@ function pickTeamLogo(matches: Match[], focusTeam: string, fallback?: string | n
   return fallback ?? undefined;
 }
 
-function formatScore(match: Match, focusTeam: string) {
-  const winner = computeWinner(match);
-  const loseColor = winner && normalizeTeamName(winner) !== normalizeTeamName(focusTeam) ? "text-red-300" : "";
-  const winColor = winner && normalizeTeamName(winner) === normalizeTeamName(focusTeam) ? "text-emerald-300" : "";
-  return match.scoreA !== null && match.scoreB !== null ? (
-    <div className="flex items-center gap-1 text-sm font-semibold text-slate-100 justify-center w-20">
-      <span className={normalizeTeamName(match.teamA) === normalizeTeamName(winner ?? "") ? winColor : loseColor}>{match.scoreA}</span>
-      <span className="text-slate-500">-</span>
-      <span className={normalizeTeamName(match.teamB) === normalizeTeamName(winner ?? "") ? winColor : loseColor}>{match.scoreB}</span>
-    </div>
-  ) : (
-    <div className="text-xs text-slate-300 w-20 text-center">
-      {new Date(match.date).toLocaleTimeString("fr-FR", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}
-    </div>
-  );
-}
-
-function computeWinner(match: Match) {
-  if (match.status !== "finished") return null;
-  if (match.scoreA == null || match.scoreB == null) return null;
-  if (match.scoreA === match.scoreB) return null;
-  return match.scoreA > match.scoreB ? match.teamA : match.teamB;
-}
-
 export default function TeamPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -125,12 +97,6 @@ export default function TeamPage() {
     enabled: !!pouleCode,
     staleTime: 5 * 60_000,
   });
-
-  const teamEntry: ClassementEntry | undefined = React.useMemo(() => {
-    if (!classement.data) return undefined;
-    const needle = normalizeTeamName(teamName);
-    return classement.data.equipes.find((e) => normalizeTeamName(e.name) === needle);
-  }, [classement.data, teamName]);
 
   const heroLogo = React.useMemo(
     () => pickTeamLogo(filtered, teamName, sample?.teamALogo ?? sample?.teamBLogo),
@@ -233,7 +199,7 @@ export default function TeamPage() {
                     />
                   ))
                 ) : (
-                  <span className="text-slate-500 text-sm">Aucun match Ã  venir</span>
+                  <span className="text-slate-500 text-sm">Aucun match a venir</span>
                 )}
               </div>
             </Card>
@@ -271,7 +237,7 @@ export default function TeamPage() {
             <Card className="bg-white/5 border-slate-800 backdrop-blur space-y-3">
               <div className="flex items-center gap-3">
                 <HexBadge name="Jour 1" size={36} imageUrl={ICONS.classe} />
-                <div className="text-sm font-semibold text-slate-100">Jour 1 Â· {formatDay(jour1)}</div>
+                <div className="text-sm font-semibold text-slate-100">Jour 1 - {formatDay(jour1)}</div>
               </div>
               <DayClassement
                 title="Classement 5v5"
@@ -449,7 +415,9 @@ function InlineMatchCard({
       </div>
     </div>
   );
-}function PlayersGrid({ players, loading }: { players?: any[]; loading: boolean }) {
+}
+
+function PlayersGrid({ players, loading }: { players?: Array<{ id?: string; name?: string; prenom?: string; nom?: string; poste?: string; numero?: number | null }>; loading: boolean }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -475,11 +443,6 @@ function InlineMatchCard({
       ))}
     </div>
   );
-}
-
-function formatDateTime(date: string) {
-  const d = new Date(date);
-  return d.toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 function getUpcoming(matches: Match[]) {

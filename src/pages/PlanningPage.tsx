@@ -10,11 +10,6 @@ function normalize(value?: string | null) {
   return (value ?? "").trim().toLowerCase();
 }
 
-function formatDateTime(date: string) {
-  const d = new Date(date);
-  return d.toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-}
-
 export default function PlanningPage() {
   const { selectedTeam } = useSelectedTeam();
   const { data: matches } = useMatchesFiltered({ teamId: selectedTeam?.id });
@@ -61,7 +56,7 @@ export default function PlanningPage() {
         return true;
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [matches, competitionFilter, dayFilter, selectedTeam?.id, search]);
+  }, [matches, competitionFilter, dayFilter, selectedTeam, search]);
 
   const buildCardClasses = (status: Match["status"]) => {
     if (status === "ongoing") {

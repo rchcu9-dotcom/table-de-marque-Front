@@ -44,7 +44,7 @@ export default function ChallengeAtelierPage() {
       const equipe = (a.equipeName ?? "").toLowerCase();
       return joueur.includes(term) || equipe.includes(term) || (a.equipeId ?? "").toLowerCase().includes(term);
     });
-  }, [atelierType, data?.jour1, search, selectedTeam?.id]);
+  }, [atelierType, data?.jour1, search, selectedTeam]);
 
   const sorted = React.useMemo(() => {
     return [...attempts].sort((a, b) => {

@@ -230,7 +230,7 @@ export default function MatchDetailPage() {
                   key: "name",
                   label: "Equipe",
                   render: (_value, item) => {
-                    const target = (item as any).id ?? item.name;
+                    const target = (item as { id?: string }).id ?? item.name;
                     return (
                       <button
                         onClick={() => navigate(`/teams/${target}`)}

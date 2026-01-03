@@ -14,7 +14,6 @@ export default function ChallengePage() {
   const [showVitesse, setShowVitesse] = React.useState(true);
   const [showTir, setShowTir] = React.useState(true);
   const [showGlisse, setShowGlisse] = React.useState(true);
-  const [selectedPlayer, setSelectedPlayer] = React.useState<string>("");
   const [showEvaluation, setShowEvaluation] = React.useState(true);
   const [showFinale, setShowFinale] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -63,13 +62,6 @@ export default function ChallengePage() {
   const hasFinales = React.useMemo(() => {
     return finalesByRound.qf.length > 0 || finalesByRound.df.length > 0 || finalesByRound.finale.length > 0;
   }, [finalesByRound]);
-
-  const uniquePlayers = React.useMemo(() => {
-    return (data?.jour1 ?? [])
-      .map((a) => a.joueurName)
-      .filter((v, idx, arr) => arr.indexOf(v) === idx)
-      .sort((a, b) => a.localeCompare(b));
-  }, [data]);
 
   const evalLabel = React.useMemo(() => {
     const first = (data?.jour1 ?? [])
@@ -211,10 +203,6 @@ export default function ChallengePage() {
         const equipeName = (a.equipeName ?? "").toLowerCase();
         return joueur.includes(term) || equipeId.includes(term) || equipeName.includes(term);
       });
-    }
-    if (selectedPlayer) {
-      const key = selectedPlayer.toLowerCase();
-      filtered = filtered.filter((a) => (a.joueurName ?? "").toLowerCase() === key);
     }
     if (!opts?.limitTop) return filtered;
     const scorer =

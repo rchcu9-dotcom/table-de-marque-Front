@@ -32,10 +32,8 @@ class FakeEventSource {
 
 describe("MatchStreamListener", () => {
   beforeEach(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (globalThis as any).EventSource = FakeEventSource;
     FakeEventSource.reset();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (globalThis as any).__APP_API_BASE_URL__ = "http://localhost:3000";
   });
 

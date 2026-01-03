@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+/* eslint-disable react-refresh/only-export-components */
+import React, { createContext, useContext, useMemo, useState } from "react";
 
 type SelectedTeam = {
   id: string;
@@ -17,19 +18,18 @@ const SelectedTeamContext = createContext<SelectedTeamContextValue | undefined>(
 const STORAGE_KEY = "selected-team";
 
 export function SelectedTeamProvider({ children }: { children: React.ReactNode }) {
-  const [selectedTeam, setSelectedTeamState] = useState<SelectedTeam | null>(null);
-
-  useEffect(() => {
+  const [selectedTeam, setSelectedTeamState] = useState<SelectedTeam | null>(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as SelectedTeam;
-        setSelectedTeamState(parsed);
-      }
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as Partial<SelectedTeam>;
+      if (!parsed.id || !parsed.name) return null;
+      return { id: parsed.id, name: parsed.name, logoUrl: parsed.logoUrl, muted: parsed.muted };
     } catch (e) {
       console.warn("Failed to read selected team from storage", e);
+      return null;
     }
-  }, []);
+  });
 
   const setSelectedTeam = (team: SelectedTeam | null) => {
     setSelectedTeamState(team);

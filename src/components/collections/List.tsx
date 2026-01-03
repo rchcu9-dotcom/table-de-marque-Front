@@ -4,7 +4,7 @@ import Card from "../ds/Card";
 export type Field<T> = {
   key: keyof T;
   label?: string;
-  render?: (value: any, item: T) => React.ReactNode;
+  render?: (value: T[keyof T], item: T) => React.ReactNode;
   secondary?: boolean;
   hideLabel?: boolean;
 };
@@ -54,8 +54,8 @@ export default function List<T extends { id?: string | number }>({
     const comparator =
       compare ??
       ((a: T, b: T) => {
-        const left = normalizeValue((a as any)[key]);
-        const right = normalizeValue((b as any)[key]);
+        const left = normalizeValue(a[key] as unknown);
+        const right = normalizeValue(b[key] as unknown);
         if (left < right) return -1;
         if (left > right) return 1;
         return 0;
@@ -102,9 +102,7 @@ export default function List<T extends { id?: string | number }>({
               )}
               {primary && (
                 <div className={`text-sm font-semibold ${alignCenter ? "w-full text-center" : ""}`}>
-                  {primary.render
-                    ? primary.render((item as any)[primary.key], item)
-                    : String((item as any)[primary.key])}
+                  {primary.render ? primary.render(item[primary.key], item) : String(item[primary.key])}
                 </div>
               )}
 
@@ -119,9 +117,7 @@ export default function List<T extends { id?: string | number }>({
                       {!f.hideLabel && f.label && (
                         <span className="font-medium text-slate-500 mr-1">{f.label}:</span>
                       )}
-                      {f.render
-                        ? f.render((item as any)[f.key], item)
-                        : String((item as any)[f.key] ?? "")}
+                      {f.render ? f.render(item[f.key], item) : String(item[f.key] ?? "")}
                     </span>
                   ))}
                 </div>

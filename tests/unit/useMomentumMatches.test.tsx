@@ -13,7 +13,7 @@ function createWrapper() {
 }
 
 describe("useMomentumMatches", () => {
-  const apiUrl = "http://localhost:3000/matches/momentum";
+  const _apiUrl = "http://localhost:3000/matches/momentum";
 
   beforeEach(() => {
     vi.stubGlobal(

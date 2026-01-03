@@ -12,13 +12,6 @@ type Props = {
   withDiagonalBg?: boolean;
 };
 
-const statusColors: Record<Match["status"], string> = {
-  planned: "bg-slate-800 text-slate-200",
-  ongoing: "bg-amber-400/90 text-slate-900",
-  finished: "bg-sky-400/90 text-slate-900",
-  deleted: "bg-slate-700 text-slate-200",
-};
-
 function winnerClass(match: Match, side: "A" | "B") {
   if (match.status !== "finished") return "text-slate-100";
   if (match.scoreA === null || match.scoreB === null) return "text-slate-100";
@@ -36,8 +29,6 @@ export default function HorizontalMatchSlider({
   centered = false,
   withDiagonalBg = false,
 }: Props) {
-  if (!matches || matches.length === 0) return null;
-
   const sliderRef = React.useRef<HTMLDivElement | null>(null);
   const cardRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -67,6 +58,8 @@ export default function HorizontalMatchSlider({
     const scrollLeft = Math.max(targetCenter - container.clientWidth / 2, 0);
     container.scrollTo({ left: scrollLeft, behavior: "smooth" });
   }, [matches, currentMatchId]);
+
+  if (!matches || matches.length === 0) return null;
 
   return (
     <div className="relative">
