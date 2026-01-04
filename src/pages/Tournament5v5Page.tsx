@@ -150,6 +150,18 @@ export default function Tournament5v5Page() {
                 </div>
                 <h2 className="text-lg font-semibold text-white">Tournoi 5v5</h2>
               </div>
+              {selectedTeam && (
+                <div className="flex items-center gap-2 text-xs text-emerald-200 pr-1">
+                  <span>Équipe suivie : {selectedTeam.name}</span>
+                  {selectedTeam.logoUrl && (
+                    <img
+                      src={selectedTeam.logoUrl}
+                      alt={selectedTeam.name}
+                      className="h-6 w-6 rounded-full object-cover border border-emerald-300/60 bg-slate-900"
+                    />
+                  )}
+                </div>
+              )}
               <div className="flex items-center gap-2 text-xs font-semibold flex-wrap">
                 <button
                   className={`rounded-full border px-3 py-1 ${

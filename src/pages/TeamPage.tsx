@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import HexBadge from "../components/ds/HexBadge";
@@ -9,6 +9,7 @@ import { useTeams } from "../hooks/useTeams";
 import type { Match } from "../api/match";
 import { fetchClassementByPoule, type ClassementEntry } from "../api/classement";
 import { usePlayersByEquipe } from "../hooks/usePlayers";
+import icon5v5 from "../assets/icons/nav/fivev5.png";
 
 type RankedPlayer = {
   name: string;
@@ -35,10 +36,6 @@ function normalizeTeamName(team?: string) {
 
 function formatDay(date: string) {
   return new Date(date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" });
-}
-
-function focusClass(name: string, focusTeam: string) {
-  return normalizeTeamName(name) === normalizeTeamName(focusTeam) ? "font-semibold text-slate-50" : "text-slate-400";
 }
 
 function computeForm(matches: Match[], team: string) {
@@ -143,7 +140,7 @@ export default function TeamPage() {
   if (isError || filtered.length === 0) {
     return (
       <div className="p-6 text-slate-100 space-y-4">
-        <p>Impossible de charger les donnÃ©es pour {teamName}.</p>
+        <p>Impossible de charger les données pour {teamName}.</p>
         <button
           className="text-sky-400 underline"
           onClick={() => navigate(-1)}
@@ -179,7 +176,6 @@ export default function TeamPage() {
                 <h1 className="text-3xl md:text-4xl font-bold text-slate-50">
                   <span className="font-extrabold text-slate-50">{teamName}</span>
                 </h1>
-                <p className="text-slate-400 text-sm">{sample?.pouleName ?? sample?.pouleCode ?? "Poule inconnue"}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 text-sm text-slate-300" />
@@ -187,11 +183,11 @@ export default function TeamPage() {
 
           <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <Card className="bg-white/5 border-slate-800 backdrop-blur">
-              <p className="text-xs text-slate-400">Forme (tous terminés)</p>
+              <p className="text-xs text-slate-400">Forme</p>
               <p className="text-lg font-semibold text-slate-50">
                 {form.wins}G / {form.draws}N / {form.losses}P
               </p>
-              <p className="text-xs text-slate-500">Basée sur tous les matchs terminés</p>
+              <p className="text-xs text-slate-500">Basés sur tous les matchs terminés</p>
             </Card>
             <Card className="bg-white/5 border-slate-800 backdrop-blur">
               <p className="text-xs text-slate-400">Prochains matchs</p>
@@ -237,19 +233,37 @@ export default function TeamPage() {
           <PlayersGrid players={playerList} loading={players.isLoading} />
         </section>
 
+        <section className="grid gap-4 md:grid-cols-2">
+          <Card className="bg-white/5 border-slate-800 backdrop-blur">
+            <h4 className="text-sm font-semibold text-slate-100 mb-2">Repas</h4>
+            <ul className="space-y-2 text-sm text-slate-200">
+              <li className="flex items-center justify-between"><span>J1</span><span>12:30 - Salle principale</span></li>
+              <li className="flex items-center justify-between"><span>J2</span><span>12:30 - Salle principale</span></li>
+              <li className="flex items-center justify-between"><span>J3</span><span>12:30 - Salle principale</span></li>
+            </ul>
+          </Card>
+          <Card className="bg-white/5 border-slate-800 backdrop-blur space-y-3">
+            <div>
+              <h4 className="text-sm font-semibold text-slate-100">Vestiaire</h4>
+              <p className="text-sm text-slate-300">Vestiaire A (mock)</p>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-slate-100">Teaser</h4>
+              <p className="text-sm text-slate-300">Equipe réputée pour sa vitesse et sa cohésion sur glace.</p>
+            </div>
+          </Card>
+        </section>
+
         <section className="space-y-4">
           <h3 className="text-lg font-semibold text-slate-50">Calendrier</h3>
           <p className="text-sm text-slate-400">Classements & highlights par jour</p>
 
           {jour1 && (
             <Card className="bg-white/5 border-slate-800 backdrop-blur space-y-3">
-              <div className="flex items-center gap-3">
-                <HexBadge name="Jour 1" size={36} imageUrl={ICONS.classe} />
-                <div className="text-sm font-semibold text-slate-100">Jour 1 - {formatDay(jour1)}</div>
-              </div>
+              <div className="text-sm font-semibold text-slate-100">Jour 1 - {formatDay(jour1)}</div>
               <DayClassement
                 title="Classement 5v5"
-                icon={ICONS.classe}
+                icon={icon5v5}
                 classement={rankingByPoule}
                 focusTeam={teamName}
                 logoFor={logoFor}
@@ -295,13 +309,10 @@ export default function TeamPage() {
 
           {jour2 && (
             <Card className="bg-white/5 border-slate-800 backdrop-blur space-y-3">
-              <div className="flex items-center gap-3">
-                <HexBadge name="Jour 2" size={36} imageUrl={ICONS.classe} />
-                <div className="text-sm font-semibold text-slate-100">Jour 2 - {formatDay(jour2)}</div>
-              </div>
+              <div className="text-sm font-semibold text-slate-100">Jour 2 - {formatDay(jour2)}</div>
               <DayClassement
                 title="Classement 5v5"
-                icon={ICONS.classe}
+                icon={icon5v5}
                 classement={rankingByPoule}
                 focusTeam={teamName}
                 logoFor={logoFor}
@@ -312,13 +323,10 @@ export default function TeamPage() {
 
           {jour3 && (
             <Card className="bg-white/5 border-slate-800 backdrop-blur space-y-3">
-              <div className="flex items-center gap-3">
-                <HexBadge name="Jour 3" size={36} imageUrl={ICONS.classe} />
-                <div className="text-sm font-semibold text-slate-100">Jour 3 - {formatDay(jour3)}</div>
-              </div>
+              <div className="text-sm font-semibold text-slate-100">Jour 3 - {formatDay(jour3)}</div>
               <DayClassement
-                title="Classement CarrÃ©"
-                icon={ICONS.classe}
+                title="Classement Carré"
+                icon={icon5v5}
                 classement={rankingByPoule}
                 focusTeam={teamName}
                 logoFor={logoFor}
@@ -437,19 +445,21 @@ function PlayersGrid({ players, loading }: { players?: Array<{ id?: string; name
     return <p className="text-slate-400 text-sm">Aucun joueur disponible.</p>;
   }
   return (
-    <div className="grid gap-3 md:grid-cols-2">
-      {players.map((p) => (
-        <Card key={p.id ?? p.name} className="bg-white/5 border-slate-800 backdrop-blur flex items-center gap-4">
-          <div className="h-10 w-10 rounded-full bg-slate-800 text-slate-100 flex items-center justify-center text-sm font-semibold">
-            {p.numero ?? "?"}
+    <Card className="bg-white/5 border-slate-800 backdrop-blur">
+      <div className="divide-y divide-slate-800">
+        {players.map((p) => (
+          <div key={p.id ?? p.name} className="flex items-center gap-3 py-2">
+            <div className="h-9 w-9 rounded-full bg-slate-800 text-slate-100 flex items-center justify-center text-sm font-semibold">
+              {p.numero ?? "?"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-slate-100 font-semibold text-sm truncate block">{displayName(p)}</span>
+              <span className="text-xs text-slate-400">{p.poste ?? "N/A"}</span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="text-slate-100 font-semibold text-sm">{displayName(p)}</span>
-            <span className="text-xs text-slate-400">{p.poste ?? "N/A"}</span>
-          </div>
-        </Card>
-      ))}
-    </div>
+        ))}
+      </div>
+    </Card>
   );
 }
 
@@ -482,27 +492,58 @@ function DayClassement({
   logoFor: (name: string) => string | undefined | null;
   navigate: (path: string) => void;
 }) {
+  if (!classement || classement.length === 0) {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          {icon && <img src={icon} alt="" className="h-5 w-5 rounded-full object-cover bg-slate-800" />}
+          <p className="text-sm font-semibold text-slate-100">{title}</p>
+        </div>
+        <p className="text-sm text-slate-400">Classement indisponible.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        {icon && <span className="h-6 w-6 rounded-full bg-cover bg-center" style={{ backgroundImage: `url(${icon})` }} />}
+        {icon && <img src={icon} alt="" className="h-5 w-5 rounded-full object-cover bg-slate-800" />}
         <p className="text-sm font-semibold text-slate-100">{title}</p>
       </div>
-      <div className="grid gap-2 md:grid-cols-2">
-        {classement.map((entry) => (
-          <button
-            key={entry.name}
-            type="button"
-            onClick={() => navigate(`/teams/${encodeURIComponent(entry.name)}`)}
-            className={`w-full rounded-lg border px-3 py-2 flex items-center gap-2 text-left ${normalizeTeamName(entry.name) === normalizeTeamName(focusTeam) ? "border-emerald-400/70 bg-emerald-500/10" : "border-slate-800 bg-slate-900/70"}`}
-          >
-            <HexBadge name={entry.name} size={28} imageUrl={logoFor(entry.name) ?? undefined} />
-            <div className="flex-1 flex items-center justify-between gap-2">
-              <span className={`${focusClass(entry.name, focusTeam)} text-sm truncate`}>{entry.name}</span>
-              <span className="text-xs text-slate-400">Rang {entry.rang ?? "-"}</span>
-            </div>
-          </button>
-        ))}
+      <div className="overflow-x-auto rounded-lg border border-slate-800 bg-slate-900/70">
+        <table className="min-w-full text-sm">
+          <thead className="bg-slate-900/80 text-slate-400 text-xs uppercase tracking-wide">
+            <tr>
+              <th className="px-3 py-2 text-left font-semibold">#</th>
+              <th className="px-3 py-2 text-left font-semibold">Équipe</th>
+              <th className="px-3 py-2 text-right font-semibold">Pts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {classement.map((entry) => {
+              const isFocus = normalizeTeamName(entry.name) === normalizeTeamName(focusTeam);
+              return (
+                <tr
+                  key={entry.name}
+                  className={`border-t border-slate-800 hover:bg-slate-800/60 transition ${isFocus ? "bg-emerald-500/10 border-emerald-400/50" : ""}`}
+                  onClick={() => navigate(`/teams/${encodeURIComponent(entry.name)}`)}
+                  role="button"
+                >
+                  <td className="px-3 py-2 text-slate-200">{entry.rang ?? "-"}</td>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <HexBadge name={entry.name} size={28} imageUrl={logoFor(entry.name) ?? undefined} />
+                      <span className={`${isFocus ? "text-slate-50 font-semibold" : "text-slate-200"} truncate block`}>
+                        {entry.name}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 text-right text-slate-100">{entry.points ?? "-"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -533,6 +574,8 @@ function HighlightBlock({ title, icon, players }: { title: string; icon?: string
     </Card>
   );
 }
+
+
 
 
 

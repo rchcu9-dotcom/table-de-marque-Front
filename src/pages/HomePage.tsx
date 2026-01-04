@@ -80,10 +80,15 @@ function dayIndex(nowMs: number, matches: Match[]) {
 function tripletForCompetition(matches: Match[], competition: "5v5" | "3v3" | "challenge", nowMs: number): Triplet {
   const list = filterByCompetition(matches, competition).sort(byDateAsc);
   const live = list.find((m) => m.status === "ongoing") ?? null;
-  const finished = list.filter((m) => m.status === "finished" || new Date(m.date).getTime() <= nowMs);
-  const planned = list.filter((m) => m.status === "planned" && new Date(m.date).getTime() > nowMs);
+  const finished = list.filter((m) => m.status === "finished" && new Date(m.date).getTime() <= nowMs);
   const last = finished.length > 0 ? finished[finished.length - 1] : null;
-  const next = planned.length > 0 ? planned[0] : null;
+  const future = list.filter((m) => {
+    const ts = new Date(m.date).getTime();
+    if (live && m.id === live.id) return false;
+    if (m.status === "finished") return false;
+    return ts >= nowMs;
+  });
+  const next = future.length > 0 ? future[0] : null;
   return { last, live, next };
 }
 
@@ -99,12 +104,29 @@ function recentMatches(matches: Match[], competition: "5v5" | "3v3" | "challenge
     .sort(byDateAsc);
 }
 
-function liveCenteredOrder(triplet: Triplet) {
-  if (triplet.live) {
-    return [triplet.last, triplet.live, triplet.next].filter(Boolean) as Match[];
+function clampWindow(list: Match[], targetId: string | null, desired = 3) {
+  if (list.length === 0) return [];
+  if (list.length <= desired) return list;
+  const targetIdx =
+    targetId && list.findIndex((m) => m.id === targetId) >= 0 ? list.findIndex((m) => m.id === targetId) : 0;
+  let start = Math.max(0, targetIdx - 1);
+  let end = start + desired;
+  if (end > list.length) {
+    end = list.length;
+    start = Math.max(0, end - desired);
   }
-  // fallback chronologique sans live
-  return [triplet.last, triplet.next].filter(Boolean) as Match[];
+  return list.slice(start, end);
+}
+
+function liveCenteredOrder(triplet: Triplet, all: Match[], nowMs: number) {
+  const sorted = [...all].sort(byDateAsc);
+  const liveId = triplet.live?.id ?? null;
+  const plannedIdx = sorted.findIndex((m) => m.status === "planned" || new Date(m.date).getTime() > nowMs);
+  const targetId =
+    liveId ??
+    (plannedIdx >= 0 ? sorted[plannedIdx].id : null) ??
+    (sorted.length > 0 ? sorted[0].id : null);
+  return clampWindow(sorted, targetId, 3);
 }
 
 function autoIndexForList(list: Match[], liveId: string | null, nowMs: number) {
@@ -544,11 +566,11 @@ export default function HomePage() {
     () => tripletForCompetition(matches, smallGlaceType, nowMs),
     [matches, smallGlaceType, nowMs],
   );
-  const ordered5v5 = React.useMemo(() => {
-    const list = [triplet5v5.last, triplet5v5.live, triplet5v5.next].filter(Boolean) as Match[];
-    return [...list].sort((a, b) => byDateAsc(a, b));
-  }, [triplet5v5]);
-  const orderedSmallGlace = React.useMemo(() => liveCenteredOrder(tripletSmallGlace), [tripletSmallGlace]);
+  const ordered5v5 = React.useMemo(() => liveCenteredOrder(triplet5v5, filterByCompetition(matches, "5v5"), nowMs), [triplet5v5, matches, nowMs]);
+  const orderedSmallGlace = React.useMemo(
+    () => liveCenteredOrder(tripletSmallGlace, filterByCompetition(matches, smallGlaceType), nowMs),
+    [tripletSmallGlace, matches, smallGlaceType, nowMs],
+  );
   const autoIndex5v5 = React.useMemo(
     () => autoIndexForList(ordered5v5, triplet5v5.live?.id ?? null, nowMs),
     [ordered5v5, triplet5v5.live, nowMs],
@@ -608,6 +630,18 @@ export default function HomePage() {
               {hero.title}
             </h1>
             <p className="text-sm text-slate-300">{hero.subtitle}</p>
+            {selectedTeam && (
+              <div className="flex items-center gap-2 text-xs text-emerald-200 pr-1">
+                <span>Équipe suivie : {selectedTeam.name}</span>
+                {selectedTeam.logoUrl && (
+                  <img
+                    src={selectedTeam.logoUrl}
+                    alt={selectedTeam.name}
+                    className="h-6 w-6 rounded-full object-cover border border-emerald-300/60 bg-slate-900"
+                  />
+                )}
+              </div>
+            )}
           </div>
         </div>
         {state === "avant" && countdown && (

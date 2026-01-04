@@ -1,4 +1,4 @@
-﻿import "@testing-library/jest-dom/vitest";
+import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeAll } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -98,7 +98,8 @@ describe("TeamPage", () => {
     );
 
     expect(screen.getAllByRole("heading", { name: /Rennes/i })[0]).toBeInTheDocument();
-    expect(screen.getByText(/Forme \(tous terminés\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Forme/i)).toBeInTheDocument();
+    expect(screen.getByText(/matchs termin/i)).toBeInTheDocument();
     expect(screen.getByText(/Prochains matchs/i)).toBeInTheDocument();
     expect(screen.getByText(/Derniers matchs/i)).toBeInTheDocument();
   });

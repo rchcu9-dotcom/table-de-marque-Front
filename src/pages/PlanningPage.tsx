@@ -5,10 +5,19 @@ import HexBadge from "../components/ds/HexBadge";
 import { useNavigate } from "react-router-dom";
 import planningIcon from "../assets/icons/nav/planning.png";
 import { useSelectedTeam } from "../providers/SelectedTeamProvider";
+import icon5v5 from "../assets/icons/nav/fivev5.png";
+import icon3v3 from "../assets/icons/nav/threev3.png";
+import iconChallenge from "../assets/icons/nav/challenge.png";
 
 function normalize(value?: string | null) {
   return (value ?? "").trim().toLowerCase();
 }
+
+const compIcon: Record<string, string> = {
+  "5v5": icon5v5,
+  "3v3": icon3v3,
+  challenge: iconChallenge,
+};
 
 export default function PlanningPage() {
   const { selectedTeam } = useSelectedTeam();
@@ -109,6 +118,18 @@ export default function PlanningPage() {
             </div>
             <h1 className="text-xl font-semibold text-white">Planning</h1>
           </div>
+          {selectedTeam && (
+            <div className="flex items-center gap-2 text-xs text-emerald-200 mb-2 pr-1">
+              <span>Équipe suivie : {selectedTeam.name}</span>
+              {selectedTeam.logoUrl && (
+                <img
+                  src={selectedTeam.logoUrl}
+                  alt={selectedTeam.name}
+                  className="h-6 w-6 rounded-full object-cover border border-emerald-300/60 bg-slate-900"
+                />
+              )}
+            </div>
+          )}
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             <div className="flex flex-col gap-1">
               <label className="text-xs text-slate-400">Recherche</label>
@@ -221,6 +242,13 @@ export default function PlanningPage() {
                   }}
                   className={`relative overflow-hidden rounded-lg px-3 py-2 cursor-pointer transition-colors border ${buildCardClasses(m.status ?? "planned")}`}
                 >
+                  <div className="absolute top-2 right-2 z-10">
+                    <img
+                      src={compIcon[(m.competitionType ?? "5v5").toLowerCase()] ?? icon5v5}
+                      alt={m.competitionType ?? "5v5"}
+                      className="h-6 w-6 rounded-md bg-slate-800 object-cover"
+                    />
+                  </div>
                   <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-lg">
                     <div
                       className="absolute inset-y-0 left-0 w-1/3 opacity-15"
@@ -250,7 +278,7 @@ export default function PlanningPage() {
                       />
                     )}
                   </div>
-                  <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+                  <div className="flex items-center justify-between text-xs text-slate-400 mb-1 pr-8">
                     <span>{m.pouleName ?? m.pouleCode ?? "Poule"}</span>
                     <span>
                       {new Date(m.date).toLocaleDateString("fr-FR", {

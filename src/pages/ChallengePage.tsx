@@ -289,6 +289,18 @@ export default function ChallengePage() {
               </div>
               <h1 className="text-xl font-semibold text-white">Challenge</h1>
             </div>
+            {selectedTeam && (
+              <div className="flex items-center gap-2 text-xs text-emerald-200 pr-1">
+                <span>Équipe suivie : {selectedTeam.name}</span>
+                {selectedTeam.logoUrl && (
+                  <img
+                    src={selectedTeam.logoUrl}
+                    alt={selectedTeam.name}
+                    className="h-6 w-6 rounded-full object-cover border border-emerald-300/60 bg-slate-900"
+                  />
+                )}
+              </div>
+            )}
             <div className="flex flex-col gap-2 max-w-xl">
               <input
                 type="text"
