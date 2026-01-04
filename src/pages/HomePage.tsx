@@ -107,6 +107,16 @@ function liveCenteredOrder(triplet: Triplet) {
   return [triplet.last, triplet.next].filter(Boolean) as Match[];
 }
 
+function autoIndexForList(list: Match[], liveId: string | null, nowMs: number) {
+  if (liveId) {
+    const idx = list.findIndex((m) => m.id === liveId);
+    if (idx >= 0) return idx;
+  }
+  const plannedIdx = list.findIndex((m) => m.status === "planned" || new Date(m.date).getTime() > nowMs);
+  if (plannedIdx >= 0) return plannedIdx;
+  return 0;
+}
+
 function smallGlaceCompetition(day: number): "3v3" | "challenge" {
   if (day === 2) return "3v3";
   return "challenge";
@@ -136,12 +146,14 @@ function CompactLine({
   items,
   testId,
   autoFocusIndex = 0,
+  onSelect,
 }: {
   title: string;
   icon: string;
   items: Array<{ label?: string; match: Match | null }>;
   testId: string;
   autoFocusIndex?: number;
+  onSelect?: (id: string) => void;
 }) {
   const listRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -168,6 +180,7 @@ function CompactLine({
               label={label}
               testId={`${testId}-item-${index}`}
               autoFocus={index === autoFocusIndex}
+              onSelect={onSelect}
             />
           ))}
       </div>
@@ -324,7 +337,19 @@ function Logo({ name, url, size = 32 }: { name: string; url?: string | null; siz
   );
 }
 
-function CompactMatchCard({ match, label, testId, autoFocus }: { match: Match; label?: string; testId: string; autoFocus?: boolean }) {
+function CompactMatchCard({
+  match,
+  label,
+  testId,
+  autoFocus,
+  onSelect,
+}: {
+  match: Match;
+  label?: string;
+  testId: string;
+  autoFocus?: boolean;
+  onSelect?: (id: string) => void;
+}) {
   const d = new Date(match.date);
   const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   const isChallenge = (match.competitionType ?? "").toLowerCase() === "challenge";
@@ -348,6 +373,9 @@ function CompactMatchCard({ match, label, testId, autoFocus }: { match: Match; l
       } bg-slate-950/80`}
       data-testid={testId}
       data-autofocus={autoFocus ? "true" : "false"}
+      role={onSelect ? "button" : undefined}
+      tabIndex={onSelect ? 0 : -1}
+      onClick={() => onSelect?.(match.id)}
     >
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-25">
         <div
@@ -513,12 +541,12 @@ export default function HomePage() {
   }, [triplet5v5]);
   const orderedSmallGlace = React.useMemo(() => liveCenteredOrder(tripletSmallGlace), [tripletSmallGlace]);
   const autoIndex5v5 = React.useMemo(
-    () => (triplet5v5.live ? ordered5v5.findIndex((m) => m.id === triplet5v5.live?.id) : 0),
-    [ordered5v5, triplet5v5.live],
+    () => autoIndexForList(ordered5v5, triplet5v5.live?.id ?? null, nowMs),
+    [ordered5v5, triplet5v5.live, nowMs],
   );
   const autoIndexSmallGlace = React.useMemo(
-    () => (tripletSmallGlace.live ? orderedSmallGlace.findIndex((m) => m.id === tripletSmallGlace.live?.id) : 0),
-    [orderedSmallGlace, tripletSmallGlace.live],
+    () => autoIndexForList(orderedSmallGlace, tripletSmallGlace.live?.id ?? null, nowMs),
+    [orderedSmallGlace, tripletSmallGlace.live, nowMs],
   );
   const countdown = React.useMemo(() => {
     const next = [...matches].sort(byDateAsc).find((m) => new Date(m.date).getTime() > nowMs);
@@ -601,12 +629,14 @@ export default function HomePage() {
                 icon={icon5v5}
                 items={beforeUpcoming5v5.map((m) => ({ match: m }))}
                 testId="home-now-5v5"
+                onSelect={(id) => navigate(`/matches/${id}`)}
               />
               <CompactLine
                 title="Challenge"
                 icon={iconChallenge}
                 items={beforeUpcomingChallenge.map((m) => ({ match: m }))}
                 testId="home-challenge-compact"
+                onSelect={(id) => navigate(`/matches/${id}`)}
               />
             </>
           )}
@@ -618,6 +648,7 @@ export default function HomePage() {
                 items={ordered5v5.map((m) => ({ match: m }))}
                 testId="home-now-5v5"
                 autoFocusIndex={autoIndex5v5}
+                onSelect={(id) => navigate(`/matches/${id}`)}
               />
               <CompactLine
                 title={smallGlaceLabel}
@@ -625,6 +656,7 @@ export default function HomePage() {
                 items={orderedSmallGlace.map((m) => ({ match: m }))}
                 testId="home-now-smallglace"
                 autoFocusIndex={autoIndexSmallGlace}
+                onSelect={(id) => navigate(`/matches/${id}`)}
               />
             </>
           )}
@@ -635,6 +667,7 @@ export default function HomePage() {
                 icon={icon5v5}
                 items={afterRecent5v5.map((m) => ({ match: m }))}
                 testId="home-now-5v5"
+                onSelect={(id) => navigate(`/matches/${id}`)}
               />
               <CompactLine
                 title="Challenge"
@@ -643,6 +676,7 @@ export default function HomePage() {
                   match: m,
                 }))}
                 testId="home-challenge-compact"
+                onSelect={(id) => navigate(`/matches/${id}`)}
               />
             </>
           )}
