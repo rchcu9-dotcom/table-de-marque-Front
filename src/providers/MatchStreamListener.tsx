@@ -19,7 +19,12 @@ type StreamPayload =
  * - ping keep-alive géré côté serveur
  * - reconnexion automatique en cas de perte
  */
-export function MatchStreamListener() {
+type MatchStreamListenerProps = {
+  onOpen?: () => void;
+  onError?: () => void;
+};
+
+export function MatchStreamListener({ onOpen, onError }: MatchStreamListenerProps = {}) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -54,6 +59,8 @@ export function MatchStreamListener() {
           clearTimeout(reconnectHandle);
         }
         reconnectHandle = window.setTimeout(connect, 5000);
+        window.dispatchEvent(new CustomEvent("match-stream:error"));
+        onError?.();
       };
 
       source.onerror = scheduleReconnect;
@@ -62,6 +69,8 @@ export function MatchStreamListener() {
           clearTimeout(reconnectHandle);
           reconnectHandle = null;
         }
+        window.dispatchEvent(new CustomEvent("match-stream:open"));
+        onOpen?.();
       };
     };
 
@@ -73,7 +82,7 @@ export function MatchStreamListener() {
       }
       source?.close();
     };
-  }, [queryClient]);
+  }, [queryClient, onError, onOpen]);
 
   return null;
 }

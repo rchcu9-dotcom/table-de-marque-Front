@@ -106,13 +106,18 @@ export default function TeamPage() {
   const form = computeForm(filtered, teamName);
 
   const equipeKey = React.useMemo(() => {
+    const list = Array.isArray(allTeams) ? allTeams : [];
     const needle = normalizeTeamName(teamName);
-    const found = allTeams?.find(
+    const found = list.find(
       (t) => normalizeTeamName(t.name) === needle || normalizeTeamName(t.id) === needle,
     );
     return found?.id ?? teamName;
   }, [allTeams, teamName]);
   const players = usePlayersByEquipe(equipeKey || undefined);
+  const playerList = React.useMemo(() => {
+    const data = players.data;
+    return Array.isArray(data) ? data : [];
+  }, [players.data]);
 
   const grouped = React.useMemo(() => {
     const groups = groupByDay(filtered);
@@ -151,7 +156,9 @@ export default function TeamPage() {
   }
 
   const rankingByPoule = classement.data?.equipes ?? [];
-  const logoFor = (name: string) => allTeams?.find((t) => normalizeTeamName(t.name) === normalizeTeamName(name))?.logoUrl;
+  const teamsList = Array.isArray(allTeams) ? allTeams : [];
+  const logoFor = (name: string) =>
+    teamsList.find((t) => normalizeTeamName(t.name) === normalizeTeamName(name))?.logoUrl;
 
   const dayKeys = grouped.map(([day]) => day);
   const jour1 = dayKeys[0];
@@ -180,11 +187,11 @@ export default function TeamPage() {
 
           <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <Card className="bg-white/5 border-slate-800 backdrop-blur">
-              <p className="text-xs text-slate-400">Forme (tous terminÃ©s)</p>
+              <p className="text-xs text-slate-400">Forme (tous terminés)</p>
               <p className="text-lg font-semibold text-slate-50">
                 {form.wins}G / {form.draws}N / {form.losses}P
               </p>
-              <p className="text-xs text-slate-500">BasÃ©e sur tous les matchs terminÃ©s</p>
+              <p className="text-xs text-slate-500">Basée sur tous les matchs terminés</p>
             </Card>
             <Card className="bg-white/5 border-slate-800 backdrop-blur">
               <p className="text-xs text-slate-400">Prochains matchs</p>
@@ -199,7 +206,7 @@ export default function TeamPage() {
                     />
                   ))
                 ) : (
-                  <span className="text-slate-500 text-sm">Aucun match a venir</span>
+                  <span className="text-slate-500 text-sm">Aucun match à venir</span>
                 )}
               </div>
             </Card>
@@ -216,7 +223,7 @@ export default function TeamPage() {
                     />
                   ))
                 ) : (
-                  <span className="text-slate-500 text-sm">Pas de match jouÃ©</span>
+                  <span className="text-slate-500 text-sm">Pas de match joué</span>
                 )}
               </div>
             </Card>
@@ -227,11 +234,12 @@ export default function TeamPage() {
       <div className="px-6 md:px-10 pb-12 space-y-10 max-w-6xl mx-auto">
         <section className="space-y-3">
           <h3 className="text-lg font-semibold text-slate-50">Effectif</h3>
-          <PlayersGrid players={players.data} loading={players.isLoading} />
+          <PlayersGrid players={playerList} loading={players.isLoading} />
         </section>
 
         <section className="space-y-4">
-          <h3 className="text-lg font-semibold text-slate-50">Classements & highlights par jour</h3>
+          <h3 className="text-lg font-semibold text-slate-50">Calendrier</h3>
+          <p className="text-sm text-slate-400">Classements & highlights par jour</p>
 
           {jour1 && (
             <Card className="bg-white/5 border-slate-800 backdrop-blur space-y-3">
@@ -251,7 +259,7 @@ export default function TeamPage() {
                 <HighlightBlock
                   title="Vitesse (2 meilleurs)"
                   icon={ICONS.vitesse}
-                  players={players.data?.slice(0, 2).map((p, idx) => ({
+                  players={playerList.slice(0, 2).map((p, idx) => ({
                     name: displayName(p),
                     numero: p.numero,
                     poste: p.poste,
@@ -262,7 +270,7 @@ export default function TeamPage() {
                 <HighlightBlock
                   title="Adresse au tir (2 meilleurs)"
                   icon={ICONS.tir}
-                  players={players.data?.slice(0, 2).map((p, idx) => ({
+                  players={playerList.slice(0, 2).map((p, idx) => ({
                     name: displayName(p),
                     numero: p.numero,
                     poste: p.poste,
@@ -273,7 +281,7 @@ export default function TeamPage() {
                 <HighlightBlock
                   title="Glisse & agilité (2 meilleurs)"
                   icon={ICONS.glisse}
-                  players={players.data?.slice(0, 2).map((p, idx) => ({
+                  players={playerList.slice(0, 2).map((p, idx) => ({
                     name: displayName(p),
                     numero: p.numero,
                     poste: p.poste,
@@ -289,7 +297,7 @@ export default function TeamPage() {
             <Card className="bg-white/5 border-slate-800 backdrop-blur space-y-3">
               <div className="flex items-center gap-3">
                 <HexBadge name="Jour 2" size={36} imageUrl={ICONS.classe} />
-                <div className="text-sm font-semibold text-slate-100">Jour 2 · {formatDay(jour2)}</div>
+                <div className="text-sm font-semibold text-slate-100">Jour 2 - {formatDay(jour2)}</div>
               </div>
               <DayClassement
                 title="Classement 5v5"
@@ -306,7 +314,7 @@ export default function TeamPage() {
             <Card className="bg-white/5 border-slate-800 backdrop-blur space-y-3">
               <div className="flex items-center gap-3">
                 <HexBadge name="Jour 3" size={36} imageUrl={ICONS.classe} />
-                <div className="text-sm font-semibold text-slate-100">Jour 3 · {formatDay(jour3)}</div>
+                <div className="text-sm font-semibold text-slate-100">Jour 3 - {formatDay(jour3)}</div>
               </div>
               <DayClassement
                 title="Classement CarrÃ©"

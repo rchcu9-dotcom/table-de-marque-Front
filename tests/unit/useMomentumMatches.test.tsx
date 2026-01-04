@@ -16,6 +16,7 @@ describe("useMomentumMatches", () => {
   const _apiUrl = "http://localhost:3000/matches/momentum";
 
   beforeEach(() => {
+    (globalThis as any).__APP_API_BASE_URL__ = "http://localhost:3000";
     vi.stubGlobal(
       "fetch",
       vi.fn(() =>

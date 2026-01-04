@@ -56,7 +56,11 @@ export default function HorizontalMatchSlider({
     const container = sliderRef.current;
     const targetCenter = target.offsetLeft + target.offsetWidth / 2;
     const scrollLeft = Math.max(targetCenter - container.clientWidth / 2, 0);
-    container.scrollTo({ left: scrollLeft, behavior: "smooth" });
+    if (typeof container.scrollTo === "function") {
+      container.scrollTo({ left: scrollLeft, behavior: "smooth" });
+    } else {
+      container.scrollLeft = scrollLeft;
+    }
   }, [matches, currentMatchId]);
 
   if (!matches || matches.length === 0) return null;

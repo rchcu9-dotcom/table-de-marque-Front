@@ -204,8 +204,9 @@ export default function MatchDetailPage() {
 
       <Card data-testid="classement-section">
         <div className="space-y-3">
-          <div className="text-base font-semibold text-slate-100">
-            Classement {classement?.pouleName ? `- ${classement.pouleName}` : ""}
+          <div className="text-base font-semibold text-slate-100">Classement</div>
+          <div className="text-sm text-slate-300">
+            {classement?.pouleName ? `Poule ${classement.pouleName}` : ""}
           </div>
 
           {isClassementLoading && (

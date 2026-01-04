@@ -58,27 +58,34 @@ vi.mock("../../hooks/useMatches", () => ({
   }),
 }));
 
-vi.mock("../../hooks/useClassement", () => ({
-  useClassementForMatch: () => ({
-    data: {
+const mockClassement = {
+  pouleCode: "A",
+  pouleName: "Poule A",
+  equipes: [
+    {
+      id: "Rennes",
+      name: "Rennes",
+      logoUrl: "https://example.com/logo.png",
+      rang: 1,
+      points: 10,
+      victoires: 3,
+      nuls: 1,
+      defaites: 0,
+      diff: 5,
       pouleCode: "A",
       pouleName: "Poule A",
-      equipes: [
-        {
-          id: "Rennes",
-          name: "Rennes",
-          logoUrl: "https://example.com/logo.png",
-          rang: 1,
-          points: 10,
-          victoires: 3,
-          nuls: 1,
-          defaites: 0,
-          diff: 5,
-          pouleCode: "A",
-          pouleName: "Poule A",
-        },
-      ],
     },
+  ],
+};
+
+vi.mock("../../hooks/useClassement", () => ({
+  useClassementForMatch: () => ({
+    data: mockClassement,
+    isLoading: false,
+    isError: false,
+  }),
+  useClassement: () => ({
+    data: mockClassement,
     isLoading: false,
     isError: false,
   }),

@@ -13,6 +13,7 @@ export default defineConfig({
       ".git",
       "tests/e2e",
       "tests/e2e-prod",
+      "tests/e2e-mock",
       "tests/match-list.spec.ts"
     ]
   }
