@@ -8,6 +8,8 @@ import HorizontalMatchSlider from "../components/collections/HorizontalMatchSlid
 import fiveV5Icon from "../assets/icons/nav/fivev5.png";
 import { useSelectedTeam } from "../providers/SelectedTeamProvider";
 
+const byDateAsc = (a: Match, b: Match) => new Date(a.date).getTime() - new Date(b.date).getTime();
+
 const BRASSAGE = [
   { code: "A", title: "Sam - Brassage Poule A", phase: "Brassage" },
   { code: "B", title: "Sam - Brassage Poule B", phase: "Brassage" },
@@ -56,34 +58,43 @@ export default function Tournament5v5Page() {
     const current = momentum5v5?.find((m) => m.status === "ongoing");
     return current?.pouleCode;
   }, [momentum5v5]);
+  const targetMatchId = React.useMemo(() => {
+    if (!momentum5v5?.length) return null;
+    const sorted = [...momentum5v5].sort(byDateAsc);
+    const target =
+      sorted.find((m) => m.status === "ongoing") ||
+      sorted.find((m) => m.status === "planned") ||
+      sorted[0];
+    return target?.id ?? null;
+  }, [momentum5v5]);
   const listRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const matchRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
+  const hasAutoScrolled = useRef(false);
 
   useEffect(() => {
-    if (!momentum5v5?.length) return;
-    const current = momentum5v5.find((m) => m.status === "ongoing") ?? momentum5v5[0];
-    const targetEl = current ? matchRefs.current[current.id] : null;
-    if (targetEl && scrollAreaRef.current) {
-      const container = scrollAreaRef.current;
-      const rawOffset =
-        targetEl.getBoundingClientRect().top -
-        container.getBoundingClientRect().top +
-        container.scrollTop -
-        12;
-      const maxOffset = Math.max(0, container.scrollHeight - container.clientHeight);
-      const offset = Math.min(Math.max(rawOffset, 0), maxOffset);
-      requestAnimationFrame(() => {
-        container.scrollTo({ top: offset, behavior: "smooth" });
-      });
-    }
-  }, [momentum5v5]);
+    hasAutoScrolled.current = false;
+  }, [targetMatchId]);
+
+  useEffect(() => {
+    if (!targetMatchId || hasAutoScrolled.current) return;
+    const targetEl = matchRefs.current[targetMatchId];
+    if (!targetEl || !scrollAreaRef.current) return;
+    requestAnimationFrame(() => {
+      targetEl.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    });
+    hasAutoScrolled.current = true;
+  }, [targetMatchId, matches5v5]);
 
   useEffect(() => {
     if (filtersInitialized.current) return;
     if (!momentum5v5 || momentum5v5.length === 0) return;
-    const center = momentum5v5[Math.floor(momentum5v5.length / 2)];
-    const phase = (center?.phase ?? "").toLowerCase();
+    const sorted = [...momentum5v5].sort(byDateAsc);
+    const refMatch =
+      sorted.find((m) => m.status === "ongoing") ||
+      sorted.find((m) => m.status === "planned") ||
+      sorted[Math.floor(sorted.length / 2)];
+    const phase = (refMatch?.phase ?? "").toLowerCase();
     if (phase) {
       setShowBrassage(phase === "brassage");
       setShowQualif(phase === "qualification");

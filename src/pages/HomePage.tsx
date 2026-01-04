@@ -233,10 +233,11 @@ function TodayBlock({
     </div>
   );
 
-  const altCard = segmentsAlt.ongoing || segmentsAlt.nextPlanned ? (
+  const altTarget = segmentsAlt.ongoing ?? segmentsAlt.nextPlanned ?? segmentsAlt.lastFinished;
+  const altCard = altTarget ? (
     <InlineMatchCard
       key="alt"
-      match={segmentsAlt.ongoing ?? segmentsAlt.nextPlanned!}
+      match={altTarget}
       focusTeam={focusTeamName}
       onSelect={onSelect}
       testId="home-today-alt"
@@ -369,7 +370,7 @@ function CompactMatchCard({
   return (
     <div
       className={`relative overflow-hidden rounded-lg border px-4 py-3 text-sm text-slate-100 shadow-inner min-w-[260px] sm:min-w-[280px] max-w-[360px] flex-[0_0_85vw] md:flex-[0_0_320px] snap-center ${
-        isLive ? "border-amber-400 ring-2 ring-amber-300/60" : "border-slate-800"
+        isLive ? "border-amber-400 ring-2 ring-amber-300/60 live-pulse-card" : "border-slate-800"
       } bg-slate-950/80`}
       data-testid={testId}
       data-autofocus={autoFocus ? "true" : "false"}
@@ -436,7 +437,9 @@ function InlineMatchCard({
 }) {
   const d = new Date(match.date);
   const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const isChallenge = (match.competitionType ?? "").toLowerCase() === "challenge";
   const isScored =
+    !isChallenge &&
     (match.status === "finished" || match.status === "ongoing") &&
     match.scoreA !== null &&
     match.scoreB !== null;
@@ -495,7 +498,11 @@ function InlineMatchCard({
           </span>
         </div>
         <div className="flex-none w-20 text-center">
-          {isScored ? (
+          {isChallenge ? (
+            <span className="text-[12px] leading-tight font-semibold text-slate-100 whitespace-nowrap">
+              {match.status === "ongoing" ? "En cours" : match.status === "finished" ? "Terminé" : time}
+            </span>
+          ) : isScored ? (
             <span className="text-[12px] leading-tight font-semibold text-slate-100 whitespace-nowrap">
               <span className={winnerClass("A")}>{match.scoreA}</span>
               <span className="mx-1 text-slate-400">-</span>
@@ -505,14 +512,16 @@ function InlineMatchCard({
             <span className="text-[12px] leading-tight font-semibold text-slate-100 whitespace-nowrap">{time}</span>
           )}
         </div>
-        <div className="flex items-center gap-1 justify-end min-w-0 flex-1">
-          <span
-            className={`text-[12px] leading-tight font-normal truncate text-right block whitespace-nowrap ${winnerClass("B")} ${focusHighlight(match.teamB)}`}
-          >
-            {match.teamB}
-          </span>
-          {match.teamBLogo && <img src={match.teamBLogo} alt={match.teamB} className="h-5 w-5 rounded-full object-cover" />}
-        </div>
+        {!isChallenge && (
+          <div className="flex items-center gap-1 justify-end min-w-0 flex-1">
+            <span
+              className={`text-[12px] leading-tight font-normal truncate text-right block whitespace-nowrap ${winnerClass("B")} ${focusHighlight(match.teamB)}`}
+            >
+              {match.teamB}
+            </span>
+            {match.teamBLogo && <img src={match.teamBLogo} alt={match.teamB} className="h-5 w-5 rounded-full object-cover" />}
+          </div>
+        )}
       </div>
     </div>
   );
