@@ -45,8 +45,8 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Tests (Vitest, in-band)
-        run: pnpm test -- --runInBand
+      - name: Tests (Vitest, single thread)
+        run: pnpm test -- --threads=false
 
       - name: Prepare env for build (staging)
         run: |
