@@ -1,6 +1,9 @@
 import React from "react";
 import HexBadge from "../ds/HexBadge";
 import type { Match } from "../../api/match";
+import icon5v5 from "../../assets/icons/nav/fivev5.png";
+import icon3v3 from "../../assets/icons/nav/threev3.png";
+import iconChallenge from "../../assets/icons/nav/challenge.png";
 
 type Props = {
   matches: Match[];
@@ -10,6 +13,12 @@ type Props = {
   getCardClassName?: (match: Match) => string;
   centered?: boolean;
   withDiagonalBg?: boolean;
+};
+
+const compIcon: Record<string, string> = {
+  "5v5": icon5v5,
+  "3v3": icon3v3,
+  challenge: iconChallenge,
 };
 
 function winnerClass(match: Match, side: "A" | "B") {
@@ -83,6 +92,13 @@ export default function HorizontalMatchSlider({
             } ${m.status === "ongoing" ? "live-pulse-card" : ""} ${getCardClassName ? getCardClassName(m) : ""}`}
             onClick={() => onSelect?.(m.id)}
           >
+            <div className="absolute top-2 right-2 z-10">
+              <img
+                src={compIcon[(m.competitionType ?? "5v5").toLowerCase()] ?? icon5v5}
+                alt={m.competitionType ?? "5v5"}
+                className="h-6 w-6 rounded-md bg-slate-800 object-cover"
+              />
+            </div>
             {withDiagonalBg && (
               <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
                 <div

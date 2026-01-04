@@ -109,6 +109,18 @@ export default function ThreeVThreePage() {
             </div>
             <h1 className="text-xl font-semibold text-white">Tournoi 3v3 FUN</h1>
           </div>
+          {selectedTeam && (
+            <div className="flex items-center gap-2 text-xs text-emerald-200 mb-2 pr-1">
+              <span>Équipe suivie : {selectedTeam.name}</span>
+              {selectedTeam.logoUrl && (
+                <img
+                  src={selectedTeam.logoUrl}
+                  alt={selectedTeam.name}
+                  className="h-6 w-6 rounded-full object-cover border border-emerald-300/60 bg-slate-900"
+                />
+              )}
+            </div>
+          )}
           <div className="grid gap-3">
             <div className="flex flex-col gap-1">
               <label className="text-xs text-slate-400">Recherche</label>
