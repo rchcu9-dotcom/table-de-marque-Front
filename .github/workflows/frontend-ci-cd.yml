@@ -44,6 +44,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Lint
+        run: pnpm lint
+
+      - name: Tests (Vitest)
+        run: pnpm test
+
       - name: Prepare env for build (prod secret)
         run: |
           rm -f .env .env.local .env.production
