@@ -369,7 +369,7 @@ function CompactMatchCard({
   const showTeamB = !isChallenge;
   return (
     <div
-      className={`relative overflow-hidden rounded-lg border px-4 py-3 text-sm text-slate-100 shadow-inner min-w-[260px] sm:min-w-[280px] max-w-[360px] flex-[0_0_85vw] md:flex-[0_0_320px] snap-center ${
+      className={`relative overflow-hidden rounded-lg border px-4 py-3 text-sm text-slate-100 shadow-inner min-w-[220px] sm:min-w-[240px] max-w-[320px] flex-[0_0_78vw] md:flex-[0_0_280px] snap-center ${
         isLive ? "border-amber-400 ring-2 ring-amber-300/60 live-pulse-card" : "border-slate-800"
       } bg-slate-950/80`}
       data-testid={testId}
