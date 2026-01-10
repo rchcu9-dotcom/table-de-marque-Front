@@ -3,6 +3,7 @@ import planningIcon from "../../assets/icons/nav/planning.png";
 import fiveV5Icon from "../../assets/icons/nav/fivev5.png";
 import challengeIcon from "../../assets/icons/nav/challenge.png";
 import threeV3Icon from "../../assets/icons/nav/threev3.png";
+import liveIcon from "../../assets/icons/nav/live.svg";
 
 export type TabItem = {
   id: string;
@@ -26,6 +27,13 @@ export const tabsConfig: TabItem[] = [
     shortLabel: "Planning",
     path: "/planning",
     iconUrl: planningIcon,
+  },
+  {
+    id: "live",
+    label: "Live",
+    shortLabel: "Live",
+    path: "/live",
+    iconUrl: liveIcon,
   },
   {
     id: "tournament",

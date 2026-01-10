@@ -13,6 +13,7 @@ import ThreeVThreePage from "../pages/ThreeVThreePage";
 import ChallengeDetailPage from "../pages/ChallengeDetailPage";
 import PlanningPage from "../pages/PlanningPage";
 import ChallengeAtelierPage from "../pages/ChallengeAtelierPage";
+import LivePage from "../pages/LivePage";
 import SearchBar from "../components/ds/SearchBar";
 import Button from "../components/ds/Button";
 import type { SortConfig } from "../components/collections/List";
@@ -40,6 +41,14 @@ export default function AppRouter() {
         element={
           <LayoutRoot>
             <PlanningPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/live"
+        element={
+          <LayoutRoot>
+            <LivePage />
           </LayoutRoot>
         }
       />
