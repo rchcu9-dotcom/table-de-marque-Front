@@ -216,6 +216,7 @@ export default function TeamPage() {
                       match={m}
                       focusTeam={teamName}
                       onSelect={(id) => navigate(`/matches/${id}`)}
+                      compactChallenge
                     />
                   ))
                 ) : (
@@ -228,11 +229,6 @@ export default function TeamPage() {
       </div>
 
       <div className="px-6 md:px-10 pb-12 space-y-10 max-w-6xl mx-auto">
-        <section className="space-y-3">
-          <h3 className="text-lg font-semibold text-slate-50">Effectif</h3>
-          <PlayersGrid players={playerList} loading={players.isLoading} />
-        </section>
-
         <section className="grid gap-4 md:grid-cols-2">
           <Card className="bg-white/5 border-slate-800 backdrop-blur">
             <h4 className="text-sm font-semibold text-slate-100 mb-2">Repas</h4>
@@ -335,6 +331,11 @@ export default function TeamPage() {
             </Card>
           )}
         </section>
+
+        <section className="space-y-3">
+          <h3 className="text-lg font-semibold text-slate-50">Effectif</h3>
+          <PlayersGrid players={playerList} loading={players.isLoading} />
+        </section>
       </div>
     </div>
   );
@@ -344,13 +345,16 @@ function InlineMatchCard({
   match,
   focusTeam,
   onSelect,
+  compactChallenge,
 }: {
   match: Match;
   focusTeam: string;
   onSelect: (id: string) => void;
+  compactChallenge?: boolean;
 }) {
   const d = new Date(match.date);
   const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const isChallenge = (match.competitionType ?? "").toLowerCase() === "challenge";
   const isScored =
     (match.status === "finished" || match.status === "ongoing") &&
     match.scoreA !== null &&
@@ -364,6 +368,47 @@ function InlineMatchCard({
   };
 
   const focusHighlight = (team: string) => (normalizeTeamName(team) === normalizeTeamName(focusTeam) ? "font-semibold" : "");
+
+  if (isChallenge && compactChallenge) {
+    const subtitle =
+      match.status === "finished"
+        ? "Terminé"
+        : match.status === "ongoing"
+          ? "En cours"
+          : time;
+    return (
+      <div
+        className={`relative overflow-hidden rounded-lg border bg-slate-900/80 px-3 py-1 shadow-inner shadow-slate-950 cursor-pointer transition duration-200 hover:-translate-y-0.5 hover:bg-slate-900/90 hover:shadow-lg active:scale-[0.99] ${
+          match.status === "ongoing" ? "border-amber-400 ring-2 ring-amber-300/60 live-pulse-card" : "border-slate-800"
+        }`}
+        onClick={() => onSelect(match.id)}
+      >
+        <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-lg opacity-25">
+          <div
+            className="absolute inset-y-0 left-0 w-1/3"
+            style={{
+              backgroundImage: match.teamALogo ? `url(${match.teamALogo})` : undefined,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              maskImage: "linear-gradient(90deg, rgba(0,0,0,0.75), rgba(0,0,0,0))",
+              WebkitMaskImage: "linear-gradient(90deg, rgba(0,0,0,0.75), rgba(0,0,0,0))",
+              transform: "skewX(-10deg)",
+              transformOrigin: "left",
+            }}
+          />
+        </div>
+        <div className="relative flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            {match.teamALogo && <img src={match.teamALogo} alt={match.teamA} className="h-5 w-5 rounded-full object-cover" />}
+            <span className="text-[12px] font-semibold truncate">{match.teamA}</span>
+          </div>
+          <span className={`text-[12px] font-semibold ${match.status === "ongoing" ? "text-amber-200" : "text-slate-100"}`}>
+            {subtitle}
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

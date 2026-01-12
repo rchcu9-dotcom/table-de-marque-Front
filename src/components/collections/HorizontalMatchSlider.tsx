@@ -13,6 +13,7 @@ type Props = {
   getCardClassName?: (match: Match) => string;
   centered?: boolean;
   withDiagonalBg?: boolean;
+  focusAlign?: "center" | "end";
 };
 
 const compIcon: Record<string, string> = {
@@ -37,6 +38,7 @@ export default function HorizontalMatchSlider({
   getCardClassName,
   centered = false,
   withDiagonalBg = false,
+  focusAlign = "center",
 }: Props) {
   const sliderRef = React.useRef<HTMLDivElement | null>(null);
   const cardRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
@@ -64,13 +66,16 @@ export default function HorizontalMatchSlider({
     if (!target) return;
     const container = sliderRef.current;
     const targetCenter = target.offsetLeft + target.offsetWidth / 2;
-    const scrollLeft = Math.max(targetCenter - container.clientWidth / 2, 0);
+    const scrollLeft =
+      focusAlign === "end"
+        ? Math.max(target.offsetLeft + target.offsetWidth - container.clientWidth, 0)
+        : Math.max(targetCenter - container.clientWidth / 2, 0);
     if (typeof container.scrollTo === "function") {
       container.scrollTo({ left: scrollLeft, behavior: "smooth" });
     } else {
       container.scrollLeft = scrollLeft;
     }
-  }, [matches, currentMatchId]);
+  }, [matches, currentMatchId, focusAlign]);
 
   if (!matches || matches.length === 0) return null;
 

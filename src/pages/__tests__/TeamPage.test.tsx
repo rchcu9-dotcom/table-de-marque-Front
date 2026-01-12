@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
-import { describe, it, expect, vi, beforeAll } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { Match } from "../../api/match";
 
@@ -11,6 +11,7 @@ vi.mock("../../api/env", () => ({
 vi.stubGlobal("process", { env: { VITE_API_BASE_URL: "http://localhost:3000" } });
 
 let TeamPage: typeof import("../TeamPage").default;
+const mockNavigate = vi.fn();
 
 const mockMatches: Match[] = [
   {
@@ -45,6 +46,26 @@ const mockMatches: Match[] = [
     scoreB: 1,
     pouleCode: "A",
     pouleName: "Poule A",
+  },
+  {
+    id: "4",
+    date: "2025-12-01T12:00:00.000Z",
+    teamA: "Rennes",
+    teamB: "Odin",
+    status: "finished",
+    scoreA: 2,
+    scoreB: 0,
+    competitionType: "challenge",
+  },
+  {
+    id: "5",
+    date: "2025-12-01T13:00:00.000Z",
+    teamA: "Rennes",
+    teamB: "Loki",
+    status: "ongoing",
+    scoreA: null,
+    scoreB: null,
+    competitionType: "challenge",
   },
 ];
 
@@ -83,9 +104,21 @@ vi.mock("@tanstack/react-query", async (orig) => {
   };
 });
 
+vi.mock("react-router-dom", async (orig) => {
+  const mod = await orig();
+  return {
+    ...(mod as any),
+    useNavigate: () => mockNavigate,
+  };
+});
+
 describe("TeamPage", () => {
   beforeAll(async () => {
     TeamPage = (await import("../TeamPage")).default;
+  });
+
+  beforeEach(() => {
+    mockNavigate.mockReset();
   });
 
   it("affiche le header et les infos clés de l'équipe", () => {
@@ -117,5 +150,28 @@ describe("TeamPage", () => {
     expect(calendrierHeaders.length).toBeGreaterThan(0);
     const classements = screen.getAllByText(/Classement/i);
     expect(classements.length).toBeGreaterThan(0);
+  });
+
+  it("rend les cartes Challenge compactes dans Derniers matchs", () => {
+    render(
+      <MemoryRouter initialEntries={["/teams/Rennes"]}>
+        <Routes>
+          <Route path="/teams/:id" element={<TeamPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const lastMatchesCard = screen.getByText(/Derniers matchs/i).closest("div");
+    expect(lastMatchesCard).toBeTruthy();
+
+    const finishedStatus = within(lastMatchesCard as HTMLElement).getByText(/Terminé/i);
+    const finishedCard = finishedStatus.closest("div") as HTMLElement;
+    expect(within(finishedCard).getByText(/Terminé/i)).toBeInTheDocument();
+    expect(within(finishedCard).queryByText("Odin")).not.toBeInTheDocument();
+
+    const ongoingStatus = within(lastMatchesCard as HTMLElement).getByText(/En cours/i);
+    const ongoingCard = ongoingStatus.closest("div") as HTMLElement;
+    expect(within(ongoingCard).getByText(/En cours/i)).toBeInTheDocument();
+    expect(within(ongoingCard).queryByText("Loki")).not.toBeInTheDocument();
   });
 });

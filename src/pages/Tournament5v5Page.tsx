@@ -34,6 +34,7 @@ const FINALES = [
 export default function Tournament5v5Page() {
   const navigate = useNavigate();
   const { selectedTeam } = useSelectedTeam();
+  const [nowMs, setNowMs] = React.useState<number | null>(null);
   const { data: momentum5v5 } = useMomentumMatches({
     competitionType: "5v5",
     surface: "GG",
@@ -49,6 +50,38 @@ export default function Tournament5v5Page() {
   const [showFinales, setShowFinales] = React.useState(true);
   const [layout, setLayout] = useState<{ topOffset: number; paddingTop: number }>({ topOffset: 64, paddingTop: 320 });
   const filtersInitialized = React.useRef(false);
+  useEffect(() => {
+    setNowMs(Date.now());
+  }, []);
+  const momentumSorted = React.useMemo(
+    () => (momentum5v5 ? [...momentum5v5].sort(byDateAsc) : []),
+    [momentum5v5],
+  );
+  const momentumFocus = React.useMemo(() => {
+    if (momentumSorted.length === 0) return null;
+    const ongoing = momentumSorted.filter((m) => m.status === "ongoing");
+    if (ongoing.length > 0) return ongoing[ongoing.length - 1];
+    const now = nowMs ?? 0;
+    const next = momentumSorted.find((m) => m.status === "planned" || new Date(m.date).getTime() > now);
+    return next ?? momentumSorted[momentumSorted.length - 1];
+  }, [momentumSorted, nowMs]);
+  const momentumWindow = React.useMemo(() => {
+    if (momentumSorted.length <= 3) return momentumSorted;
+    const targetId = momentumFocus?.id ?? null;
+    const targetIdx = targetId ? momentumSorted.findIndex((m) => m.id === targetId) : 0;
+    let start = Math.max(0, targetIdx - 1);
+    let end = start + 3;
+    if (end > momentumSorted.length) {
+      end = momentumSorted.length;
+      start = Math.max(0, end - 3);
+    }
+    return momentumSorted.slice(start, end);
+  }, [momentumSorted, momentumFocus]);
+  const momentumAlign = React.useMemo(() => {
+    if (momentumSorted.length === 0) return "center";
+    const allFinished = momentumSorted.every((m) => m.status === "finished");
+    return allFinished ? "end" : "center";
+  }, [momentumSorted]);
   const highlightTeams = React.useMemo(() => {
     const current = momentum5v5?.find((m) => m.status === "ongoing");
     if (!current) return new Set<string>();
@@ -198,11 +231,12 @@ export default function Tournament5v5Page() {
           </section>
           <section className="rounded-xl border border-slate-800 bg-slate-900 p-4 shadow-md shadow-slate-950">
             <HorizontalMatchSlider
-              matches={momentum5v5?.slice(0, 3) ?? []}
-              currentMatchId={momentum5v5 && momentum5v5[1]?.id}
+              matches={momentumWindow}
+              currentMatchId={momentumFocus?.id}
               onSelect={(id) => navigate(`/matches/${id}`)}
               testIdPrefix="tournament-momentum"
               withDiagonalBg
+              focusAlign={momentumAlign}
             />
           </section>
         </div>

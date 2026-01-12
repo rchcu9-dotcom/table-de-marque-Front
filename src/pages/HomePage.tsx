@@ -79,7 +79,8 @@ function dayIndex(nowMs: number, matches: Match[]) {
 
 function tripletForCompetition(matches: Match[], competition: "5v5" | "3v3" | "challenge", nowMs: number): Triplet {
   const list = filterByCompetition(matches, competition).sort(byDateAsc);
-  const live = list.find((m) => m.status === "ongoing") ?? null;
+  const liveCandidates = list.filter((m) => m.status === "ongoing");
+  const live = liveCandidates.length > 0 ? liveCandidates[liveCandidates.length - 1] : null;
   const finished = list.filter((m) => m.status === "finished" && new Date(m.date).getTime() <= nowMs);
   const last = finished.length > 0 ? finished[finished.length - 1] : null;
   const future = list.filter((m) => {
@@ -168,6 +169,9 @@ function CompactLine({
   items,
   testId,
   autoFocusIndex = 0,
+  autoFocusAlign = "center",
+  focusId,
+  focusTone,
   onSelect,
 }: {
   title: string;
@@ -175,14 +179,19 @@ function CompactLine({
   items: Array<{ label?: string; match: Match | null }>;
   testId: string;
   autoFocusIndex?: number;
+  autoFocusAlign?: "center" | "end";
+  focusId?: string | null;
+  focusTone?: "blue";
   onSelect?: (id: string) => void;
 }) {
   const listRef = React.useRef<HTMLDivElement | null>(null);
+  const shouldAutoFocus = typeof autoFocusIndex === "number" && autoFocusIndex >= 0;
 
   React.useEffect(() => {
     const el = listRef.current?.querySelector<HTMLElement>('[data-autofocus="true"]');
     if (el?.scrollIntoView) {
-      el.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+      const align = el.dataset.autofocusAlign === "end" ? "end" : "center";
+      el.scrollIntoView({ inline: align, block: "nearest", behavior: "smooth" });
     }
   }, [items]);
 
@@ -201,7 +210,10 @@ function CompactLine({
               match={match!}
               label={label}
               testId={`${testId}-item-${index}`}
-              autoFocus={index === autoFocusIndex}
+              autoFocus={shouldAutoFocus && index === autoFocusIndex}
+              autoFocusAlign={autoFocusAlign}
+              isFocused={!!focusId && match?.id === focusId}
+              focusTone={focusTone}
               onSelect={onSelect}
             />
           ))}
@@ -365,12 +377,18 @@ function CompactMatchCard({
   label,
   testId,
   autoFocus,
+  autoFocusAlign,
+  isFocused,
+  focusTone,
   onSelect,
 }: {
   match: Match;
   label?: string;
   testId: string;
   autoFocus?: boolean;
+  autoFocusAlign?: "center" | "end";
+  isFocused?: boolean;
+  focusTone?: "blue";
   onSelect?: (id: string) => void;
 }) {
   const d = new Date(match.date);
@@ -389,13 +407,16 @@ function CompactMatchCard({
   })();
   const isLive = match.status === "ongoing";
   const showTeamB = !isChallenge;
+  const focusClass =
+    isFocused && focusTone === "blue" && !isLive ? "border-sky-400 ring-2 ring-sky-300/70" : "";
   return (
     <div
-      className={`relative overflow-hidden rounded-lg border px-4 py-3 text-sm text-slate-100 shadow-inner min-w-[220px] sm:min-w-[240px] max-w-[320px] flex-[0_0_78vw] md:flex-[0_0_280px] snap-center ${
+      className={`relative overflow-hidden rounded-lg border px-4 py-3 text-sm text-slate-100 shadow-inner min-w-[220px] sm:min-w-[240px] max-w-[320px] flex-[0_0_78vw] md:flex-[0_0_280px] snap-center cursor-pointer transition duration-200 hover:-translate-y-0.5 hover:bg-slate-900/80 hover:shadow-lg active:scale-[0.99] ${
         isLive ? "border-amber-400 ring-2 ring-amber-300/60 live-pulse-card" : "border-slate-800"
-      } bg-slate-950/80`}
+      } ${focusClass} bg-slate-950/80`}
       data-testid={testId}
       data-autofocus={autoFocus ? "true" : "false"}
+      data-autofocus-align={autoFocus ? autoFocusAlign : undefined}
       role={onSelect ? "button" : undefined}
       tabIndex={onSelect ? 0 : -1}
       onClick={() => onSelect?.(match.id)}
@@ -610,8 +631,12 @@ export default function HomePage() {
     [matches, nowMs],
   );
   const afterRecent5v5 = React.useMemo(
-    () => recentMatches(matches, "5v5", nowMs).slice(-3).reverse(),
+    () => recentMatches(matches, "5v5", nowMs).slice(-3),
     [matches, nowMs],
+  );
+  const focusIdApres5v5 = React.useMemo(
+    () => (afterRecent5v5.length > 0 ? afterRecent5v5[afterRecent5v5.length - 1].id : null),
+    [afterRecent5v5],
   );
   const afterChallengeWinners = React.useMemo(
     () => recentMatches(matches, "challenge", nowMs).slice(-3).reverse(),
@@ -663,7 +688,6 @@ export default function HomePage() {
         <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-4" data-testid="home-now">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-white">En ce moment</h2>
-            <span className="text-xs text-slate-400">Vue selon état {state}</span>
           </div>
           {state === "avant" && (
             <>
@@ -672,6 +696,7 @@ export default function HomePage() {
                 icon={icon5v5}
                 items={beforeUpcoming5v5.map((m) => ({ match: m }))}
                 testId="home-now-5v5"
+                autoFocusIndex={0}
                 onSelect={(id) => navigate(`/matches/${id}`)}
               />
               <CompactLine
@@ -710,6 +735,10 @@ export default function HomePage() {
                 icon={icon5v5}
                 items={afterRecent5v5.map((m) => ({ match: m }))}
                 testId="home-now-5v5"
+                autoFocusIndex={afterRecent5v5.length > 0 ? afterRecent5v5.length - 1 : -1}
+                autoFocusAlign="end"
+                focusId={focusIdApres5v5}
+                focusTone="blue"
                 onSelect={(id) => navigate(`/matches/${id}`)}
               />
               <CompactLine
