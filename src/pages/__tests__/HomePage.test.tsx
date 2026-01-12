@@ -8,6 +8,7 @@ import type { Match } from "../../api/match";
 
 let HomePage: typeof import("../HomePage").default;
 let mockMatches: Match[] = [];
+let mockMeals: { mealOfDay: { dateTime: string | null; message?: string | null } | null } | null = null;
 const mockNavigate = vi.fn();
 let mockSelectedTeam: {
   selectedTeam: { id: string; name: string; logoUrl?: string } | null;
@@ -29,6 +30,13 @@ vi.mock("../../hooks/useTeams", () => ({
     isError: false,
   }),
 }));
+
+vi.mock("../../hooks/useMeals", () => ({
+  useMeals: () => ({
+    data: mockMeals,
+  }),
+}));
+
 
 vi.mock("../../providers/SelectedTeamProvider", () => ({
   useSelectedTeam: () => mockSelectedTeam,
@@ -60,6 +68,7 @@ async function renderHome(simulatedNow: string) {
 
 beforeEach(() => {
   mockNavigate.mockReset();
+  mockMeals = { mealOfDay: null };
   mockSelectedTeam = {
     selectedTeam: null,
     setSelectedTeam: vi.fn(),
@@ -187,5 +196,33 @@ describe("HomePage dynamique", () => {
     await waitFor(() => {
       expect(screen.getByTestId("home-degraded-banner")).toBeInTheDocument();
     });
+  });
+
+  it("affiche l'heure du repas du jour depuis /meals", async () => {
+    mockSelectedTeam = {
+      selectedTeam: { id: "rennes", name: "Rennes", logoUrl: "logo-rennes" },
+      setSelectedTeam: vi.fn(),
+      toggleMuted: vi.fn(),
+    };
+    mockMeals = { mealOfDay: { dateTime: "2026-01-17T12:30:00" } };
+
+    await renderHome("2026-01-17T14:30:00Z");
+
+    expect(screen.getByText("Repas du jour")).toBeInTheDocument();
+    expect(screen.getByText(/12:30/)).toBeInTheDocument();
+  });
+
+  it("affiche le fallback repas si dateTime est null", async () => {
+    mockSelectedTeam = {
+      selectedTeam: { id: "rennes", name: "Rennes", logoUrl: "logo-rennes" },
+      setSelectedTeam: vi.fn(),
+      toggleMuted: vi.fn(),
+    };
+    mockMeals = { mealOfDay: { dateTime: null, message: "Repas indisponible" } };
+
+    await renderHome("2026-01-17T14:30:00Z");
+
+    expect(screen.getByText("Repas du jour")).toBeInTheDocument();
+    expect(screen.getByText(/Repas indisponible/i)).toBeInTheDocument();
   });
 });

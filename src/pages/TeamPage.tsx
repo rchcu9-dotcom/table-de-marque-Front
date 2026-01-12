@@ -6,6 +6,7 @@ import Card from "../components/ds/Card";
 import Spinner from "../components/ds/Spinner";
 import { useMatches } from "../hooks/useMatches";
 import { useTeams } from "../hooks/useTeams";
+import { useMeals } from "../hooks/useMeals";
 import type { Match } from "../api/match";
 import { fetchClassementByPoule, type ClassementEntry } from "../api/classement";
 import { usePlayersByEquipe } from "../hooks/usePlayers";
@@ -36,6 +37,11 @@ function normalizeTeamName(team?: string) {
 
 function formatDay(date: string) {
   return new Date(date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" });
+}
+
+function formatMealTime(dateTime?: string | null) {
+  if (!dateTime) return null;
+  return new Date(dateTime).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 }
 
 function computeForm(matches: Match[], team: string) {
@@ -78,6 +84,7 @@ export default function TeamPage() {
   const teamName = decodeURIComponent(id ?? "").trim();
   const { data: matches, isLoading, isError } = useMatches();
   const { data: allTeams } = useTeams();
+  const { data: meals } = useMeals();
 
   const filtered = React.useMemo(() => {
     if (!matches) return [];
@@ -161,6 +168,11 @@ export default function TeamPage() {
   const jour1 = dayKeys[0];
   const jour2 = dayKeys[1];
   const jour3 = dayKeys[2];
+  const mealDays = meals?.days ?? [
+    { key: "J1", label: "J1", dateTime: null, message: "Repas indisponible" },
+    { key: "J2", label: "J2", dateTime: null, message: "Repas indisponible" },
+    { key: "J3", label: "J3", dateTime: null, message: "Repas indisponible" },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100">
@@ -233,9 +245,12 @@ export default function TeamPage() {
           <Card className="bg-white/5 border-slate-800 backdrop-blur">
             <h4 className="text-sm font-semibold text-slate-100 mb-2">Repas</h4>
             <ul className="space-y-2 text-sm text-slate-200">
-              <li className="flex items-center justify-between"><span>J1</span><span>12:30 - Salle principale</span></li>
-              <li className="flex items-center justify-between"><span>J2</span><span>12:30 - Salle principale</span></li>
-              <li className="flex items-center justify-between"><span>J3</span><span>12:30 - Salle principale</span></li>
+              {mealDays.map((meal) => (
+                <li key={meal.key} className="flex items-center justify-between">
+                  <span>{meal.label}</span>
+                  <span>{formatMealTime(meal.dateTime) ?? meal.message ?? "Repas indisponible"}</span>
+                </li>
+              ))}
             </ul>
           </Card>
           <Card className="bg-white/5 border-slate-800 backdrop-blur space-y-3">

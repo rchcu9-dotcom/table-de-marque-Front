@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchMatches } from "../api/match";
 import type { Match } from "../api/match";
 import { useTeams } from "../hooks/useTeams";
+import { useMeals } from "../hooks/useMeals";
 import { useSelectedTeam } from "../providers/SelectedTeamProvider";
 import homeIcon from "../assets/icons/nav/home.png";
 import icon5v5 from "../assets/icons/nav/fivev5.png";
@@ -229,6 +230,7 @@ function TodayBlock({
   onSelect,
   smallGlaceLabel,
   smallGlaceType,
+  mealOfDay,
 }: {
   matches: Match[];
   selectedTeamId: string;
@@ -236,6 +238,7 @@ function TodayBlock({
   onSelect: (id: string) => void;
   smallGlaceLabel: string;
   smallGlaceType: "3v3" | "challenge";
+  mealOfDay?: { dateTime: string | null; message?: string | null } | null;
 }) {
   const segments5v5 = segmentForTeam(matches, selectedTeamId, "5v5");
   const segmentsAlt = segmentForTeam(matches, selectedTeamId, smallGlaceType);
@@ -282,6 +285,16 @@ function TodayBlock({
     </div>
   );
 
+  const mealLabel = (() => {
+    if (mealOfDay?.dateTime) {
+      return new Date(mealOfDay.dateTime).toLocaleTimeString("fr-FR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
+    return mealOfDay?.message ?? "Repas indisponible";
+  })();
+
   return (
     <div className="space-y-3" data-testid="home-today">
       <div className="flex items-center gap-2 text-xs uppercase text-slate-400">
@@ -302,7 +315,7 @@ function TodayBlock({
       <div className="grid gap-2 md:grid-cols-2">
         <div className="rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 flex items-center justify-between">
           <span className="text-xs uppercase text-slate-400">Repas du jour</span>
-          <span className="font-semibold">12:30 (mock)</span>
+          <span className="font-semibold">{mealLabel}</span>
         </div>
         <div className="rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 flex items-center justify-between">
           <span className="text-xs uppercase text-slate-400">Vestiaire</span>
@@ -575,6 +588,7 @@ export default function HomePage() {
   const { data: teams } = useTeams();
   const { selectedTeam } = useSelectedTeam();
   const { matches, isDegraded } = useLiveMatches();
+  const { data: meals } = useMeals();
   const nowMs = getNowMs();
 
   const state = React.useMemo(() => pickStateByDate(matches, nowMs), [matches, nowMs]);
@@ -782,6 +796,7 @@ export default function HomePage() {
             onSelect={(id) => navigate(`/matches/${id}`)}
             smallGlaceLabel={smallGlaceLabel}
             smallGlaceType={smallGlaceType}
+            mealOfDay={meals?.mealOfDay ?? null}
           />
         </section>
       )}

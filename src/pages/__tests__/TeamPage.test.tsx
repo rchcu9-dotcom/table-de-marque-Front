@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { Match } from "../../api/match";
+import type { MealsResponse } from "../../api/meals";
 
 vi.mock("../../api/env", () => ({
   getApiBaseUrl: () => "http://localhost:3000",
@@ -12,6 +13,7 @@ vi.stubGlobal("process", { env: { VITE_API_BASE_URL: "http://localhost:3000" } }
 
 let TeamPage: typeof import("../TeamPage").default;
 const mockNavigate = vi.fn();
+let mockMeals: MealsResponse | null = null;
 
 const mockMatches: Match[] = [
   {
@@ -77,6 +79,13 @@ vi.mock("../../hooks/useMatches", () => ({
   }),
 }));
 
+vi.mock("../../hooks/useMeals", () => ({
+  useMeals: () => ({
+    data: mockMeals,
+  }),
+}));
+
+
 const mockClassement = {
   pouleCode: "A",
   pouleName: "Poule A",
@@ -119,6 +128,14 @@ describe("TeamPage", () => {
 
   beforeEach(() => {
     mockNavigate.mockReset();
+    mockMeals = {
+      days: [
+        { key: "J1", label: "J1", dateTime: "2026-01-17T12:30:00" },
+        { key: "J2", label: "J2", dateTime: "2026-01-18T12:45:00" },
+        { key: "J3", label: "J3", dateTime: null, message: "Repas indisponible" },
+      ],
+      mealOfDay: null,
+    };
   });
 
   it("affiche le header et les infos clés de l'équipe", () => {
@@ -150,6 +167,25 @@ describe("TeamPage", () => {
     expect(calendrierHeaders.length).toBeGreaterThan(0);
     const classements = screen.getAllByText(/Classement/i);
     expect(classements.length).toBeGreaterThan(0);
+  });
+
+  it("affiche les repas J1/J2 et le fallback J3", () => {
+    render(
+      <MemoryRouter initialEntries={["/teams/Rennes"]}>
+        <Routes>
+          <Route path="/teams/:id" element={<TeamPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const repasTitle = screen.getByText("Repas");
+    const repasCard = repasTitle.closest("div") as HTMLElement;
+    expect(within(repasCard).getByText("J1")).toBeInTheDocument();
+    expect(within(repasCard).getByText("J2")).toBeInTheDocument();
+    expect(within(repasCard).getByText("J3")).toBeInTheDocument();
+    expect(within(repasCard).getByText(/12:30/)).toBeInTheDocument();
+    expect(within(repasCard).getByText(/12:45/)).toBeInTheDocument();
+    expect(within(repasCard).getByText(/Repas indisponible/i)).toBeInTheDocument();
   });
 
   it("rend les cartes Challenge compactes dans Derniers matchs", () => {
