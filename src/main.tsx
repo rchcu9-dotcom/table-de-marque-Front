@@ -1,14 +1,16 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import App from './App';
 import './styles/global.css';
 import { MatchStreamListener } from './providers/MatchStreamListener';
 import { SelectedTeamProvider } from './providers/SelectedTeamProvider';
+import { queryClient } from './queryClient';
+import { setupQueryPersistence } from './queryPersist';
 
-const queryClient = new QueryClient();
+setupQueryPersistence();
 
 if (import.meta.env.DEV) {
   // Aid local troubleshooting of env injection
