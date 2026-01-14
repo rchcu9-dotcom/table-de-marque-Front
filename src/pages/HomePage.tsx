@@ -590,6 +590,27 @@ export default function HomePage() {
   const { matches, isDegraded } = useLiveMatches();
   const { data: meals } = useMeals();
   const nowMs = getNowMs();
+  const [layout, setLayout] = React.useState<{ topOffset: number; paddingTop: number }>({
+    topOffset: 64,
+    paddingTop: 320,
+  });
+  const topBlockRef = React.useRef<HTMLDivElement | null>(null);
+
+  const recomputeLayout = React.useCallback(() => {
+    const header = document.querySelector("header");
+    const headerHeight = header ? header.getBoundingClientRect().height : 64;
+    const topHeight = topBlockRef.current ? topBlockRef.current.getBoundingClientRect().height : 220;
+    const gap = 8;
+    const topOffset = headerHeight + gap;
+    const paddingTop = topOffset + topHeight + gap;
+    setLayout({ topOffset, paddingTop });
+  }, []);
+
+  React.useLayoutEffect(() => {
+    recomputeLayout();
+    window.addEventListener("resize", recomputeLayout);
+    return () => window.removeEventListener("resize", recomputeLayout);
+  }, [recomputeLayout]);
 
   const state = React.useMemo(() => pickStateByDate(matches, nowMs), [matches, nowMs]);
   const day = React.useMemo(() => dayIndex(nowMs, matches), [matches, nowMs]);
@@ -657,9 +678,25 @@ export default function HomePage() {
     [matches, nowMs],
   );
 
+  React.useEffect(() => {
+    recomputeLayout();
+  }, [
+    recomputeLayout,
+    isDegraded,
+    state,
+    countdown,
+    selectedTeam?.id,
+    selectedTeam?.name,
+    selectedTeam?.logoUrl,
+    meals?.mealOfDay?.dateTime,
+    meals?.mealOfDay?.message,
+  ]);
+
   return (
-    <div className="flex flex-col gap-4 min-h-screen" data-testid="home-page">
-      <section className="sticky top-16 z-30 rounded-xl border border-slate-800 bg-slate-950/80 backdrop-blur px-4 py-3 shadow-lg shadow-slate-900/40">
+    <div className="fixed inset-0 overflow-hidden" data-testid="home-page">
+      <div className="absolute left-0 right-0 px-4" style={{ top: `${layout.topOffset}px` }}>
+        <div className="max-w-6xl mx-auto" ref={topBlockRef}>
+          <section className="rounded-xl border border-slate-800 bg-slate-950/80 backdrop-blur px-4 py-3 shadow-lg shadow-slate-900/40">
         <div className="flex items-center gap-3 mb-1">
           <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-800/80 flex-shrink-0">
             <img src={homeIcon} alt="Accueil" className="h-full w-full object-cover scale-150" loading="lazy" />
@@ -696,9 +733,18 @@ export default function HomePage() {
             Mode dégradé (reconnexion en cours) – actualisation toutes les 30s.
           </div>
         )}
-      </section>
+          </section>
+        </div>
+      </div>
 
-      <div className="flex-1 overflow-y-auto space-y-6" style={{ maxHeight: "calc(100vh - 5.5rem)", paddingBottom: "7rem" }}>
+      <div
+        className="absolute inset-x-4 bottom-4"
+        style={{
+          top: `${layout.paddingTop}px`,
+          height: `calc(100vh - ${layout.paddingTop}px - 24px)`,
+        }}
+      >
+        <div className="max-w-6xl mx-auto h-full overflow-y-auto space-y-6 pb-24 md:pb-6">
         <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-4" data-testid="home-now">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-white">En ce moment</h2>
@@ -812,6 +858,7 @@ export default function HomePage() {
           />
         </section>
       </div>
+    </div>
     </div>
   );
 }
