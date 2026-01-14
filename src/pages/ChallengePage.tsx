@@ -361,7 +361,7 @@ export default function ChallengePage() {
                         className={`rounded-full border px-3 py-1 ${showGlisse ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-300 border-slate-700"}`}
                         onClick={() => setShowGlisse((v) => !v)}
                       >
-                        Glisse & Crosse
+                        Agilité
                       </button>
                     </div>
                   </div>

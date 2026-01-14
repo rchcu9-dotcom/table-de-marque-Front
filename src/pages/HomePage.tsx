@@ -639,9 +639,14 @@ export default function HomePage() {
     const next = [...matches].sort(byDateAsc).find((m) => new Date(m.date).getTime() > nowMs);
     if (!next) return null;
     const diff = new Date(next.date).getTime() - nowMs;
-    const hours = Math.floor(diff / 3_600_000);
-    const minutes = Math.floor((diff % 3_600_000) / 60_000);
-    return `${hours}h${minutes.toString().padStart(2, "0")}`;
+    const totalSeconds = Math.max(0, Math.floor(diff / 1000));
+    const days = Math.floor(totalSeconds / 86_400);
+    const hours = Math.floor((totalSeconds % 86_400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${days}j ${hours.toString().padStart(2, "0")}h ${minutes
+      .toString()
+      .padStart(2, "0")}m ${seconds.toString().padStart(2, "0")}s`;
   }, [matches, nowMs]);
 
   const hero = React.useMemo(() => {
@@ -659,6 +664,11 @@ export default function HomePage() {
       subtitle,
     };
   }, [countdown, selectedTeam?.name, state]);
+  const momentumTitle = React.useMemo(() => {
+    if (state === "avant") return "Prêts à jouer !";
+    if (state === "pendant") return "Ça joue !";
+    return "Clap de fin !";
+  }, [state]);
 
   const beforeUpcoming5v5 = React.useMemo(() => upcomingMatches(matches, "5v5", nowMs).slice(0, 3), [matches, nowMs]);
   const beforeUpcomingChallenge = React.useMemo(
@@ -720,11 +730,6 @@ export default function HomePage() {
             )}
           </div>
         </div>
-        {state === "avant" && countdown && (
-          <div className="text-xs text-slate-300" data-testid="home-countdown">
-            Début dans {countdown}
-          </div>
-        )}
         {isDegraded && (
           <div
             className="mt-2 rounded-md border border-amber-500/60 bg-amber-500/10 px-3 py-2 text-xs text-amber-100"
@@ -745,10 +750,10 @@ export default function HomePage() {
         }}
       >
         <div className="max-w-6xl mx-auto h-full overflow-y-auto space-y-6 pb-24 md:pb-6">
-        <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-4" data-testid="home-now">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">En ce moment</h2>
-          </div>
+          <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-4" data-testid="home-now">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">{momentumTitle}</h2>
+            </div>
           {state === "avant" && (
             <>
               <CompactLine
