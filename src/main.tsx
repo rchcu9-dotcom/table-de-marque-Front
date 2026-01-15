@@ -6,6 +6,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import App from './App';
 import './styles/global.css';
 import { MatchStreamListener } from './providers/MatchStreamListener';
+import { ChallengeStreamListener } from './providers/ChallengeStreamListener';
 import { SelectedTeamProvider } from './providers/SelectedTeamProvider';
 import { queryClient } from './queryClient';
 import { setupQueryPersistence } from './queryPersist';
@@ -22,6 +23,7 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <QueryClientProvider client={queryClient}>
       <SelectedTeamProvider>
         <MatchStreamListener />
+        <ChallengeStreamListener />
         <BrowserRouter>
           <App />
         </BrowserRouter>

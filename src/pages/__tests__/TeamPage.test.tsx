@@ -130,8 +130,8 @@ describe("TeamPage", () => {
     mockNavigate.mockReset();
     mockMeals = {
       days: [
-        { key: "J1", label: "J1", dateTime: "2026-01-17T12:30:00" },
-        { key: "J2", label: "J2", dateTime: "2026-01-18T12:45:00" },
+        { key: "J1", label: "Samedi", dateTime: "2026-01-17T12:30:00" },
+        { key: "J2", label: "Dimanche", dateTime: "2026-01-18T12:45:00" },
         { key: "J3", label: "J3", dateTime: null, message: "Repas indisponible" },
       ],
       mealOfDay: null,
@@ -180,8 +180,8 @@ describe("TeamPage", () => {
 
     const repasTitle = screen.getByText("Repas");
     const repasCard = repasTitle.closest("div") as HTMLElement;
-    expect(within(repasCard).getByText("J1")).toBeInTheDocument();
-    expect(within(repasCard).getByText("J2")).toBeInTheDocument();
+    expect(within(repasCard).getByText("Samedi")).toBeInTheDocument();
+    expect(within(repasCard).getByText("Dimanche")).toBeInTheDocument();
     expect(within(repasCard).getByText("J3")).toBeInTheDocument();
     expect(within(repasCard).getByText(/12:30/)).toBeInTheDocument();
     expect(within(repasCard).getByText(/12:45/)).toBeInTheDocument();

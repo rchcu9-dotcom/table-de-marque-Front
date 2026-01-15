@@ -43,7 +43,15 @@ describe("MatchStreamListener", () => {
 
   it("met à jour le cache react-query lors d'un event matches", async () => {
     const qc = new QueryClient();
-    const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
+    qc.setQueryData(["matches", "42"], {
+      id: "42",
+      date: "2024-01-01T00:00:00.000Z",
+      teamA: "A",
+      teamB: "B",
+      status: "planned",
+      scoreA: null,
+      scoreB: null,
+    });
 
     render(
       <QueryClientProvider client={qc}>
@@ -76,7 +84,8 @@ describe("MatchStreamListener", () => {
     });
 
     expect(qc.getQueryData<Match[]>(["matches"])).toEqual(payload.matches);
+    expect(qc.getQueryData<Match[]>(["matches", false])).toEqual(payload.matches);
+    expect(qc.getQueryData<Match[]>(["matches", true])).toEqual(payload.matches);
     expect(qc.getQueryData<Match>(["matches", "42"])).toEqual(payload.matches[0]);
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["matches", "momentum"], exact: false });
   });
 });

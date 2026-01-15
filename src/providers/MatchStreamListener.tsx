@@ -38,15 +38,33 @@ export function MatchStreamListener({ onOpen, onError }: MatchStreamListenerProp
       source?.close();
       source = new EventSource(streamUrl);
 
-      source.onmessage = (event) => {
+      source.onmessage = async (event) => {
         try {
           const parsed: StreamPayload = JSON.parse(event.data);
           if (parsed.type !== "matches" || !("matches" in parsed)) return;
 
           const matches = parsed.matches ?? [];
+          await queryClient.cancelQueries({ queryKey: ["matches"], exact: false });
           queryClient.setQueryData<Match[]>(["matches"], matches);
-          matches.forEach((m) => queryClient.setQueryData<Match>(["matches", m.id], m));
-          queryClient.invalidateQueries({ queryKey: ["matches", "momentum"], exact: false });
+          queryClient.setQueryData<Match[]>(["matches", false], matches);
+          queryClient.setQueryData<Match[]>(["matches", true], matches);
+
+          const matchById = new Map(matches.map((match) => [match.id, match]));
+          queryClient.setQueriesData<Match[] | Match>(
+            {
+              predicate: (query) => query.queryKey[0] === "matches",
+            },
+            (current) => {
+              if (!current) return current;
+
+              if (Array.isArray(current)) {
+                return current.map((item) => matchById.get(item.id) ?? item);
+              }
+
+              return matchById.get(current.id) ?? current;
+            },
+          );
+
         } catch (err) {
           console.error("Match stream parse error", err);
         }

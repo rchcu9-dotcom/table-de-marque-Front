@@ -44,6 +44,14 @@ function formatMealTime(dateTime?: string | null) {
   return new Date(dateTime).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 }
 
+function formatMealDayLabel(meal: { dateTime?: string | null; label?: string | null }) {
+  if (meal.dateTime) {
+    const day = new Date(meal.dateTime).toLocaleDateString("fr-FR", { weekday: "long" });
+    return `${day.charAt(0).toUpperCase()}${day.slice(1)}`;
+  }
+  return meal.label ?? "Repas indisponible";
+}
+
 function computeForm(matches: Match[], team: string) {
   const finished = matches.filter((m) => m.status === "finished" && m.scoreA !== null && m.scoreB !== null);
   const ordered = [...finished].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -246,8 +254,8 @@ export default function TeamPage() {
             <h4 className="text-sm font-semibold text-slate-100 mb-2">Repas</h4>
             <ul className="space-y-2 text-sm text-slate-200">
               {mealDays.map((meal) => (
-                <li key={meal.key} className="flex items-center justify-between">
-                  <span>{meal.label}</span>
+              <li key={meal.key} className="flex items-center justify-between">
+                  <span>{formatMealDayLabel(meal)}</span>
                   <span>{formatMealTime(meal.dateTime) ?? meal.message ?? "Repas indisponible"}</span>
                 </li>
               ))}
