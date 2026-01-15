@@ -13,15 +13,10 @@ import iconChallenge from "../assets/icons/nav/challenge.png";
 
 type HomeState = "avant" | "pendant" | "apres";
 
-const SIMULATED_NOW = Date.parse(
-  // Permet d'overrider si besoin, sinon valeur seed mock.
-  (import.meta.env.VITE_SIMULATED_NOW as string | undefined) ?? "2026-01-17T14:30:00Z",
-);
-
 type Triplet = { last: Match | null; live: Match | null; next: Match | null };
 
 function getNowMs() {
-  return Number.isNaN(SIMULATED_NOW) ? Date.now() : SIMULATED_NOW;
+  return Date.now();
 }
 
 function useLiveMatches() {
@@ -63,6 +58,7 @@ function filterByCompetition(matches: Match[], competition: "5v5" | "3v3" | "cha
 
 function pickStateByDate(matches: Match[], nowMs: number): HomeState {
   if (matches.length === 0) return "avant";
+  if (matches.some((m) => m.status === "ongoing")) return "pendant";
   const sorted = [...matches].sort(byDateAsc);
   const first = new Date(sorted[0].date).getTime();
   const last = new Date(sorted[sorted.length - 1].date).getTime();
