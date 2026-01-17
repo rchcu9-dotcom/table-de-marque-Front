@@ -101,7 +101,8 @@ export default function TeamPage() {
     return matches.filter((m) => normalizeTeamName(m.teamA) === needle || normalizeTeamName(m.teamB) === needle);
   }, [matches, teamName]);
 
-  const sample = filtered[0];
+  const sample =
+    filtered.find((m) => (m.competitionType ?? "5v5") === "5v5") ?? filtered[0];
   const pouleCode = sample?.pouleCode ?? sample?.pouleName;
 
   const classement = useQuery({
@@ -217,7 +218,7 @@ export default function TeamPage() {
               <p className="text-xs text-slate-500">Basés sur tous les matchs terminés</p>
             </Card>
             <Card className="bg-white/5 border-slate-800 backdrop-blur">
-              <p className="text-xs text-slate-400">Prochains matchs</p>
+              <p className="text-xs text-slate-400">Prochains matchs et activités</p>
               <div className="flex flex-col gap-2 mt-2">
                 {getUpcoming(filtered).length > 0 ? (
                   getUpcoming(filtered).map((m) => (
@@ -234,7 +235,7 @@ export default function TeamPage() {
               </div>
             </Card>
             <Card className="bg-white/5 border-slate-800 backdrop-blur">
-              <p className="text-xs text-slate-400">Derniers matchs</p>
+              <p className="text-xs text-slate-400">Derniers matchs et activités</p>
               <div className="flex flex-col gap-2 mt-2">
                 {getRecent(filtered).length > 0 ? (
                   getRecent(filtered).map((m) => (
@@ -281,8 +282,7 @@ export default function TeamPage() {
         </section>
 
         <section className="space-y-4">
-          <h3 className="text-lg font-semibold text-slate-50">Calendrier</h3>
-          <p className="text-sm text-slate-400">Classements & highlights par jour</p>
+          <h3 className="text-lg font-semibold text-slate-50">Classements</h3>
 
           {jour1 && (
             <Card className="bg-white/5 border-slate-800 backdrop-blur space-y-3">
@@ -319,7 +319,7 @@ export default function TeamPage() {
                   })) ?? []}
                 />
                 <HighlightBlock
-                  title="Glisse & agilité (2 meilleurs)"
+                  title="Agilité (2 meilleurs)"
                   icon={ICONS.glisse}
                   players={playerList.slice(0, 2).map((p, idx) => ({
                     name: displayName(p),

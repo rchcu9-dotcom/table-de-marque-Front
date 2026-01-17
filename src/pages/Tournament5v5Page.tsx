@@ -31,6 +31,25 @@ const FINALES = [
   { code: "Argent5", title: "Lun - Carré Argent 5", phase: "Finales" },
 ];
 
+type HomeState = "avant" | "pendant" | "apres";
+
+function pickStateByDate(matches: Match[], nowMs: number): HomeState {
+  if (matches.length === 0) return "avant";
+  if (matches.some((m) => m.status === "ongoing")) return "pendant";
+  const sorted = [...matches].sort(byDateAsc);
+  const first = new Date(sorted[0].date).getTime();
+  const last = new Date(sorted[sorted.length - 1].date).getTime();
+  if (nowMs < first) return "avant";
+  if (nowMs > last) return "apres";
+  return "pendant";
+}
+
+function momentumTitle(state: HomeState) {
+  if (state === "avant") return "PrÊts à jouer !";
+  if (state === "pendant") return "Ça joue !";
+  return "Clap de fin !";
+}
+
 export default function Tournament5v5Page() {
   const navigate = useNavigate();
   const { selectedTeam } = useSelectedTeam();
@@ -50,6 +69,7 @@ export default function Tournament5v5Page() {
   const [showFinales, setShowFinales] = React.useState(true);
   const [layout, setLayout] = useState<{ topOffset: number; paddingTop: number }>({ topOffset: 64, paddingTop: 320 });
   const filtersInitialized = React.useRef(false);
+  const nowValue = nowMs ?? 0;
   useEffect(() => {
     setNowMs(Date.now());
   }, []);
@@ -82,6 +102,8 @@ export default function Tournament5v5Page() {
     const allFinished = momentumSorted.every((m) => m.status === "finished");
     return allFinished ? "end" : "center";
   }, [momentumSorted]);
+  const state = React.useMemo(() => pickStateByDate(momentumSorted, nowValue), [momentumSorted, nowValue]);
+  const momentumLabel = React.useMemo(() => momentumTitle(state), [state]);
   const highlightTeams = React.useMemo(() => {
     const current = momentum5v5?.find((m) => m.status === "ongoing");
     if (!current) return new Set<string>();
@@ -230,6 +252,9 @@ export default function Tournament5v5Page() {
             </div>
           </section>
           <section className="rounded-xl border border-slate-800 bg-slate-900 p-4 shadow-md shadow-slate-950" data-testid="tournament-momentum">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold text-white">{momentumLabel}</h3>
+            </div>
             <HorizontalMatchSlider
               matches={momentumWindow}
               currentMatchId={momentumFocus?.id}

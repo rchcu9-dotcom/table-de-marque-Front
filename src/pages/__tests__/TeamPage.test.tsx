@@ -154,7 +154,7 @@ describe("TeamPage", () => {
     expect(screen.getByText(/Derniers matchs/i)).toBeInTheDocument();
   });
 
-  it("affiche le calendrier et le classement", () => {
+  it("affiche le bloc classements", () => {
     render(
       <MemoryRouter initialEntries={["/teams/Rennes"]}>
         <Routes>
@@ -163,10 +163,7 @@ describe("TeamPage", () => {
       </MemoryRouter>,
     );
 
-    const calendrierHeaders = screen.getAllByText(/Calendrier/i);
-    expect(calendrierHeaders.length).toBeGreaterThan(0);
-    const classements = screen.getAllByText(/Classement/i);
-    expect(classements.length).toBeGreaterThan(0);
+    expect(screen.getByText(/Classements/i)).toBeInTheDocument();
   });
 
   it("affiche les repas J1/J2 et le fallback J3", () => {
