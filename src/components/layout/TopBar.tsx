@@ -30,7 +30,7 @@ export default function TopBar({ children }: Props) {
     return Array.from(map.values()).slice(0, 16);
   }, [teams]);
 
-  const updateMenuPos = React.useCallback((ref: React.RefObject<HTMLButtonElement>) => {
+  const updateMenuPos = React.useCallback((ref: React.RefObject<HTMLButtonElement | null>) => {
     const rect = ref.current?.getBoundingClientRect();
     if (!rect) return;
     setMenuPos({
