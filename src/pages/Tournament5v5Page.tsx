@@ -251,6 +251,17 @@ export default function Tournament5v5Page() {
               </div>
             </div>
           </section>
+        </div>
+      </div>
+
+      <div
+        className="absolute inset-x-4 bottom-4"
+        style={{
+          top: `${layout.paddingTop}px`,
+          height: `calc(100vh - ${layout.paddingTop}px - 24px)`,
+        }}
+      >
+        <div className="max-w-6xl mx-auto h-full overflow-y-auto space-y-6 pb-24 md:pb-6" ref={scrollAreaRef}>
           <section className="rounded-xl border border-slate-800 bg-slate-900 p-4 shadow-md shadow-slate-950" data-testid="tournament-momentum">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold text-white">{momentumLabel}</h3>
@@ -265,17 +276,6 @@ export default function Tournament5v5Page() {
               focusAlign={momentumAlign}
             />
           </section>
-        </div>
-      </div>
-
-      <div
-        className="absolute inset-x-4 bottom-4"
-        style={{
-          top: `${layout.paddingTop}px`,
-          height: `calc(100vh - ${layout.paddingTop}px - 24px)`,
-        }}
-      >
-        <div className="max-w-6xl mx-auto h-full overflow-y-auto space-y-6 pb-24 md:pb-6" ref={scrollAreaRef}>
           {showBrassage && (
             <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
               <h2 className="text-lg font-semibold mb-3">Classements Sam (Brassage)</h2>
