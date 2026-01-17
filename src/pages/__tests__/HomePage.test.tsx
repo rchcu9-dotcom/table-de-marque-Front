@@ -10,6 +10,7 @@ let HomePage: typeof import("../HomePage").default;
 let mockMatches: Match[] = [];
 let mockMeals: { mealOfDay: { dateTime: string | null; message?: string | null } | null } | null = null;
 const mockNavigate = vi.fn();
+let dateNowSpy: ReturnType<typeof vi.spyOn> | null = null;
 let mockSelectedTeam: {
   selectedTeam: { id: string; name: string; logoUrl?: string } | null;
   setSelectedTeam: ReturnType<typeof vi.fn>;
@@ -61,7 +62,8 @@ function createWrapper() {
 
 async function renderHome(simulatedNow: string) {
   vi.resetModules();
-  vi.stubEnv("VITE_SIMULATED_NOW", simulatedNow);
+  dateNowSpy?.mockRestore();
+  dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(new Date(simulatedNow).getTime());
   HomePage = (await import("../HomePage")).default;
   render(<HomePage />, { wrapper: createWrapper() });
 }
@@ -77,7 +79,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.unstubAllEnvs();
+  dateNowSpy?.mockRestore();
+  dateNowSpy = null;
 });
 
 describe("HomePage dynamique", () => {

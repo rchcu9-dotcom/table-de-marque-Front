@@ -29,18 +29,21 @@ export const tabsConfig: TabItem[] = [
     iconUrl: planningIcon,
   },
   {
-    id: "live",
-    label: "Live",
-    shortLabel: "Live",
-    path: "/live",
-    iconUrl: liveIcon,
-  },
-  {
     id: "tournament",
     label: "Tournoi 5v5",
     shortLabel: "5v5",
     path: "/tournament/5v5",
     iconUrl: fiveV5Icon,
+  },
+];
+
+export const menuConfig: TabItem[] = [
+  {
+    id: "live",
+    label: "Live",
+    shortLabel: "Live",
+    path: "/live",
+    iconUrl: liveIcon,
   },
   {
     id: "challenge",

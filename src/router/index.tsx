@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import LayoutRoot from "../components/layout/LayoutRoot";
 import MatchListPage from "../pages/MatchListPage";
 import MatchDetailPage from "../pages/MatchDetailPage";
@@ -15,7 +15,6 @@ import PlanningPage from "../pages/PlanningPage";
 import ChallengeAtelierPage from "../pages/ChallengeAtelierPage";
 import LivePage from "../pages/LivePage";
 import SearchBar from "../components/ds/SearchBar";
-import Button from "../components/ds/Button";
 import type { SortConfig } from "../components/collections/List";
 import type { Match } from "../api/match";
 
@@ -87,7 +86,7 @@ export default function AppRouter() {
       <Route
         path="/challenge/:id"
         element={
-          <LayoutRoot topBarContent={<BackToListButton />}>
+          <LayoutRoot>
             <ChallengeDetailPage />
           </LayoutRoot>
         }
@@ -124,7 +123,7 @@ export default function AppRouter() {
       <Route
         path="/matches/:id"
         element={
-          <LayoutRoot topBarContent={<BackToListButton />}>
+          <LayoutRoot>
             <MatchDetailPage />
           </LayoutRoot>
         }
@@ -132,7 +131,7 @@ export default function AppRouter() {
       <Route
         path="/teams/:id"
         element={
-          <LayoutRoot topBarContent={<BackToListButton />}>
+          <LayoutRoot>
             <TeamPage />
           </LayoutRoot>
         }
@@ -146,14 +145,5 @@ export default function AppRouter() {
         }
       />
     </Routes>
-  );
-}
-
-function BackToListButton() {
-  const navigate = useNavigate();
-  return (
-    <Button variant="ghost" onClick={() => navigate("/")}>
-      Retour
-    </Button>
   );
 }

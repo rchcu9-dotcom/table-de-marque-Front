@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { useChallengeByEquipe } from "../hooks/useChallengeByEquipe";
 import { useTeams } from "../hooks/useTeams";
 import type { ChallengeAttempt as Attempt } from "../api/challenge";
+import Breadcrumbs from "../components/navigation/Breadcrumbs";
 
 export default function ChallengeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -188,20 +189,26 @@ export default function ChallengeDetailPage() {
   return (
     <div className="fixed inset-0 overflow-hidden">
       <div className="absolute left-0 right-0 px-4" style={{ top: `${layout.topOffset}px` }}>
-        <div
-          ref={headerRef}
-          className="relative max-w-6xl mx-auto rounded-xl border border-slate-800 bg-slate-950/90 backdrop-blur p-3 flex items-center gap-3 shadow-md shadow-slate-950"
-        >
-          <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-800 flex items-center justify-center">
-            {team?.logoUrl ? (
-              <img src={team.logoUrl} alt={team.name} className="h-full w-full object-cover" />
-            ) : (
-              <span className="text-white text-sm font-semibold">{(team?.name ?? id ?? "?").slice(0, 2).toUpperCase()}</span>
-            )}
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xs uppercase text-slate-400">Challenge</span>
-            <h1 className="text-lg font-semibold text-white leading-tight">{team?.name ?? data?.equipeName ?? id}</h1>
+        <div ref={headerRef} className="max-w-6xl mx-auto space-y-2">
+          <Breadcrumbs
+            items={[
+              { label: "Accueil", path: "/" },
+              { label: "Challenge", path: "/challenge" },
+              { label: team?.name ?? data?.equipeName ?? id ?? "Equipe" },
+            ]}
+          />
+          <div className="rounded-xl border border-slate-800 bg-slate-950/90 backdrop-blur p-3 flex items-center gap-3 shadow-md shadow-slate-950">
+            <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-800 flex items-center justify-center">
+              {team?.logoUrl ? (
+                <img src={team.logoUrl} alt={team.name} className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-white text-sm font-semibold">{(team?.name ?? id ?? "?").slice(0, 2).toUpperCase()}</span>
+              )}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs uppercase text-slate-400">Challenge</span>
+              <h1 className="text-lg font-semibold text-white leading-tight">{team?.name ?? data?.equipeName ?? id}</h1>
+            </div>
           </div>
         </div>
       </div>

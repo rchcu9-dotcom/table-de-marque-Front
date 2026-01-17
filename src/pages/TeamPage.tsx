@@ -11,6 +11,7 @@ import type { Match } from "../api/match";
 import { fetchClassementByPoule, type ClassementEntry } from "../api/classement";
 import { usePlayersByEquipe } from "../hooks/usePlayers";
 import icon5v5 from "../assets/icons/nav/fivev5.png";
+import Breadcrumbs from "../components/navigation/Breadcrumbs";
 
 type RankedPlayer = {
   name: string;
@@ -188,6 +189,12 @@ export default function TeamPage() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.18),transparent_50%)]" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,_rgba(236,72,153,0.14),transparent_45%)]" />
         <div className="relative px-6 pb-8 pt-6 md:px-10 max-w-6xl mx-auto">
+          <Breadcrumbs
+            items={[
+              { label: "Accueil", path: "/" },
+              { label: teamName },
+            ]}
+          />
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center gap-4">
               <HexBadge name={teamName} size={68} imageUrl={heroLogo} />

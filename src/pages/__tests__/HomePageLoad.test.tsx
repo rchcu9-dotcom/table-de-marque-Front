@@ -9,6 +9,7 @@ import type { Match } from "../../api/match";
 let HomePage: typeof import("../HomePage").default;
 const mockNavigate = vi.fn();
 const mockFetchMatches = vi.fn();
+let dateNowSpy: ReturnType<typeof vi.spyOn> | null = null;
 let mockSelectedTeam: {
   selectedTeam: { id: string; name: string; logoUrl?: string } | null;
   setSelectedTeam: ReturnType<typeof vi.fn>;
@@ -64,7 +65,8 @@ function createDeferred<T>() {
 
 async function renderHome(simulatedNow = "2026-01-17T14:30:00Z") {
   vi.resetModules();
-  vi.stubEnv("VITE_SIMULATED_NOW", simulatedNow);
+  dateNowSpy?.mockRestore();
+  dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(new Date(simulatedNow).getTime());
   HomePage = (await import("../HomePage")).default;
   render(<HomePage />, { wrapper: createWrapper() });
 }
@@ -81,7 +83,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.unstubAllEnvs();
+  dateNowSpy?.mockRestore();
+  dateNowSpy = null;
 });
 
 describe("HomePage load rapide", () => {

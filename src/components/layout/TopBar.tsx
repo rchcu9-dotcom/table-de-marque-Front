@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import Tabs from "../navigation/Tabs";
-import { tabsConfig as tabs } from "../navigation/tabsConfig";
+import { menuConfig } from "../navigation/tabsConfig";
 import { useSelectedTeam } from "../../providers/SelectedTeamProvider";
 import { useTeams } from "../../hooks/useTeams";
 
@@ -15,7 +15,8 @@ export default function TopBar({ children }: Props) {
   const [menuPos, setMenuPos] = React.useState<{ top: number; left: number }>({ top: 64, left: 12 });
   const [selectorPos, setSelectorPos] = React.useState<{ top: number; right: number }>({ top: 64, right: 12 });
   const navigate = useNavigate();
-  const menuBtnRef = React.useRef<HTMLButtonElement | null>(null);
+  const menuBtnRefMobile = React.useRef<HTMLButtonElement | null>(null);
+  const menuBtnRefDesktop = React.useRef<HTMLButtonElement | null>(null);
   const selectorBtnRef = React.useRef<HTMLButtonElement | null>(null);
   const { selectedTeam, setSelectedTeam, toggleMuted } = useSelectedTeam();
   const { data: teams } = useTeams();
@@ -29,8 +30,8 @@ export default function TopBar({ children }: Props) {
     return Array.from(map.values()).slice(0, 16);
   }, [teams]);
 
-  const updateMenuPos = React.useCallback(() => {
-    const rect = menuBtnRef.current?.getBoundingClientRect();
+  const updateMenuPos = React.useCallback((ref: React.RefObject<HTMLButtonElement>) => {
+    const rect = ref.current?.getBoundingClientRect();
     if (!rect) return;
     setMenuPos({
       top: rect.bottom + 4,
@@ -76,16 +77,18 @@ export default function TopBar({ children }: Props) {
           <button
             type="button"
             aria-label="Ouvrir le menu"
-            className="rounded-lg border border-slate-700 bg-slate-900/80 p-2 text-slate-100 hover:bg-slate-800"
+            className="md:hidden rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2 text-slate-100 hover:bg-slate-800 flex items-center gap-2"
             onClick={() => {
               setOpen((v) => !v);
-              updateMenuPos();
+              updateMenuPos(menuBtnRefMobile);
             }}
-            ref={menuBtnRef}
+            ref={menuBtnRefMobile}
           >
-            <span className="block w-5 h-0.5 bg-slate-100 mb-1" />
-            <span className="block w-5 h-0.5 bg-slate-100 mb-1" />
-            <span className="block w-5 h-0.5 bg-slate-100" />
+            <span className="flex flex-col gap-1">
+              <span className="block w-5 h-0.5 bg-slate-100" />
+              <span className="block w-5 h-0.5 bg-slate-100" />
+              <span className="block w-5 h-0.5 bg-slate-100" />
+            </span>
           </button>
           <div className="text-sm md:text-base font-semibold text-white truncate">
             Tournoi RCHC U11 2026 - 10eme edition
@@ -96,6 +99,23 @@ export default function TopBar({ children }: Props) {
           <div className="hidden md:flex">
             <Tabs variant="top" />
           </div>
+          <button
+            type="button"
+            aria-label="Ouvrir le menu"
+            className="hidden md:flex rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2 text-slate-100 hover:bg-slate-800 items-center gap-2"
+            onClick={() => {
+              setOpen((v) => !v);
+              updateMenuPos(menuBtnRefDesktop);
+            }}
+            ref={menuBtnRefDesktop}
+          >
+            <span className="flex flex-col gap-1">
+              <span className="block w-5 h-0.5 bg-slate-100" />
+              <span className="block w-5 h-0.5 bg-slate-100" />
+              <span className="block w-5 h-0.5 bg-slate-100" />
+            </span>
+            <span className="text-xs font-semibold">Plus</span>
+          </button>
           <div className="flex items-center gap-2">
             <span className="text-xs text-slate-300">Mon équipe</span>
             <button
@@ -160,7 +180,7 @@ function MobileMenu({ onSelect, top, left }: { onSelect: (path: string) => void;
 
   React.useEffect(() => {
     const compute = () => {
-      const maxLabel = tabs.reduce((acc, t) => Math.max(acc, t.label.length), 0);
+      const maxLabel = menuConfig.reduce((acc, t) => Math.max(acc, t.label.length), 0);
       const estimated = maxLabel * 12 + 48; // char width estimate + padding
       const clamped = Math.max(220, Math.min(estimated, Math.floor(window.innerWidth * 0.95)));
       setMenuWidth(clamped);
@@ -177,13 +197,25 @@ function MobileMenu({ onSelect, top, left }: { onSelect: (path: string) => void;
         style={{ width: `${menuWidth}px` }}
       >
         <nav className="flex flex-col gap-2 pt-2">
-          {tabs.map((tab) => (
+          {menuConfig.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => onSelect(tab.path)}
-              className="text-left rounded-lg px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-800/70 border border-slate-800 flex items-center justify-center"
+              className="text-left rounded-lg px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-800/70 border border-slate-800 flex items-center gap-3"
             >
+              <span className="h-7 w-7 rounded-md overflow-hidden flex items-center justify-center bg-slate-900">
+                {tab.iconUrl ? (
+                  <img
+                    src={tab.iconUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    style={{ transform: "scale(1.4)" }}
+                  />
+                ) : (
+                  <span className="text-[10px] font-semibold">{tab.label.slice(0, 2)}</span>
+                )}
+              </span>
               <span>{tab.label}</span>
             </button>
           ))}

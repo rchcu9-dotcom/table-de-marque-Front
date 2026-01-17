@@ -12,6 +12,7 @@ import { useClassement } from "../hooks/useClassement";
 import icon5v5 from "../assets/icons/nav/fivev5.png";
 import icon3v3 from "../assets/icons/nav/threev3.png";
 import iconChallenge from "../assets/icons/nav/challenge.png";
+import Breadcrumbs from "../components/navigation/Breadcrumbs";
 
 const compIcon: Record<string, string> = {
   "5v5": icon5v5,
@@ -82,9 +83,15 @@ export default function MatchDetailPage() {
   const competitionType = (data.competitionType ?? "5v5").toLowerCase();
   const competitionIcon = compIcon[competitionType] ?? icon5v5;
   const hasClassement = competitionType === "5v5";
+  const breadcrumbs = [
+    { label: "Accueil", path: "/" },
+    { label: "Planning", path: "/planning" },
+    { label: `${data.teamA} vs ${data.teamB}` },
+  ];
 
   return (
     <div className="space-y-4">
+      <Breadcrumbs items={breadcrumbs} />
       <div className="sticky top-16 md:top-24 z-40 bg-slate-950/90 backdrop-blur border-b border-slate-800 py-3">
         <div className="flex items-center justify-center gap-6">
           <button
