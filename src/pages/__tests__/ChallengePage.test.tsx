@@ -69,5 +69,7 @@ describe("ChallengePage", () => {
     expect(screen.getByText("Rennes Joueur 1")).toBeInTheDocument();
     expect(screen.getByText(/Quarts de finale/i)).toBeInTheDocument();
     expect(screen.getByText("Rennes Joueur 2")).toBeInTheDocument();
+    expect(screen.getAllByTestId("challenge-attempts").length).toBeGreaterThan(0);
+    expect(screen.getByTestId("challenge-attempt-vitesse-1-p1-0")).toBeInTheDocument();
   });
 });

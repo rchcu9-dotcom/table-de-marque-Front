@@ -130,14 +130,17 @@ describe("HomePage dynamique", () => {
 
     await renderHome("2026-01-17T14:30:00Z");
 
-    const nowSection = await screen.findByTestId("home-now");
-    const cards = within(nowSection).getAllByTestId(/home-now-5v5-item-/);
-    expect(cards).toHaveLength(3);
-    const focused = cards.find((c) => c.getAttribute("data-autofocus") === "true");
-    expect(focused).toBeDefined();
-    expect(focused?.className ?? "").toMatch(/live-pulse-card/);
+    const momentum = await screen.findByTestId("home-momentum");
+    const cards = within(momentum).getAllByTestId(/home-momentum-card-/);
+    expect(cards.length).toBeGreaterThanOrEqual(3);
+    expect(within(momentum).getByTestId("home-momentum-card-m-last")).toBeInTheDocument();
+    expect(within(momentum).getByTestId("home-momentum-card-m-live")).toBeInTheDocument();
+    expect(within(momentum).getByTestId("home-momentum-card-m-next")).toBeInTheDocument();
+    const focusMarker = within(screen.getByTestId("home-now-5v5")).getByTestId("home-momentum-focus");
+    const focusedCard = focusMarker.closest('[data-testid^="home-momentum-card-"]') as HTMLElement;
+    expect(focusedCard).toHaveAttribute("data-testid", "home-momentum-card-m-live");
 
-    focused?.click();
+    screen.getByTestId("home-momentum-card-m-live").click();
     expect(mockNavigate).toHaveBeenCalledWith("/matches/m-live");
   });
 

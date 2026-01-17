@@ -103,7 +103,7 @@ export default function ChallengeDetailPage() {
           <p className="text-slate-300 text-xs">Aucune donnée.</p>
         ) : (
           <div className="overflow-auto">
-            <table className="min-w-full text-xs text-slate-100">
+            <table className="min-w-full text-xs text-slate-100" data-testid="challenge-attempts">
               <thead className="text-[11px] uppercase text-slate-400">
                 <tr>
                   <th className="py-1 pr-3 text-left">Joueur</th>
@@ -115,7 +115,10 @@ export default function ChallengeDetailPage() {
                   const rank = needsRanking ? idx + 1 : undefined;
                   const highlight = rank && opts?.highlightTop && rank <= opts.highlightTop;
                   return (
-                    <tr key={`${a.atelierId}-${a.joueurId}-${idx}`}>
+                    <tr
+                      key={`${a.atelierId}-${a.joueurId}-${idx}`}
+                      data-testid={`challenge-attempt-${a.atelierId}-${a.joueurId}-${idx}`}
+                    >
                       <td className={`py-1 pr-3 font-semibold ${highlight ? "text-emerald-200" : "text-slate-100"}`}>
                         <span className="inline-flex items-center gap-2">
                           {team?.logoUrl && (

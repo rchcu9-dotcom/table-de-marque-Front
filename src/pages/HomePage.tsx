@@ -165,6 +165,8 @@ function CompactLine({
   icon,
   items,
   testId,
+  cardTestIdPrefix,
+  focusTestId,
   autoFocusIndex = 0,
   autoFocusAlign = "center",
   focusId,
@@ -175,6 +177,8 @@ function CompactLine({
   icon: string;
   items: Array<{ label?: string; match: Match | null }>;
   testId: string;
+  cardTestIdPrefix?: string;
+  focusTestId?: string;
   autoFocusIndex?: number;
   autoFocusAlign?: "center" | "end";
   focusId?: string | null;
@@ -206,11 +210,16 @@ function CompactLine({
               key={`${testId}-${index}-${match?.id ?? "na"}`}
               match={match!}
               label={label}
-              testId={`${testId}-item-${index}`}
+              testId={
+                cardTestIdPrefix && match?.id
+                  ? `${cardTestIdPrefix}-${match.id}`
+                  : `${testId}-item-${index}`
+              }
               autoFocus={shouldAutoFocus && index === autoFocusIndex}
               autoFocusAlign={autoFocusAlign}
               isFocused={!!focusId && match?.id === focusId}
               focusTone={focusTone}
+              focusTestId={focusTestId}
               onSelect={onSelect}
             />
           ))}
@@ -389,6 +398,7 @@ function CompactMatchCard({
   autoFocusAlign,
   isFocused,
   focusTone,
+  focusTestId,
   onSelect,
 }: {
   match: Match;
@@ -398,6 +408,7 @@ function CompactMatchCard({
   autoFocusAlign?: "center" | "end";
   isFocused?: boolean;
   focusTone?: "blue";
+  focusTestId?: string;
   onSelect?: (id: string) => void;
 }) {
   const d = new Date(match.date);
@@ -430,6 +441,7 @@ function CompactMatchCard({
       tabIndex={onSelect ? 0 : -1}
       onClick={() => onSelect?.(match.id)}
     >
+      {isFocused && focusTestId ? <span data-testid={focusTestId} /> : null}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-25">
         <div
           className="absolute inset-y-0 left-0 w-1/3"
@@ -631,6 +643,14 @@ export default function HomePage() {
     () => autoIndexForList(orderedSmallGlace, tripletSmallGlace.live?.id ?? null, nowMs),
     [orderedSmallGlace, tripletSmallGlace.live, nowMs],
   );
+  const focusId5v5 = React.useMemo(
+    () => (ordered5v5[autoIndex5v5]?.id ? ordered5v5[autoIndex5v5].id : null),
+    [ordered5v5, autoIndex5v5],
+  );
+  const focusIdSmallGlace = React.useMemo(
+    () => (orderedSmallGlace[autoIndexSmallGlace]?.id ? orderedSmallGlace[autoIndexSmallGlace].id : null),
+    [orderedSmallGlace, autoIndexSmallGlace],
+  );
   const countdown = React.useMemo(() => {
     const next = [...matches].sort(byDateAsc).find((m) => new Date(m.date).getTime() > nowMs);
     if (!next) return null;
@@ -671,6 +691,11 @@ export default function HomePage() {
     () => upcomingMatches(matches, "challenge", nowMs).slice(0, 3),
     [matches, nowMs],
   );
+  const beforeFocus5v5 = React.useMemo(() => beforeUpcoming5v5[0]?.id ?? null, [beforeUpcoming5v5]);
+  const beforeFocusChallenge = React.useMemo(
+    () => beforeUpcomingChallenge[0]?.id ?? null,
+    [beforeUpcomingChallenge],
+  );
   const afterRecent5v5 = React.useMemo(
     () => recentMatches(matches, "5v5", nowMs).slice(-3),
     [matches, nowMs],
@@ -682,6 +707,10 @@ export default function HomePage() {
   const afterChallengeWinners = React.useMemo(
     () => recentMatches(matches, "challenge", nowMs).slice(-3).reverse(),
     [matches, nowMs],
+  );
+  const afterFocusChallenge = React.useMemo(
+    () => (afterChallengeWinners[0]?.id ? afterChallengeWinners[0].id : null),
+    [afterChallengeWinners],
   );
 
   React.useEffect(() => {
@@ -750,70 +779,89 @@ export default function HomePage() {
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">{momentumTitle}</h2>
             </div>
-          {state === "avant" && (
-            <>
-              <CompactLine
-                title="5v5"
-                icon={icon5v5}
-                items={beforeUpcoming5v5.map((m) => ({ match: m }))}
-                testId="home-now-5v5"
-                autoFocusIndex={0}
-                onSelect={(id) => navigate(`/matches/${id}`)}
-              />
-              <CompactLine
-                title="Challenge"
-                icon={iconChallenge}
-                items={beforeUpcomingChallenge.map((m) => ({ match: m }))}
-                testId="home-challenge-compact"
-                onSelect={(id) => navigate(`/matches/${id}`)}
-              />
-            </>
-          )}
-          {state === "pendant" && (
-            <>
-              <CompactLine
-                title="5v5"
-                icon={icon5v5}
-                items={ordered5v5.map((m) => ({ match: m }))}
-                testId="home-now-5v5"
-                autoFocusIndex={autoIndex5v5}
-                onSelect={(id) => navigate(`/matches/${id}`)}
-              />
-              <CompactLine
-                title={smallGlaceLabel}
-                icon={smallGlaceType === "3v3" ? icon3v3 : iconChallenge}
-                items={orderedSmallGlace.map((m) => ({ match: m }))}
-                testId="home-now-smallglace"
-                autoFocusIndex={autoIndexSmallGlace}
-                onSelect={(id) => navigate(`/matches/${id}`)}
-              />
-            </>
-          )}
-          {state === "apres" && (
-            <>
-              <CompactLine
-                title="5v5"
-                icon={icon5v5}
-                items={afterRecent5v5.map((m) => ({ match: m }))}
-                testId="home-now-5v5"
-                autoFocusIndex={afterRecent5v5.length > 0 ? afterRecent5v5.length - 1 : -1}
-                autoFocusAlign="end"
-                focusId={focusIdApres5v5}
-                focusTone="blue"
-                onSelect={(id) => navigate(`/matches/${id}`)}
-              />
-              <CompactLine
-                title="Challenge"
-                icon={iconChallenge}
-                items={afterChallengeWinners.map((m) => ({
-                  match: m,
-                }))}
-                testId="home-challenge-compact"
-                onSelect={(id) => navigate(`/matches/${id}`)}
-              />
-            </>
-          )}
-        </section>
+            <div data-testid="home-momentum" className="space-y-4">
+              {state === "avant" && (
+                <>
+                  <CompactLine
+                    title="5v5"
+                    icon={icon5v5}
+                    items={beforeUpcoming5v5.map((m) => ({ match: m }))}
+                    testId="home-now-5v5"
+                    cardTestIdPrefix="home-momentum-card"
+                    focusId={beforeFocus5v5}
+                    focusTestId="home-momentum-focus"
+                    autoFocusIndex={0}
+                    onSelect={(id) => navigate(`/matches/${id}`)}
+                  />
+                  <CompactLine
+                    title="Challenge"
+                    icon={iconChallenge}
+                    items={beforeUpcomingChallenge.map((m) => ({ match: m }))}
+                    testId="home-challenge-compact"
+                    cardTestIdPrefix="home-momentum-card"
+                    focusId={beforeFocusChallenge}
+                    focusTestId="home-momentum-focus"
+                    onSelect={(id) => navigate(`/matches/${id}`)}
+                  />
+                </>
+              )}
+              {state === "pendant" && (
+                <>
+                  <CompactLine
+                    title="5v5"
+                    icon={icon5v5}
+                    items={ordered5v5.map((m) => ({ match: m }))}
+                    testId="home-now-5v5"
+                    cardTestIdPrefix="home-momentum-card"
+                    focusId={focusId5v5}
+                    focusTestId="home-momentum-focus"
+                    autoFocusIndex={autoIndex5v5}
+                    onSelect={(id) => navigate(`/matches/${id}`)}
+                  />
+                  <CompactLine
+                    title={smallGlaceLabel}
+                    icon={smallGlaceType === "3v3" ? icon3v3 : iconChallenge}
+                    items={orderedSmallGlace.map((m) => ({ match: m }))}
+                    testId="home-now-smallglace"
+                    cardTestIdPrefix="home-momentum-card"
+                    focusId={focusIdSmallGlace}
+                    focusTestId="home-momentum-focus"
+                    autoFocusIndex={autoIndexSmallGlace}
+                    onSelect={(id) => navigate(`/matches/${id}`)}
+                  />
+                </>
+              )}
+              {state === "apres" && (
+                <>
+                  <CompactLine
+                    title="5v5"
+                    icon={icon5v5}
+                    items={afterRecent5v5.map((m) => ({ match: m }))}
+                    testId="home-now-5v5"
+                    cardTestIdPrefix="home-momentum-card"
+                    autoFocusIndex={afterRecent5v5.length > 0 ? afterRecent5v5.length - 1 : -1}
+                    autoFocusAlign="end"
+                    focusId={focusIdApres5v5}
+                    focusTestId="home-momentum-focus"
+                    focusTone="blue"
+                    onSelect={(id) => navigate(`/matches/${id}`)}
+                  />
+                  <CompactLine
+                    title="Challenge"
+                    icon={iconChallenge}
+                    items={afterChallengeWinners.map((m) => ({
+                      match: m,
+                    }))}
+                    testId="home-challenge-compact"
+                    cardTestIdPrefix="home-momentum-card"
+                    focusId={afterFocusChallenge}
+                    focusTestId="home-momentum-focus"
+                    onSelect={(id) => navigate(`/matches/${id}`)}
+                  />
+                </>
+              )}
+            </div>
+          </section>
 
         {selectedTeam && (
         <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3" data-testid="home-today-wrapper">

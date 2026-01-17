@@ -229,12 +229,13 @@ export default function Tournament5v5Page() {
               </div>
             </div>
           </section>
-          <section className="rounded-xl border border-slate-800 bg-slate-900 p-4 shadow-md shadow-slate-950">
+          <section className="rounded-xl border border-slate-800 bg-slate-900 p-4 shadow-md shadow-slate-950" data-testid="tournament-momentum">
             <HorizontalMatchSlider
               matches={momentumWindow}
               currentMatchId={momentumFocus?.id}
               onSelect={(id) => navigate(`/matches/${id}`)}
-              testIdPrefix="tournament-momentum"
+              testIdPrefix="tournament-momentum-card"
+              focusTestId="tournament-momentum-focus"
               withDiagonalBg
               focusAlign={momentumAlign}
             />

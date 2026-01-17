@@ -132,7 +132,7 @@ export default function ChallengeAtelierPage() {
               {sorted.length === 0 ? (
                 <p className="text-slate-300 text-sm">Aucune donnée disponible.</p>
               ) : (
-                <table className="min-w-full text-xs text-slate-100">
+                <table className="min-w-full text-xs text-slate-100" data-testid="challenge-attempts">
                   <thead className="text-[11px] uppercase text-slate-400">
                     <tr>
                       <th className="py-1 pr-3 text-left w-10">Rang</th>
@@ -146,7 +146,10 @@ export default function ChallengeAtelierPage() {
                       const equipe = teamMap.get(eqKey);
                       const rank = idx + 1;
                       return (
-                        <tr key={`${a.atelierId}-${a.joueurId}-${idx}`}>
+                        <tr
+                          key={`${a.atelierId}-${a.joueurId}-${idx}`}
+                          data-testid={`challenge-attempt-${a.atelierId}-${a.joueurId}-${idx}`}
+                        >
                           <td className="py-1 pr-3 text-slate-200 text-center">{rank}</td>
                           <td className="py-1 pr-3 font-semibold text-slate-100">
                             <span className="inline-flex items-center gap-2">

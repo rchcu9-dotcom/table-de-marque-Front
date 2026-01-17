@@ -59,6 +59,9 @@ describe("Tournament5v5Page", () => {
     );
 
     expect(screen.getByText(/Tournoi 5v5/i)).toBeInTheDocument();
+    expect(screen.getByTestId("tournament-momentum")).toBeInTheDocument();
+    expect(screen.getByTestId("tournament-momentum-card-m5")).toBeInTheDocument();
+    expect(screen.getByTestId("tournament-momentum-focus")).toBeInTheDocument();
     expect(screen.getAllByText("Rennes").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Dammarie").length).toBeGreaterThan(0);
     expect(screen.getByText(/Classements Sam/i)).toBeInTheDocument();

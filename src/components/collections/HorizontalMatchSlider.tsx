@@ -10,6 +10,7 @@ type Props = {
   currentMatchId?: string;
   onSelect?: (id: string) => void;
   testIdPrefix?: string;
+  focusTestId?: string;
   getCardClassName?: (match: Match) => string;
   centered?: boolean;
   withDiagonalBg?: boolean;
@@ -35,6 +36,7 @@ export default function HorizontalMatchSlider({
   currentMatchId,
   onSelect,
   testIdPrefix = "poule-slider-card",
+  focusTestId,
   getCardClassName,
   centered = false,
   withDiagonalBg = false,
@@ -97,6 +99,9 @@ export default function HorizontalMatchSlider({
             } ${m.status === "ongoing" ? "live-pulse-card" : ""} ${getCardClassName ? getCardClassName(m) : ""}`}
             onClick={() => onSelect?.(m.id)}
           >
+            {m.id === currentMatchId && focusTestId ? (
+              <span data-testid={focusTestId} />
+            ) : null}
             <div className="absolute top-2 right-2 z-10">
               <img
                 src={compIcon[(m.competitionType ?? "5v5").toLowerCase()] ?? icon5v5}
