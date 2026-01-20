@@ -414,14 +414,31 @@ function CompactMatchCard({
   const d = new Date(match.date);
   const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   const isChallenge = (match.competitionType ?? "").toLowerCase() === "challenge";
+  const isScored =
+    !isChallenge &&
+    (match.status === "finished" || match.status === "ongoing") &&
+    match.scoreA !== null &&
+    match.scoreB !== null;
+  const hasWinner =
+    match.status === "finished" &&
+    match.scoreA !== null &&
+    match.scoreB !== null &&
+    match.scoreA !== match.scoreB;
+  const winnerSide = hasWinner ? (match.scoreA! > match.scoreB! ? "A" : "B") : null;
   const subtitle = (() => {
     if (isChallenge) {
       if (match.status === "ongoing") return "En cours";
       if (match.status === "finished") return "Terminé";
       return time;
     }
-    if (match.status === "finished" || match.status === "ongoing") {
-      return `${match.scoreA ?? "-"} - ${match.scoreB ?? "-"}`;
+    if (isScored) {
+      return (
+        <span className="inline-flex items-center gap-1">
+          <span className={hasWinner && winnerSide === "A" ? "text-emerald-300" : ""}>{match.scoreA}</span>
+          <span className="text-slate-400">-</span>
+          <span className={hasWinner && winnerSide === "B" ? "text-emerald-300" : ""}>{match.scoreB}</span>
+        </span>
+      );
     }
     return time;
   })();
@@ -471,15 +488,29 @@ function CompactMatchCard({
       <div className="relative flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {match.teamALogo && <img src={match.teamALogo} alt={match.teamA} className="h-5 w-5 rounded-full object-cover" />}
-          <span className="text-[12px] font-semibold truncate">{match.teamA}</span>
+          <span
+            className={`text-[12px] font-semibold truncate ${
+              hasWinner && winnerSide === "A" ? "text-emerald-300" : ""
+            }`}
+          >
+            {match.teamA}
+          </span>
         </div>
         <div className="flex flex-col items-center min-w-[52px]">
           {label && <span className="text-[10px] uppercase text-slate-400">{label}</span>}
-          <span className={`text-[12px] font-semibold ${isLive ? "text-amber-200" : "text-slate-100"}`}>{subtitle}</span>
+          <span className={`text-[12px] font-semibold ${isLive ? "text-amber-200" : "text-slate-100"}`}>
+            {subtitle}
+          </span>
         </div>
         {showTeamB && (
           <div className="flex items-center gap-2 min-w-0 justify-end">
-            <span className="text-[12px] font-semibold truncate text-right">{match.teamB}</span>
+            <span
+              className={`text-[12px] font-semibold truncate text-right ${
+                hasWinner && winnerSide === "B" ? "text-emerald-300" : ""
+              }`}
+            >
+              {match.teamB}
+            </span>
             {match.teamBLogo && <img src={match.teamBLogo} alt={match.teamB} className="h-5 w-5 rounded-full object-cover" />}
           </div>
         )}

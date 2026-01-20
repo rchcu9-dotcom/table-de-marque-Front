@@ -138,12 +138,37 @@ export default function HorizontalMatchSlider({
                 />
               </div>
             )}
-            <div className="text-sm font-semibold text-slate-100 text-center">
-              {formatInfo(m).headerPrimary}
-            </div>
-            {formatInfo(m).headerSecondary && (
-              <div className="text-xs text-slate-400 text-center">{formatInfo(m).headerSecondary}</div>
-            )}
+            {(() => {
+              const info = formatInfo(m);
+              const isScored =
+                (m.status === "finished" || m.status === "ongoing") &&
+                m.scoreA !== null &&
+                m.scoreB !== null;
+              const hasWinner =
+                m.status === "finished" &&
+                m.scoreA !== null &&
+                m.scoreB !== null &&
+                m.scoreA !== m.scoreB;
+              const winnerSide = hasWinner ? (m.scoreA! > m.scoreB! ? "A" : "B") : null;
+              return (
+                <>
+                  <div className="text-sm font-semibold text-slate-100 text-center">
+                    {isScored ? (
+                      <span className="inline-flex items-center gap-1">
+                        <span className={hasWinner && winnerSide === "A" ? "text-emerald-300" : ""}>{m.scoreA}</span>
+                        <span className="text-slate-400">-</span>
+                        <span className={hasWinner && winnerSide === "B" ? "text-emerald-300" : ""}>{m.scoreB}</span>
+                      </span>
+                    ) : (
+                      info.headerPrimary
+                    )}
+                  </div>
+                  {info.headerSecondary && (
+                    <div className="text-xs text-slate-400 text-center">{info.headerSecondary}</div>
+                  )}
+                </>
+              );
+            })()}
             <div className="mt-3 flex items-center justify-between gap-2">
               <HexBadge name={m.teamA} imageUrl={m.teamALogo ?? undefined} size={40} />
               <div className="flex-1 text-center">
