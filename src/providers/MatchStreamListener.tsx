@@ -65,6 +65,11 @@ export function MatchStreamListener({ onOpen, onError }: MatchStreamListenerProp
             },
           );
 
+          queryClient.invalidateQueries({
+            predicate: (query) =>
+              query.queryKey[0] === "matches" && query.queryKey[1] === "momentum",
+          });
+
         } catch (err) {
           console.error("Match stream parse error", err);
         }
