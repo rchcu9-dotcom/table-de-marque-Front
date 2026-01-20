@@ -91,7 +91,7 @@ export default function TopBar({ children }: Props) {
             </span>
           </button>
           <div className="text-sm md:text-base font-semibold text-white truncate">
-            Tournoi RCHC U11 2026 - 10eme edition
+            Tournoi RCHC U11 2026
           </div>
         </div>
         <div className="flex items-center gap-3 min-w-0">
