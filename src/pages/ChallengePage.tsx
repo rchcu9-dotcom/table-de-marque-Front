@@ -5,9 +5,12 @@ import { useTeams } from "../hooks/useTeams";
 import type { ChallengeAttempt as Attempt } from "../api/challenge";
 import challengeIcon from "../assets/icons/nav/challenge.png";
 import { useSelectedTeam } from "../providers/SelectedTeamProvider";
+import { useChallengeVitesseJ3 } from "../hooks/useChallengeVitesseJ3";
+import type { VitesseJ3Player, VitesseJ3SlotId } from "../api/challenge";
 
 export default function ChallengePage() {
   const { data, isLoading, isError } = useChallengeAll();
+  const { data: vitesseJ3 } = useChallengeVitesseJ3();
   const { data: teams } = useTeams();
   const { selectedTeam } = useSelectedTeam();
 
@@ -72,6 +75,14 @@ export default function ChallengePage() {
     return new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "2-digit", month: "short" }).format(d);
   }, [data]);
 
+  const j3Label = React.useMemo(() => {
+    const first = (data?.jour3 ?? [])
+      .filter((a) => a.attemptDate)
+      .sort((a, b) => new Date(a.attemptDate ?? 0).getTime() - new Date(b.attemptDate ?? 0).getTime())[0];
+    if (!first?.attemptDate) return null;
+    const d = new Date(first.attemptDate);
+    return new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "2-digit", month: "short" }).format(d);
+  }, [data]);
   const finaleLabel = React.useMemo(() => {
     const first = (data?.jour3 ?? [])
       .filter((a) => a.attemptDate)
@@ -253,6 +264,170 @@ export default function ChallengePage() {
     return slices.filter((slice) => slice.some((a) => (a.equipeId ?? "").toLowerCase() === selectedTeamId));
   }, [finalesByRound.df, selectedTeamId]);
 
+  const vitesseSlots = React.useMemo(() => vitesseJ3?.slots ?? {}, [vitesseJ3?.slots]);
+  const slotKeys = React.useMemo(() => Object.keys(vitesseSlots), [vitesseSlots]);
+  const quartSlots = React.useMemo(() => {
+    return slotKeys
+      .filter((key) => /^QF\d+$/.test(key))
+      .sort((a, b) => Number(a.slice(2)) - Number(b.slice(2))) as VitesseJ3SlotId[];
+  }, [slotKeys]);
+  const demiSlots = React.useMemo(() => {
+    return slotKeys
+      .filter((key) => /^DF\d+$/.test(key))
+      .sort((a, b) => Number(a.slice(2)) - Number(b.slice(2))) as VitesseJ3SlotId[];
+  }, [slotKeys]);
+  const logoBaseUrl =
+    (import.meta.env.VITE_TEAM_LOGO_BASE_URL as string | undefined) ?? "/assets/logos";
+  const slugifyTeamName = React.useCallback((name: string) => {
+    return name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }, []);
+  const buildLogoUrl = React.useCallback(
+    (name: string) => `${logoBaseUrl}/${slugifyTeamName(name)}.png`,
+    [logoBaseUrl, slugifyTeamName],
+  );
+  const statusBadgeClass = (status?: VitesseJ3Player["status"]) => {
+    if (status === "winner") return "bg-amber-400/20 text-amber-200 border-amber-300/60";
+    if (status === "finalist") return "bg-slate-800 text-slate-200 border-slate-600";
+    if (status === "qualified") return "bg-emerald-500/20 text-emerald-200 border-emerald-400/60";
+    return "";
+  };
+  const vitesseSlotsWithDefault = React.useMemo(() => {
+    const empty: Record<string, VitesseJ3Player[]> = { F1: [] };
+    return { ...empty, ...vitesseSlots };
+  }, [vitesseSlots]);
+  const statusLabel = (status?: VitesseJ3Player["status"]) => {
+    if (status === "winner") return "Vainqueur";
+    if (status === "finalist") return "Finale";
+    if (status === "qualified") return "Qualifie";
+    return "";
+  };
+  const renderVitesseSlot = (slotId: VitesseJ3SlotId, label: string) => {
+    const players = vitesseSlotsWithDefault[slotId] ?? [];
+    return (
+      <div key={slotId} className="rounded-lg border border-slate-800 bg-slate-900/70 p-3 space-y-2">
+        <div className="flex items-center justify-between text-xs text-slate-300">
+          <span className="text-sm font-semibold text-white">{label}</span>
+        </div>
+        {players.length === 0 ? (
+          <p className="text-slate-300 text-xs">Aucun joueur.</p>
+        ) : (
+          <ul className="space-y-2">
+            {players.map((player) => {
+              const equipe = teamMap.get(player.teamId.toLowerCase());
+              const displayTeamName = player.teamName ?? equipe?.name ?? null;
+              const fallbackLogo = displayTeamName ? buildLogoUrl(displayTeamName) : null;
+              const logo = equipe?.logoUrl ?? fallbackLogo;
+              const isWinner = player.status === "winner";
+              return (
+                <li key={player.id} className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {logo ? (
+                      <img
+                        src={logo}
+                        alt={displayTeamName ?? "Equipe"}
+                        className="h-6 w-6 rounded-full object-cover"
+                      />
+                    ) : null}
+                    <div className="min-w-0">
+                      <p className={`text-sm font-semibold truncate ${isWinner ? "text-amber-200" : "text-slate-100"}`}>
+                        {player.name}
+                      </p>
+                      {player.teamName && (
+                        <p className="text-xs text-slate-400 truncate">{player.teamName}</p>
+                      )}
+                    </div>
+                  </div>
+                  {player.status ? (
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusBadgeClass(player.status)}`}
+                    >
+                      {statusLabel(player.status)}
+                    </span>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    );
+  };
+
+  const renderFinaleList = () => {
+    const players = vitesseSlotsWithDefault.F1 ?? [];
+    const ordered = [...players].sort((a, b) => {
+      if (a.status === "winner" && b.status !== "winner") return -1;
+      if (a.status !== "winner" && b.status === "winner") return 1;
+      return a.name.localeCompare(b.name);
+    });
+    return (
+      <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-3 space-y-2">
+        <div className="flex items-center justify-between text-xs text-slate-300">
+          <span className="text-sm font-semibold text-white">Vitesse</span>
+        </div>
+        {ordered.length === 0 ? (
+          <p className="text-slate-300 text-xs">Aucun joueur.</p>
+        ) : (
+          <ul className="space-y-2">
+            {ordered.map((player) => {
+              const equipe = teamMap.get(player.teamId.toLowerCase());
+              const displayTeamName = player.teamName ?? equipe?.name ?? null;
+              const fallbackLogo = displayTeamName ? buildLogoUrl(displayTeamName) : null;
+              const logo = equipe?.logoUrl ?? fallbackLogo;
+              const isWinner = player.status === "winner";
+              return (
+                <li key={player.id} className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {logo ? (
+                      <img
+                        src={logo}
+                        alt={displayTeamName ?? "Equipe"}
+                        className="h-6 w-6 rounded-full object-cover"
+                      />
+                    ) : null}
+                    <div className="min-w-0">
+                      <p className={`text-sm font-semibold truncate ${isWinner ? "text-amber-200" : "text-slate-100"}`}>
+                        {player.name}
+                      </p>
+                      {player.teamName && (
+                        <p className="text-xs text-slate-400 truncate">{player.teamName}</p>
+                      )}
+                    </div>
+                  </div>
+                  {player.status ? (
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusBadgeClass(player.status)}`}
+                    >
+                      {statusLabel(player.status)}
+                    </span>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    );
+  };
+
+  const nonEmptyQuartSlots = React.useMemo(
+    () => quartSlots.filter((slot) => (vitesseSlotsWithDefault[slot] ?? []).length > 0),
+    [quartSlots, vitesseSlotsWithDefault],
+  );
+  const nonEmptyDemiSlots = React.useMemo(
+    () => demiSlots.filter((slot) => (vitesseSlotsWithDefault[slot] ?? []).length > 0),
+    [demiSlots, vitesseSlotsWithDefault],
+  );
+  const finalePlayers = vitesseSlotsWithDefault.F1 ?? [];
+  const showFinalesBlock =
+    showFinale &&
+    (finalePlayers.length > 0 || nonEmptyDemiSlots.length > 0 || nonEmptyQuartSlots.length > 0);
+
   React.useLayoutEffect(() => {
     const updateLayout = () => {
       const nav = document.querySelector("header");
@@ -341,6 +516,44 @@ export default function ChallengePage() {
 
           {data && (
             <>
+              {showFinalesBlock && (
+                <section className="space-y-3">
+                  <h2 className="text-base font-semibold text-white">
+                    Finales du Challenge Vitesse {j3Label ? `- ${j3Label}` : ""}
+                  </h2>
+                  <div className="space-y-3">
+                    {finalePlayers.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-semibold text-slate-200">Finale</h3>
+                        {renderFinaleList()}
+                      </div>
+                    )}
+                    {nonEmptyDemiSlots.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-semibold text-slate-200">Demi Finales</h3>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          {nonEmptyDemiSlots.map((slot) => {
+                            const index = Number(slot.slice(2));
+                            return renderVitesseSlot(slot, `Demi Finale ${index}`);
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    {nonEmptyQuartSlots.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-semibold text-slate-200">Quart de finale</h3>
+                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                          {nonEmptyQuartSlots.map((slot) => {
+                            const index = Number(slot.slice(2));
+                            return renderVitesseSlot(slot, `Quart de Finale ${index}`);
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+
               {showEvaluation && (
                 <section className="space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">

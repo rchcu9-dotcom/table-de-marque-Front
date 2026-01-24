@@ -6,6 +6,7 @@ import type {
   ChallengeAllResponse,
   ChallengeEquipeResponse,
   ClassementGlobalEntry,
+  ChallengeVitesseJ3Response,
 } from "../api/challenge";
 
 type ChallengeSnapshot = {
@@ -13,6 +14,7 @@ type ChallengeSnapshot = {
   ateliers?: unknown[];
   classementGlobal?: ClassementGlobalEntry[];
   classementByAtelier?: Record<string, unknown>;
+  vitesseJ3?: ChallengeVitesseJ3Response;
 };
 
 type ChallengeStreamPayload =
@@ -76,6 +78,12 @@ export function ChallengeStreamListener() {
             queryClient.setQueryData<ClassementGlobalEntry[]>(
               ["challenge", "classement-global"],
               snapshot.classementGlobal,
+            );
+          }
+          if (snapshot.vitesseJ3) {
+            queryClient.setQueryData<ChallengeVitesseJ3Response>(
+              ["challenge", "vitesse", "j3"],
+              snapshot.vitesseJ3,
             );
           }
 

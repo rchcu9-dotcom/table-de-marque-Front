@@ -17,7 +17,7 @@ export default function ChallengeEquipePage() {
   const { teamId } = useParams<{ teamId: string }>();
   const navigate = useNavigate();
   const { data, isLoading, isError } = useChallengeByEquipe(teamId);
-  const { data: teams } = useTeams();
+  const { data: teams, refetch: refetchTeams } = useTeams();
 
   const [showVitesse, setShowVitesse] = React.useState(true);
   const [showTir, setShowTir] = React.useState(true);
@@ -30,6 +30,9 @@ export default function ChallengeEquipePage() {
     topOffset: 64,
     paddingTop: 260,
   });
+  React.useEffect(() => {
+    void refetchTeams();
+  }, [refetchTeams]);
 
   const team = React.useMemo<TeamInfo | null>(() => {
     if (!teams || !teamId) return null;
