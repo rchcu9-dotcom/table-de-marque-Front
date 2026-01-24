@@ -11,6 +11,7 @@ import Tournament5v5Page from "../pages/Tournament5v5Page";
 import ChallengePage from "../pages/ChallengePage";
 import ThreeVThreePage from "../pages/ThreeVThreePage";
 import ChallengeDetailPage from "../pages/ChallengeDetailPage";
+import ChallengeEquipePage from "../pages/ChallengeEquipePage";
 import PlanningPage from "../pages/PlanningPage";
 import ChallengeAtelierPage from "../pages/ChallengeAtelierPage";
 import LivePage from "../pages/LivePage";
@@ -80,6 +81,14 @@ export default function AppRouter() {
         element={
           <LayoutRoot>
             <ChallengeAtelierPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/challenge/equipe/:teamId"
+        element={
+          <LayoutRoot>
+            <ChallengeEquipePage />
           </LayoutRoot>
         }
       />

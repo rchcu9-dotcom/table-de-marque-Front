@@ -634,6 +634,33 @@ export default function HomePage() {
     paddingTop: 320,
   });
   const topBlockRef = React.useRef<HTMLDivElement | null>(null);
+    const makeSelectHandler = React.useCallback(
+    (list: Match[]) => (id: string) => {
+      const match = list.find((m) => m.id == id);
+      if (match) {
+        const isChallenge = (match.competitionType ?? "").toLowerCase() == "challenge";
+        if (isChallenge) {
+          navigate(`/challenge/equipe/${encodeURIComponent(match.teamA)}`);
+          return;
+        }
+      }
+      navigate(`/matches/${id}`);
+    },
+    [navigate],
+  );
+
+const resolveMatchRoute = React.useCallback(
+    (id: string) => {
+      const match = matches.find((m) => m.id === id);
+      if (!match) return `/matches/${id}`;
+      const isChallenge = (match.competitionType ?? "").toLowerCase() === "challenge";
+      if (isChallenge) {
+        return `/challenge/equipe/${encodeURIComponent(match.teamA)}`;
+      }
+      return `/matches/${id}`;
+    },
+    [matches],
+  );
 
   const recomputeLayout = React.useCallback(() => {
     const header = document.querySelector("header");
@@ -822,7 +849,7 @@ export default function HomePage() {
                     focusId={beforeFocus5v5}
                     focusTestId="home-momentum-focus"
                     autoFocusIndex={0}
-                    onSelect={(id) => navigate(`/matches/${id}`)}
+                    onSelect={makeSelectHandler(beforeUpcoming5v5)}
                   />
                   <CompactLine
                     title="Challenge"
@@ -832,7 +859,7 @@ export default function HomePage() {
                     cardTestIdPrefix="home-momentum-card"
                     focusId={beforeFocusChallenge}
                     focusTestId="home-momentum-focus"
-                    onSelect={(id) => navigate(`/matches/${id}`)}
+                    onSelect={makeSelectHandler(beforeUpcomingChallenge)}
                   />
                 </>
               )}
@@ -847,7 +874,7 @@ export default function HomePage() {
                     focusId={focusId5v5}
                     focusTestId="home-momentum-focus"
                     autoFocusIndex={autoIndex5v5}
-                    onSelect={(id) => navigate(`/matches/${id}`)}
+                    onSelect={makeSelectHandler(ordered5v5)}
                   />
                   <CompactLine
                     title={smallGlaceLabel}
@@ -858,7 +885,7 @@ export default function HomePage() {
                     focusId={focusIdSmallGlace}
                     focusTestId="home-momentum-focus"
                     autoFocusIndex={autoIndexSmallGlace}
-                    onSelect={(id) => navigate(`/matches/${id}`)}
+                    onSelect={makeSelectHandler(orderedSmallGlace)}
                   />
                 </>
               )}
@@ -875,7 +902,7 @@ export default function HomePage() {
                     focusId={focusIdApres5v5}
                     focusTestId="home-momentum-focus"
                     focusTone="blue"
-                    onSelect={(id) => navigate(`/matches/${id}`)}
+                    onSelect={makeSelectHandler(afterRecent5v5)}
                   />
                   <CompactLine
                     title="Challenge"
@@ -887,7 +914,7 @@ export default function HomePage() {
                     cardTestIdPrefix="home-momentum-card"
                     focusId={afterFocusChallenge}
                     focusTestId="home-momentum-focus"
-                    onSelect={(id) => navigate(`/matches/${id}`)}
+                    onSelect={makeSelectHandler(afterChallengeWinners)}
                   />
                 </>
               )}
@@ -919,7 +946,7 @@ export default function HomePage() {
             matches={matches}
             selectedTeamId={selectedTeam.id}
             focusTeamName={selectedTeam.name}
-            onSelect={(id) => navigate(`/matches/${id}`)}
+            onSelect={(id) => navigate(resolveMatchRoute(id))}
             smallGlaceLabel={smallGlaceLabel}
             smallGlaceType={smallGlaceType}
             mealOfDay={meals?.mealOfDay ?? null}

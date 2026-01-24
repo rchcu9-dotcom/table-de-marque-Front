@@ -228,13 +228,15 @@ export default function PlanningPage() {
                   role="button"
                   tabIndex={0}
                   onClick={() =>
-                    m.competitionType === "challenge" ? navigate(`/challenge/${m.teamA}`) : navigate(`/matches/${m.id}`)
+                    m.competitionType === "challenge"
+                      ? navigate(`/challenge/equipe/${encodeURIComponent(m.teamA)}`)
+                      : navigate(`/matches/${m.id}`)
                   }
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
                       if (m.competitionType === "challenge") {
-                        navigate(`/challenge/${m.teamA}`);
+                        navigate(`/challenge/equipe/${encodeURIComponent(m.teamA)}`);
                       } else {
                         navigate(`/matches/${m.id}`);
                       }

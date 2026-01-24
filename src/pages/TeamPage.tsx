@@ -137,6 +137,22 @@ export default function TeamPage() {
     const groups = groupByDay(filtered);
     return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
   }, [filtered]);
+  const handleMatchSelect = React.useCallback(
+    (id: string) => {
+      const match = filtered.find((m) => m.id === id);
+      if (!match) {
+        navigate(`/matches/${id}`);
+        return;
+      }
+      const isChallenge = (match.competitionType ?? "").toLowerCase() === "challenge";
+      if (isChallenge) {
+        navigate(`/challenge/equipe/${encodeURIComponent(match.teamA)}`);
+        return;
+      }
+      navigate(`/matches/${id}`);
+    },
+    [filtered, navigate],
+  );
 
   if (!teamName) {
     return (
@@ -226,7 +242,7 @@ export default function TeamPage() {
                       key={m.id}
                       match={m}
                       focusTeam={teamName}
-                      onSelect={(id) => navigate(`/matches/${id}`)}
+                      onSelect={handleMatchSelect}
                     />
                   ))
                 ) : (
@@ -243,7 +259,7 @@ export default function TeamPage() {
                       key={m.id}
                       match={m}
                       focusTeam={teamName}
-                      onSelect={(id) => navigate(`/matches/${id}`)}
+                      onSelect={handleMatchSelect}
                       compactChallenge
                     />
                   ))
