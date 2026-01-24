@@ -363,6 +363,51 @@ export default function ChallengeEquipePage() {
 
           {data && (
             <>
+              {showFinale && hasFinales && (
+                <section className="space-y-3">
+                  <h2 className="text-base font-semibold text-white">
+                    {finaleLabel ? `Finales du Challenge Vitesse - ${finaleLabel}` : "Finales du Challenge Vitesse"}
+                  </h2>
+
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-slate-200">Vitesse</h3>
+                    {finalesByRound.finale.length > 0 ? (
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {renderTable("Finale", finalesByRound.finale)}
+                      </div>
+                    ) : (
+                      <p className="text-slate-300 text-xs">Pas de joueur.</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-slate-200">Demi Finales</h3>
+                    <div className="overflow-x-auto">
+                      <div className="flex gap-3 min-w-full">
+                        {dfSlices.map((slice, idx) => (
+                          <div key={`df-${idx}`} className="min-w-[240px] flex-1">
+                            {renderTable(`Demi Finale ${idx + 1}`, slice)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-slate-200">Quart de finale</h3>
+                    <div className="overflow-x-auto">
+                      <div className="flex gap-3 min-w-full">
+                        {qfSlices.map((slice, idx) => (
+                          <div key={`qf-${idx}`} className="min-w-[240px] flex-1">
+                            {renderTable(`Quart de Finale ${idx + 1}`, slice)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              )}
+
               {showEvaluation && (
                 <section className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -406,11 +451,7 @@ export default function ChallengeEquipePage() {
                             <span className="text-sm font-semibold text-white">Atelier Vitesse</span>
                           </div>
                         </div>
-                        {renderTable(
-                          "Atelier Vitesse",
-                          applyFilters(groupByAtelier.jour1.vitesse),
-                          { hideTitle: true },
-                        )}
+                        {renderTable("Atelier Vitesse", applyFilters(groupByAtelier.jour1.vitesse), { hideTitle: true })}
                       </div>
                     )}
                     {showTir && (
@@ -425,11 +466,7 @@ export default function ChallengeEquipePage() {
                             <span className="text-sm font-semibold text-white">Atelier Tir</span>
                           </div>
                         </div>
-                        {renderTable(
-                          "Atelier Tir",
-                          applyFilters(groupByAtelier.jour1.tir),
-                          { hideTitle: true },
-                        )}
+                        {renderTable("Atelier Tir", applyFilters(groupByAtelier.jour1.tir), { hideTitle: true })}
                       </div>
                     )}
                     {showGlisse && (
@@ -444,57 +481,8 @@ export default function ChallengeEquipePage() {
                             <span className="text-sm font-semibold text-white">Atelier Agilite</span>
                           </div>
                         </div>
-                        {renderTable(
-                          "Atelier Agilite",
-                          applyFilters(groupByAtelier.jour1.glisse_crosse),
-                          { hideTitle: true },
-                        )}
+                        {renderTable("Atelier Agilite", applyFilters(groupByAtelier.jour1.glisse_crosse), { hideTitle: true })}
                       </div>
-                    )}
-                  </div>
-                </section>
-              )}
-
-              {showFinale && hasFinales && (
-                <section className="space-y-3">
-                  <h2 className="text-base font-semibold text-white">
-                    {finaleLabel ? `Finale Vitesse ${finaleLabel}` : "Finale Vitesse"}
-                  </h2>
-
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-slate-200">Quarts de finale</h3>
-                    <div className="overflow-x-auto">
-                      <div className="flex gap-3 min-w-full">
-                        {qfSlices.map((slice, idx) => (
-                          <div key={`qf-${idx}`} className="min-w-[240px] flex-1">
-                            {renderTable(`Quart de finale ${idx + 1}`, slice)}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-slate-200">Demi-finales</h3>
-                    <div className="overflow-x-auto">
-                      <div className="flex gap-3 min-w-full">
-                        {dfSlices.map((slice, idx) => (
-                          <div key={`df-${idx}`} className="min-w-[240px] flex-1">
-                            {renderTable(`Demi-finale ${idx + 1}`, slice)}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-slate-200">Finale</h3>
-                    {finalesByRound.finale.length > 0 ? (
-                      <div className="grid gap-3 md:grid-cols-2">
-                        {renderTable("Finale", finalesByRound.finale)}
-                      </div>
-                    ) : (
-                      <p className="text-slate-300 text-xs">Pas de joueur.</p>
                     )}
                   </div>
                 </section>

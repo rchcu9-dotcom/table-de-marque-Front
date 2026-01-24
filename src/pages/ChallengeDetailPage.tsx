@@ -173,6 +173,10 @@ export default function ChallengeDetailPage() {
     }
     return slices;
   }, [finalesByRound.df]);
+  const hasFinales =
+    qfSlices.some((slice) => slice.length > 0) ||
+    dfSlices.some((slice) => slice.length > 0) ||
+    finalesByRound.finale.length > 0;
 
   React.useLayoutEffect(() => {
     const updateLayout = () => {
@@ -225,6 +229,58 @@ export default function ChallengeDetailPage() {
           {isError && <p className="text-red-400 text-sm">Erreur lors du chargement.</p>}
           {data && (
             <div className="grid gap-4">
+              {hasFinales && (
+                <section className="space-y-3">
+                  <h2 className="text-base font-semibold text-white">
+                    {finalsLabel ? `Finales du Challenge Vitesse - ${finalsLabel}` : "Finales du Challenge Vitesse"}
+                  </h2>
+
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-slate-200">Vitesse</h3>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {finalesByRound.finale.length > 0 ? (
+                        renderTable(
+                          "Finale",
+                          applyFilters(finalesByRound.finale, "vitesse", { top3: false, players: [] }),
+                          { highlightTop: 1, rankOnly: true },
+                        )
+                      ) : (
+                        <p className="text-slate-300 text-xs">Pas de joueur.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-slate-200">Demi Finales</h3>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {dfSlices
+                        .filter((slice) => slice.length > 0)
+                        .map((slice, idx) =>
+                          renderTable(
+                            `Demi Finale ${idx + 1}`,
+                            applyFilters(slice, "vitesse", { top3: false, players: [] }),
+                            { highlightTop: 2, rankOnly: true },
+                          ),
+                        )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-slate-200">Quart de finale</h3>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {qfSlices
+                        .filter((slice) => slice.length > 0)
+                        .map((slice, idx) =>
+                          renderTable(
+                            `Quart de Finale ${idx + 1}`,
+                            applyFilters(slice, "vitesse", { top3: false, players: [] }),
+                            { highlightTop: 2, rankOnly: true },
+                          ),
+                        )}
+                    </div>
+                  </div>
+                </section>
+              )}
               <section className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-col">
@@ -294,52 +350,6 @@ export default function ChallengeDetailPage() {
                 </div>
               </section>
 
-              <section className="space-y-3">
-                <h2 className="text-base font-semibold text-white">{finalsLabel ? `Finale Vitesse ${finalsLabel}` : "Finale Vitesse"}</h2>
-
-                <div className="space-y-2">
-                  <h3 className="text-sm font-semibold text-slate-200">Quarts de finale</h3>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {qfSlices
-                      .filter((slice) => slice.length > 0)
-                      .map((slice, idx) =>
-                        renderTable(
-                          `Quart de finale ${idx + 1}`,
-                          applyFilters(slice, "vitesse", { top3: false, players: [] }),
-                          { highlightTop: 2, rankOnly: true },
-                        ),
-                      )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <h3 className="text-sm font-semibold text-slate-200">Demi-finales</h3>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {dfSlices
-                      .filter((slice) => slice.length > 0)
-                      .map((slice, idx) =>
-                        renderTable(
-                          `Demi-finale ${idx + 1}`,
-                          applyFilters(slice, "vitesse", { top3: false, players: [] }),
-                          { highlightTop: 2, rankOnly: true },
-                        ),
-                      )}
-                  </div>
-                </div>
-
-                {finalesByRound.finale.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-slate-200">Finale</h3>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      {renderTable(
-                        "Finale",
-                        applyFilters(finalesByRound.finale, "vitesse", { top3: false, players: [] }),
-                        { highlightTop: 1, rankOnly: true },
-                      )}
-                    </div>
-                  </div>
-                )}
-              </section>
             </div>
           )}
         </div>

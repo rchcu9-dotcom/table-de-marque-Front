@@ -524,7 +524,7 @@ export default function ChallengePage() {
                   <div className="space-y-3">
                     {finalePlayers.length > 0 && (
                       <div className="space-y-2">
-                        <h3 className="text-sm font-semibold text-slate-200">Finale</h3>
+                        <h3 className="text-sm font-semibold text-slate-200">Vitesse</h3>
                         {renderFinaleList()}
                       </div>
                     )}
