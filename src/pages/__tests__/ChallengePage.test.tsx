@@ -45,6 +45,26 @@ vi.mock("../../hooks/useChallengeAll", () => ({
   useChallengeAll: () => ({ data: mockData, isLoading: false, isError: false }),
 }));
 
+vi.mock("../../hooks/useChallengeVitesseJ3", () => ({
+  useChallengeVitesseJ3: () => ({
+    data: {
+      slots: {
+        Q1: [
+          {
+            id: "p2",
+            name: "Rennes Joueur 2",
+            teamId: "rennes",
+            teamName: "Rennes",
+          },
+        ],
+      },
+      winnerId: null,
+    },
+    isLoading: false,
+    isError: false,
+  }),
+}));
+
 vi.mock("../../hooks/useTeams", () => ({
   useTeams: () => ({
     data: [{ id: "rennes", name: "Rennes", logoUrl: "logo.png" }],
@@ -67,7 +87,7 @@ describe("ChallengePage", () => {
 
     expect(screen.getByText(/Atelier Vitesse/i)).toBeInTheDocument();
     expect(screen.getByText("Rennes Joueur 1")).toBeInTheDocument();
-    expect(screen.getByText(/Quarts de finale/i)).toBeInTheDocument();
+    expect(screen.getByText(/Quart de Finale/i)).toBeInTheDocument();
     expect(screen.getByText("Rennes Joueur 2")).toBeInTheDocument();
     expect(screen.getAllByTestId("challenge-attempts").length).toBeGreaterThan(0);
     expect(screen.getByTestId("challenge-attempt-vitesse-1-p1-0")).toBeInTheDocument();
