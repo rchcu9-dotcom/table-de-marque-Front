@@ -56,15 +56,12 @@ function filterByCompetition(matches: Match[], competition: "5v5" | "3v3" | "cha
   return matches.filter((m) => (m.competitionType ?? "5v5") === competition);
 }
 
-function pickStateByDate(matches: Match[], nowMs: number): HomeState {
+function pickStateByDate(matches: Match[]): HomeState {
   if (matches.length === 0) return "avant";
   if (matches.some((m) => m.status === "ongoing")) return "pendant";
-  const sorted = [...matches].sort(byDateAsc);
-  const first = new Date(sorted[0].date).getTime();
-  const last = new Date(sorted[sorted.length - 1].date).getTime();
-  if (nowMs < first) return "avant";
-  if (nowMs > last) return "apres";
-  return "pendant";
+  if (matches.every((m) => m.status === "finished")) return "apres";
+  if (matches.some((m) => m.status === "finished") && matches.some((m) => m.status === "planned")) return "pendant";
+  return "avant";
 }
 
 function dayIndex(nowMs: number, matches: Match[]) {
@@ -74,31 +71,26 @@ function dayIndex(nowMs: number, matches: Match[]) {
   return Math.max(1, diffDays + 1);
 }
 
-function tripletForCompetition(matches: Match[], competition: "5v5" | "3v3" | "challenge", nowMs: number): Triplet {
+function tripletForCompetition(matches: Match[], competition: "5v5" | "3v3" | "challenge"): Triplet {
   const list = filterByCompetition(matches, competition).sort(byDateAsc);
   const liveCandidates = list.filter((m) => m.status === "ongoing");
   const live = liveCandidates.length > 0 ? liveCandidates[liveCandidates.length - 1] : null;
-  const finished = list.filter((m) => m.status === "finished" && new Date(m.date).getTime() <= nowMs);
+  const finished = list.filter((m) => m.status === "finished");
   const last = finished.length > 0 ? finished[finished.length - 1] : null;
-  const future = list.filter((m) => {
-    const ts = new Date(m.date).getTime();
-    if (live && m.id === live.id) return false;
-    if (m.status === "finished") return false;
-    return ts >= nowMs;
-  });
-  const next = future.length > 0 ? future[0] : null;
+  const planned = list.filter((m) => m.status === "planned");
+  const next = planned.length > 0 ? planned[0] : null;
   return { last, live, next };
 }
 
-function upcomingMatches(matches: Match[], competition: "5v5" | "3v3" | "challenge", nowMs: number) {
+function upcomingMatches(matches: Match[], competition: "5v5" | "3v3" | "challenge") {
   return filterByCompetition(matches, competition)
-    .filter((m) => new Date(m.date).getTime() > nowMs)
+    .filter((m) => m.status === "planned")
     .sort(byDateAsc);
 }
 
-function recentMatches(matches: Match[], competition: "5v5" | "3v3" | "challenge", nowMs: number) {
+function recentMatches(matches: Match[], competition: "5v5" | "3v3" | "challenge") {
   return filterByCompetition(matches, competition)
-    .filter((m) => new Date(m.date).getTime() <= nowMs)
+    .filter((m) => m.status === "finished")
     .sort(byDateAsc);
 }
 
@@ -116,23 +108,25 @@ function clampWindow(list: Match[], targetId: string | null, desired = 3) {
   return list.slice(start, end);
 }
 
-function liveCenteredOrder(triplet: Triplet, all: Match[], nowMs: number) {
+function liveCenteredOrder(triplet: Triplet, all: Match[]) {
   const sorted = [...all].sort(byDateAsc);
   const liveId = triplet.live?.id ?? null;
-  const plannedIdx = sorted.findIndex((m) => m.status === "planned" || new Date(m.date).getTime() > nowMs);
+  const nextId = triplet.next?.id ?? null;
+  const lastId = triplet.last?.id ?? null;
   const targetId =
     liveId ??
-    (plannedIdx >= 0 ? sorted[plannedIdx].id : null) ??
+    nextId ??
+    lastId ??
     (sorted.length > 0 ? sorted[0].id : null);
   return clampWindow(sorted, targetId, 3);
 }
 
-function autoIndexForList(list: Match[], liveId: string | null, nowMs: number) {
-  if (liveId) {
-    const idx = list.findIndex((m) => m.id === liveId);
+function autoIndexForList(list: Match[], focusId: string | null) {
+  if (focusId) {
+    const idx = list.findIndex((m) => m.id === focusId);
     if (idx >= 0) return idx;
   }
-  const plannedIdx = list.findIndex((m) => m.status === "planned" || new Date(m.date).getTime() > nowMs);
+  const plannedIdx = list.findIndex((m) => m.status === "planned");
   if (plannedIdx >= 0) return plannedIdx;
   return 0;
 }
@@ -678,28 +672,33 @@ const resolveMatchRoute = React.useCallback(
     return () => window.removeEventListener("resize", recomputeLayout);
   }, [recomputeLayout]);
 
-  const state = React.useMemo(() => pickStateByDate(matches, nowMs), [matches, nowMs]);
+  const state = React.useMemo(() => pickStateByDate(matches), [matches]);
   const day = React.useMemo(() => dayIndex(nowMs, matches), [matches, nowMs]);
   const smallGlaceType = React.useMemo(() => smallGlaceCompetition(day), [day]);
   const smallGlaceLabel = smallGlaceType === "3v3" ? "3v3" : "Challenge";
 
-  const triplet5v5 = React.useMemo(() => tripletForCompetition(matches, "5v5", nowMs), [matches, nowMs]);
+  const triplet5v5 = React.useMemo(() => tripletForCompetition(matches, "5v5"), [matches]);
   const tripletSmallGlace = React.useMemo(
-    () => tripletForCompetition(matches, smallGlaceType, nowMs),
-    [matches, smallGlaceType, nowMs],
+    () => tripletForCompetition(matches, smallGlaceType),
+    [matches, smallGlaceType],
   );
-  const ordered5v5 = React.useMemo(() => liveCenteredOrder(triplet5v5, filterByCompetition(matches, "5v5"), nowMs), [triplet5v5, matches, nowMs]);
+  const ordered5v5 = React.useMemo(() => liveCenteredOrder(triplet5v5, filterByCompetition(matches, "5v5")), [triplet5v5, matches]);
   const orderedSmallGlace = React.useMemo(
-    () => liveCenteredOrder(tripletSmallGlace, filterByCompetition(matches, smallGlaceType), nowMs),
-    [tripletSmallGlace, matches, smallGlaceType, nowMs],
+    () => liveCenteredOrder(tripletSmallGlace, filterByCompetition(matches, smallGlaceType)),
+    [tripletSmallGlace, matches, smallGlaceType],
   );
   const autoIndex5v5 = React.useMemo(
-    () => autoIndexForList(ordered5v5, triplet5v5.live?.id ?? null, nowMs),
-    [ordered5v5, triplet5v5.live, nowMs],
+    () =>
+      autoIndexForList(ordered5v5, triplet5v5.live?.id ?? triplet5v5.next?.id ?? triplet5v5.last?.id ?? null),
+    [ordered5v5, triplet5v5.live, triplet5v5.next, triplet5v5.last],
   );
   const autoIndexSmallGlace = React.useMemo(
-    () => autoIndexForList(orderedSmallGlace, tripletSmallGlace.live?.id ?? null, nowMs),
-    [orderedSmallGlace, tripletSmallGlace.live, nowMs],
+    () =>
+      autoIndexForList(
+        orderedSmallGlace,
+        tripletSmallGlace.live?.id ?? tripletSmallGlace.next?.id ?? tripletSmallGlace.last?.id ?? null,
+      ),
+    [orderedSmallGlace, tripletSmallGlace.live, tripletSmallGlace.next, tripletSmallGlace.last],
   );
   const focusId5v5 = React.useMemo(
     () => (ordered5v5[autoIndex5v5]?.id ? ordered5v5[autoIndex5v5].id : null),
@@ -744,27 +743,24 @@ const resolveMatchRoute = React.useCallback(
     return "Clap de fin !";
   }, [state]);
 
-  const beforeUpcoming5v5 = React.useMemo(() => upcomingMatches(matches, "5v5", nowMs).slice(0, 3), [matches, nowMs]);
+  const beforeUpcoming5v5 = React.useMemo(() => upcomingMatches(matches, "5v5").slice(0, 3), [matches]);
   const beforeUpcomingChallenge = React.useMemo(
-    () => upcomingMatches(matches, "challenge", nowMs).slice(0, 3),
-    [matches, nowMs],
+    () => upcomingMatches(matches, "challenge").slice(0, 3),
+    [matches],
   );
   const beforeFocus5v5 = React.useMemo(() => beforeUpcoming5v5[0]?.id ?? null, [beforeUpcoming5v5]);
   const beforeFocusChallenge = React.useMemo(
     () => beforeUpcomingChallenge[0]?.id ?? null,
     [beforeUpcomingChallenge],
   );
-  const afterRecent5v5 = React.useMemo(
-    () => recentMatches(matches, "5v5", nowMs).slice(-3),
-    [matches, nowMs],
-  );
+  const afterRecent5v5 = React.useMemo(() => recentMatches(matches, "5v5").slice(-3), [matches]);
   const focusIdApres5v5 = React.useMemo(
     () => (afterRecent5v5.length > 0 ? afterRecent5v5[afterRecent5v5.length - 1].id : null),
     [afterRecent5v5],
   );
   const afterChallengeWinners = React.useMemo(
-    () => recentMatches(matches, "challenge", nowMs).slice(-3).reverse(),
-    [matches, nowMs],
+    () => recentMatches(matches, "challenge").slice(-3).reverse(),
+    [matches],
   );
   const afterFocusChallenge = React.useMemo(
     () => (afterChallengeWinners[0]?.id ? afterChallengeWinners[0].id : null),
