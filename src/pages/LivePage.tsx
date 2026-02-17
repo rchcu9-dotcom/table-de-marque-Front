@@ -4,10 +4,12 @@ import Card from "../components/ds/Card";
 import Badge from "../components/ds/Badge";
 import Button from "../components/ds/Button";
 import Spinner from "../components/ds/Spinner";
-import { fetchLiveStatus } from "../api/live";
-import type { LiveStatus } from "../api/live";
+import { API_BASE_URL, fetchLiveStatus } from "../api/live";
+import type { LiveStatus, LiveStreamEnvelope } from "../api/live";
 
 const DEFAULT_FALLBACK_EMBED_URL = "https://www.youtube.com/embed/at3v7WepbDg";
+const FALLBACK_POLLING_MS = 30_000;
+const STREAM_RECONNECT_MS = 5_000;
 
 type LoadState = "loading" | "ready" | "error";
 type SourceType = "live" | "fallback";
@@ -29,30 +31,165 @@ function withLoopParams(url: string) {
   return `${url}${separator}loop=1&playlist=${videoId}`;
 }
 
+function normalizeStatus(raw: LiveStatus): LiveStatus {
+  return {
+    ...raw,
+    fallbackEmbedUrl: raw.fallbackEmbedUrl || DEFAULT_FALLBACK_EMBED_URL,
+  };
+}
+
+function parseLiveStatusEvent(payload: string): LiveStatus | null {
+  try {
+    const parsed = JSON.parse(payload) as LiveStreamEnvelope | LiveStatus;
+    if (parsed && typeof parsed === "object" && "status" in parsed) {
+      const envelope = parsed as LiveStreamEnvelope;
+      if (envelope.status && typeof envelope.status === "object") {
+        return normalizeStatus(envelope.status);
+      }
+      return null;
+    }
+    if (parsed && typeof parsed === "object" && "isLive" in parsed) {
+      return normalizeStatus(parsed as LiveStatus);
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export default function LivePage() {
   const [state, setState] = React.useState<LoadState>("loading");
   const [liveStatus, setLiveStatus] = React.useState<LiveStatus | null>(null);
   const [source, setSource] = React.useState<SourceType | null>(null);
+  const [streamNonce, setStreamNonce] = React.useState(0);
 
-  const loadStatus = React.useCallback(async () => {
-    setState("loading");
-    setLiveStatus(null);
-    setSource(null);
-    try {
-      const data = await fetchLiveStatus();
-      setLiveStatus(data);
-      setSource(data.isLive ? "live" : "fallback");
-      setState("ready");
-    } catch {
-      setLiveStatus({ isLive: false, fallbackEmbedUrl: DEFAULT_FALLBACK_EMBED_URL });
-      setSource("fallback");
-      setState("ready");
+  const eventSourceRef = React.useRef<EventSource | null>(null);
+  const pollingTimerRef = React.useRef<number | null>(null);
+  const reconnectTimerRef = React.useRef<number | null>(null);
+
+  const clearPolling = React.useCallback(() => {
+    if (pollingTimerRef.current !== null) {
+      window.clearInterval(pollingTimerRef.current);
+      pollingTimerRef.current = null;
     }
   }, []);
 
-  React.useEffect(() => {
-    loadStatus();
+  const clearReconnect = React.useCallback(() => {
+    if (reconnectTimerRef.current !== null) {
+      window.clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+  }, []);
+
+  const closeStream = React.useCallback(() => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+  }, []);
+
+  const applyStatus = React.useCallback((incoming: LiveStatus) => {
+    const normalized = normalizeStatus(incoming);
+    setLiveStatus(normalized);
+
+    if (normalized.isLive && normalized.liveEmbedUrl) {
+      setSource("live");
+      setState("ready");
+      return;
+    }
+
+    if (normalized.fallbackEmbedUrl) {
+      setSource("fallback");
+      setState("ready");
+      return;
+    }
+
+    setState("error");
+  }, []);
+
+  const loadStatus = React.useCallback(
+    async (withLoading = false) => {
+      if (withLoading) {
+        setState("loading");
+      }
+      try {
+        const data = await fetchLiveStatus();
+        applyStatus(data);
+      } catch {
+        applyStatus({
+          isLive: false,
+          mode: "fallback",
+          fallbackEmbedUrl: DEFAULT_FALLBACK_EMBED_URL,
+          sourceState: "detection_error",
+        });
+      }
+    },
+    [applyStatus],
+  );
+
+  const startFallbackPolling = React.useCallback(() => {
+    if (pollingTimerRef.current !== null) return;
+    pollingTimerRef.current = window.setInterval(() => {
+      void loadStatus(false);
+    }, FALLBACK_POLLING_MS);
   }, [loadStatus]);
+
+  React.useEffect(() => {
+    void loadStatus(true);
+  }, [loadStatus]);
+
+  React.useEffect(() => {
+    closeStream();
+    clearReconnect();
+
+    const streamUrl = `${API_BASE_URL}/live/stream`;
+    const sourceStream = new EventSource(streamUrl);
+    eventSourceRef.current = sourceStream;
+
+    const onLiveStatus = (event: MessageEvent<string>) => {
+      const parsed = parseLiveStatusEvent(event.data);
+      if (!parsed) return;
+      clearPolling();
+      applyStatus(parsed);
+    };
+
+    sourceStream.addEventListener("live_status", onLiveStatus as EventListener);
+    sourceStream.onmessage = onLiveStatus;
+    sourceStream.onopen = () => {
+      clearPolling();
+      clearReconnect();
+    };
+    sourceStream.onerror = () => {
+      closeStream();
+      startFallbackPolling();
+      if (reconnectTimerRef.current === null) {
+        reconnectTimerRef.current = window.setTimeout(() => {
+          reconnectTimerRef.current = null;
+          setStreamNonce((v) => v + 1);
+        }, STREAM_RECONNECT_MS);
+      }
+    };
+
+    return () => {
+      sourceStream.removeEventListener("live_status", onLiveStatus as EventListener);
+      closeStream();
+    };
+  }, [
+    applyStatus,
+    clearPolling,
+    clearReconnect,
+    closeStream,
+    startFallbackPolling,
+    streamNonce,
+  ]);
+
+  React.useEffect(() => {
+    return () => {
+      closeStream();
+      clearPolling();
+      clearReconnect();
+    };
+  }, [clearPolling, clearReconnect, closeStream]);
 
   const fallbackUrl = React.useMemo(() => {
     if (!liveStatus) return undefined;
@@ -61,7 +198,7 @@ export default function LivePage() {
     return undefined;
   }, [liveStatus]);
 
-  const liveUrl = liveStatus?.liveEmbedUrl;
+  const liveUrl = liveStatus?.liveEmbedUrl ?? undefined;
   const rawEmbedUrl = source === "live" ? liveUrl : source === "fallback" ? fallbackUrl : undefined;
   const embedUrl = rawEmbedUrl
     ? withAutoplayParams(source === "fallback" ? withLoopParams(rawEmbedUrl) : rawEmbedUrl)
@@ -88,6 +225,11 @@ export default function LivePage() {
     }
     setState("error");
   }, [source, fallbackUrl]);
+
+  const handleRetry = React.useCallback(() => {
+    setStreamNonce((v) => v + 1);
+    void loadStatus(true);
+  }, [loadStatus]);
 
   return (
     <Page title="Live du tournoi">
@@ -116,7 +258,7 @@ export default function LivePage() {
             data-testid="live-error"
           >
             <p>Video indisponible, reessayez plus tard.</p>
-            <Button variant="ghost" onClick={loadStatus} data-testid="live-retry">
+            <Button variant="ghost" onClick={handleRetry} data-testid="live-retry">
               Reessayer
             </Button>
           </div>
@@ -140,3 +282,4 @@ export default function LivePage() {
     </Page>
   );
 }
+
