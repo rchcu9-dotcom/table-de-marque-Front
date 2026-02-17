@@ -112,6 +112,21 @@ describe("LivePage", () => {
     expect(screen.queryByTestId("live-error")).not.toBeInTheDocument();
   });
 
+  it("applique un fallback silencieux quand sourceState=quota_exceeded", async () => {
+    mockFetchLiveStatus.mockResolvedValue({
+      isLive: false,
+      mode: "fallback",
+      sourceState: "quota_exceeded",
+      fallbackEmbedUrl: "https://www.youtube.com/embed/quota-fallback-id",
+    });
+
+    render(<LivePage />);
+
+    const iframe = (await screen.findByTestId("live-iframe")) as HTMLIFrameElement;
+    expect(iframe.src).toContain("quota-fallback-id");
+    expect(screen.queryByTestId("live-error")).not.toBeInTheDocument();
+  });
+
   it("bascule fallback -> live sur event SSE enveloppe", async () => {
     mockFetchLiveStatus.mockResolvedValue({
       isLive: false,
@@ -240,6 +255,53 @@ describe("LivePage", () => {
     });
 
     await waitFor(() => expect(screen.getByTestId("live-badge")).toBeInTheDocument());
+  });
+
+  it("bascule live -> fallback via event live_status", async () => {
+    mockFetchLiveStatus.mockResolvedValue({
+      isLive: true,
+      mode: "live",
+      liveVideoId: "live-id",
+      liveEmbedUrl: "https://www.youtube.com/embed/live-id",
+      fallbackEmbedUrl: "https://www.youtube.com/embed/fallback-id",
+    });
+
+    render(<LivePage />);
+    await screen.findByTestId("live-badge");
+
+    const stream = MockEventSource.instances[0];
+    await act(async () => {
+      stream.emitLiveStatus({
+        type: "live_status",
+        status: {
+          isLive: false,
+          mode: "fallback",
+          sourceState: "ok",
+          fallbackEmbedUrl: "https://www.youtube.com/embed/fallback-id",
+        },
+      });
+    });
+
+    await waitFor(() => expect(screen.queryByTestId("live-badge")).not.toBeInTheDocument());
+    const iframe = screen.getByTestId("live-iframe") as HTMLIFrameElement;
+    expect(iframe.src).toContain("fallback-id");
+  });
+
+  it("affiche un live force comme un live normal", async () => {
+    mockFetchLiveStatus.mockResolvedValue({
+      isLive: true,
+      mode: "live",
+      liveVideoId: "forced-live-id",
+      liveEmbedUrl: "https://www.youtube.com/embed/forced-live-id",
+      fallbackEmbedUrl: "https://www.youtube.com/embed/fallback-id",
+      sourceState: "ok",
+    });
+
+    render(<LivePage />);
+
+    expect(await screen.findByTestId("live-badge")).toBeInTheDocument();
+    const iframe = (await screen.findByTestId("live-iframe")) as HTMLIFrameElement;
+    expect(iframe.src).toContain("forced-live-id");
   });
 
   it("reconnecte le stream apres timeout et garde une seule connexion active", async () => {
