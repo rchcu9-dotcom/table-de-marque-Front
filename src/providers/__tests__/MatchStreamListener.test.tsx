@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { act, render } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -114,7 +114,9 @@ describe("MatchStreamListener", () => {
     });
     const getJ3RefreshCalls = () =>
       invalidateSpy.mock.calls.filter(
-        (args) => JSON.stringify(args[0]?.queryKey) === JSON.stringify(["classement", "j3", "carres"]),
+        (args: [unknown?]) =>
+          JSON.stringify((args[0] as { queryKey?: unknown[] } | undefined)?.queryKey) ===
+          JSON.stringify(["classement", "j3", "carres"]),
       );
     expect(getJ3RefreshCalls()).toHaveLength(1);
 
