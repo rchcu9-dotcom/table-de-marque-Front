@@ -114,7 +114,7 @@ describe("MatchStreamListener", () => {
     });
     const getJ3RefreshCalls = () =>
       invalidateSpy.mock.calls.filter(
-        (args: [unknown?]) =>
+        (args: [unknown?, unknown?]) =>
           JSON.stringify((args[0] as { queryKey?: unknown[] } | undefined)?.queryKey) ===
           JSON.stringify(["classement", "j3", "carres"]),
       );
