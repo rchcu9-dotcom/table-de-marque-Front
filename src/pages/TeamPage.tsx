@@ -10,6 +10,7 @@ import { useMeals } from "../hooks/useMeals";
 import type { Match } from "../api/match";
 import { fetchClassementByPoule, type ClassementEntry } from "../api/classement";
 import { usePlayersByEquipe } from "../hooks/usePlayers";
+import { useJ3FinalSquares } from "../hooks/useClassement";
 import icon5v5 from "../assets/icons/nav/fivev5.png";
 import Breadcrumbs from "../components/navigation/Breadcrumbs";
 
@@ -19,6 +20,11 @@ type RankedPlayer = {
   poste?: string | null;
   resultLabel: string;
   icon?: string;
+};
+
+type TeamClassementRow = ClassementEntry & {
+  isPlaceholder?: boolean;
+  placeholderLabel?: string;
 };
 
 const ICONS = {
@@ -78,6 +84,10 @@ function groupByDay(matches: Match[]) {
   }, {});
 }
 
+function dayKeyFromDate(date: string) {
+  return new Date(date).toISOString().split("T")[0];
+}
+
 function pickTeamLogo(matches: Match[], focusTeam: string, fallback?: string | null) {
   const needle = normalizeTeamName(focusTeam);
   for (const m of matches) {
@@ -103,14 +113,6 @@ export default function TeamPage() {
 
   const sample =
     filtered.find((m) => (m.competitionType ?? "5v5") === "5v5") ?? filtered[0];
-  const pouleCode = sample?.pouleCode ?? sample?.pouleName;
-
-  const classement = useQuery({
-    queryKey: ["classement", pouleCode],
-    queryFn: () => fetchClassementByPoule(pouleCode!),
-    enabled: !!pouleCode,
-    staleTime: 5 * 60_000,
-  });
 
   const heroLogo = React.useMemo(
     () => pickTeamLogo(filtered, teamName, sample?.teamALogo ?? sample?.teamBLogo),
@@ -128,15 +130,76 @@ export default function TeamPage() {
     return found?.id ?? teamName;
   }, [allTeams, teamName]);
   const players = usePlayersByEquipe(equipeKey || undefined);
+  const j3FinalSquares = useJ3FinalSquares();
   const playerList = React.useMemo(() => {
     const data = players.data;
     return Array.isArray(data) ? data : [];
   }, [players.data]);
-
   const grouped = React.useMemo(() => {
     const groups = groupByDay(filtered);
     return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
   }, [filtered]);
+  const dayKeys = grouped.map(([day]) => day);
+  const jour1 = dayKeys[0];
+  const jour2 = dayKeys[1];
+  const jour3 = dayKeys[2];
+  const filtered5v5 = React.useMemo(
+    () => filtered.filter((m) => (m.competitionType ?? "5v5") === "5v5"),
+    [filtered],
+  );
+  const j1MatchSample = filtered5v5.find((m) => dayKeyFromDate(m.date) === jour1);
+  const j2MatchSample = filtered5v5.find((m) => dayKeyFromDate(m.date) === jour2);
+  const pouleCodeJ1 = j1MatchSample?.pouleCode ?? j1MatchSample?.pouleName;
+  const pouleCodeJ2 = j2MatchSample?.pouleCode ?? j2MatchSample?.pouleName;
+
+  const j3Classement: TeamClassementRow[] = (() => {
+    const squares = j3FinalSquares.data?.carres ?? [];
+    if (squares.length === 0) return [];
+
+    const byTeam = squares.find((square) =>
+      square.ranking.some((row) => normalizeTeamName(row.team?.name) === normalizeTeamName(teamName)),
+    );
+    const fallbackCode =
+      filtered5v5.find((m) => dayKeyFromDate(m.date) === jour3)?.pouleCode ??
+      filtered5v5.find((m) => dayKeyFromDate(m.date) === jour3)?.pouleName;
+    const byCode = fallbackCode ? squares.find((square) => square.dbCode === fallbackCode) : undefined;
+    const targetSquare = byTeam ?? byCode ?? squares.find((square) => square.ranking.length > 0) ?? squares[0];
+
+    return [...targetSquare.ranking]
+      .sort((a, b) => a.place - b.place)
+      .map((row) => {
+        const hasTeam = !!row.team?.name;
+        return {
+          id: row.team?.id ?? `j3-${targetSquare.dbCode}-${row.place}`,
+          name: row.team?.name ?? "En attente du résultat",
+          logoUrl: row.team?.logoUrl ?? null,
+          rang: row.place,
+          joues: 0,
+          victoires: 0,
+          nuls: 0,
+          defaites: 0,
+          points: hasTeam ? 0 : Number.NaN,
+          bp: 0,
+          bc: 0,
+          diff: 0,
+          isPlaceholder: !hasTeam,
+          placeholderLabel: hasTeam ? undefined : "En attente du résultat",
+        };
+      });
+  })();
+
+  const classementJ1 = useQuery({
+    queryKey: ["classement", "team", teamName, "J1", pouleCodeJ1],
+    queryFn: () => fetchClassementByPoule(pouleCodeJ1!),
+    enabled: !!pouleCodeJ1,
+    staleTime: 5 * 60_000,
+  });
+  const classementJ2 = useQuery({
+    queryKey: ["classement", "team", teamName, "J2", pouleCodeJ2],
+    queryFn: () => fetchClassementByPoule(pouleCodeJ2!),
+    enabled: !!pouleCodeJ2,
+    staleTime: 5 * 60_000,
+  });
   const handleMatchSelect = React.useCallback(
     (id: string) => {
       const match = filtered.find((m) => m.id === id);
@@ -185,15 +248,11 @@ export default function TeamPage() {
     );
   }
 
-  const rankingByPoule = classement.data?.equipes ?? [];
+  const rankingJ1 = classementJ1.data?.equipes ?? [];
+  const rankingJ2 = classementJ2.data?.equipes ?? [];
   const teamsList = Array.isArray(allTeams) ? allTeams : [];
   const logoFor = (name: string) =>
     teamsList.find((t) => normalizeTeamName(t.name) === normalizeTeamName(name))?.logoUrl;
-
-  const dayKeys = grouped.map(([day]) => day);
-  const jour1 = dayKeys[0];
-  const jour2 = dayKeys[1];
-  const jour3 = dayKeys[2];
   const mealDays = meals?.days ?? [
     { key: "J1", label: "J1", dateTime: null, message: "Repas indisponible" },
     { key: "J2", label: "J2", dateTime: null, message: "Repas indisponible" },
@@ -297,16 +356,16 @@ export default function TeamPage() {
           </Card>
         </section>
 
-        <section className="space-y-4">
+        <section className="space-y-4 flex flex-col">
           <h3 className="text-lg font-semibold text-slate-50">Classements</h3>
 
           {jour1 && (
-            <Card className="bg-white/5 border-slate-800 backdrop-blur space-y-3">
+            <Card className="order-3 bg-white/5 border-slate-800 backdrop-blur space-y-3" data-testid="team-classement-j1">
               <div className="text-sm font-semibold text-slate-100">Jour 1 - {formatDay(jour1)}</div>
               <DayClassement
                 title="Classement 5v5"
                 icon={icon5v5}
-                classement={rankingByPoule}
+                classement={rankingJ1}
                 focusTeam={teamName}
                 logoFor={logoFor}
                 navigate={navigate}
@@ -350,12 +409,12 @@ export default function TeamPage() {
           )}
 
           {jour2 && (
-            <Card className="bg-white/5 border-slate-800 backdrop-blur space-y-3">
+            <Card className="order-2 bg-white/5 border-slate-800 backdrop-blur space-y-3" data-testid="team-classement-j2">
               <div className="text-sm font-semibold text-slate-100">Jour 2 - {formatDay(jour2)}</div>
               <DayClassement
                 title="Classement 5v5"
                 icon={icon5v5}
-                classement={rankingByPoule}
+                classement={rankingJ2}
                 focusTeam={teamName}
                 logoFor={logoFor}
                 navigate={navigate}
@@ -364,12 +423,12 @@ export default function TeamPage() {
           )}
 
           {jour3 && (
-            <Card className="bg-white/5 border-slate-800 backdrop-blur space-y-3">
+            <Card className="order-1 bg-white/5 border-slate-800 backdrop-blur space-y-3" data-testid="team-classement-j3">
               <div className="text-sm font-semibold text-slate-100">Jour 3 - {formatDay(jour3)}</div>
               <DayClassement
-                title="Classement Carré"
+                title="Classement Final 5v5"
                 icon={icon5v5}
-                classement={rankingByPoule}
+                classement={j3Classement}
                 focusTeam={teamName}
                 logoFor={logoFor}
                 navigate={navigate}
@@ -578,7 +637,7 @@ function DayClassement({
 }: {
   title: string;
   icon?: string;
-  classement: ClassementEntry[];
+  classement: TeamClassementRow[];
   focusTeam: string;
   logoFor: (name: string) => string | undefined | null;
   navigate: (path: string) => void;
@@ -612,24 +671,32 @@ function DayClassement({
           </thead>
           <tbody>
             {classement.map((entry) => {
+              const isPlaceholder = !!entry.isPlaceholder;
               const isFocus = normalizeTeamName(entry.name) === normalizeTeamName(focusTeam);
               return (
                 <tr
-                  key={entry.name}
-                  className={`border-t border-slate-800 hover:bg-slate-800/60 transition ${isFocus ? "bg-emerald-500/10 border-emerald-400/50" : ""}`}
-                  onClick={() => navigate(`/teams/${encodeURIComponent(entry.name)}`)}
-                  role="button"
+                  key={`${entry.id}-${entry.rang}`}
+                  className={`border-t border-slate-800 transition ${
+                    isPlaceholder ? "" : "hover:bg-slate-800/60"
+                  } ${isFocus ? "bg-emerald-500/10 border-emerald-400/50" : ""}`}
+                  onClick={isPlaceholder ? undefined : () => navigate(`/teams/${encodeURIComponent(entry.name)}`)}
+                  role={isPlaceholder ? undefined : "button"}
+                  data-testid={isPlaceholder ? `team-j3-placeholder-${entry.rang}` : undefined}
                 >
                   <td className="px-3 py-2 text-slate-200">{entry.rang ?? "-"}</td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <HexBadge name={entry.name} size={28} imageUrl={logoFor(entry.name) ?? undefined} />
+                      {!isPlaceholder && (
+                        <HexBadge name={entry.name} size={28} imageUrl={logoFor(entry.name) ?? undefined} />
+                      )}
                       <span className={`${isFocus ? "text-slate-50 font-semibold" : "text-slate-200"} truncate block`}>
-                        {entry.name}
+                        {isPlaceholder ? entry.placeholderLabel ?? "En attente du résultat" : entry.name}
                       </span>
                     </div>
                   </td>
-                  <td className="px-3 py-2 text-right text-slate-100">{entry.points ?? "-"}</td>
+                  <td className="px-3 py-2 text-right text-slate-100">
+                    {isPlaceholder || Number.isNaN(entry.points) ? "-" : entry.points ?? "-"}
+                  </td>
                 </tr>
               );
             })}
@@ -665,6 +732,7 @@ function HighlightBlock({ title, icon, players }: { title: string; icon?: string
     </Card>
   );
 }
+
 
 
 

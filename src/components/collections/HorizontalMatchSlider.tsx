@@ -15,6 +15,7 @@ type Props = {
   centered?: boolean;
   withDiagonalBg?: boolean;
   focusAlign?: "center" | "end";
+  desktopJustify?: boolean;
 };
 
 const compIcon: Record<string, string> = {
@@ -41,6 +42,7 @@ export default function HorizontalMatchSlider({
   centered = false,
   withDiagonalBg = false,
   focusAlign = "center",
+  desktopJustify = false,
 }: Props) {
   const sliderRef = React.useRef<HTMLDivElement | null>(null);
   const cardRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
@@ -80,11 +82,20 @@ export default function HorizontalMatchSlider({
 
   if (!matches || matches.length === 0) return null;
 
+  const desktopGridClass = desktopJustify
+    ? matches.length <= 1
+      ? "md:grid md:grid-cols-1 md:overflow-visible md:snap-none"
+      : matches.length === 2
+        ? "md:grid md:grid-cols-2 md:overflow-visible md:snap-none"
+        : "md:grid md:grid-cols-3 md:overflow-visible md:snap-none"
+    : "";
+
   return (
     <div className="relative">
       <div
         ref={sliderRef}
-        className={`flex gap-3 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory ${centered ? "justify-center" : ""}`}
+        data-testid={`${testIdPrefix}-track`}
+        className={`flex gap-3 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory ${centered ? "justify-center" : ""} ${desktopGridClass}`}
       >
         {matches.map((m) => (
           <div
@@ -94,6 +105,8 @@ export default function HorizontalMatchSlider({
               cardRefs.current[m.id] = el;
             }}
             className={`relative overflow-hidden snap-center min-w-[220px] max-w-[240px] flex-shrink-0 rounded-2xl border border-slate-800 bg-slate-900/70 p-3 shadow-inner shadow-slate-950 cursor-pointer hover:-translate-y-0.5 transition ${
+              desktopJustify ? "md:min-w-0 md:max-w-none md:w-full md:flex-shrink" : ""
+            } ${
               m.id === currentMatchId ? selectedBorder(m) : ""
             } ${m.status === "ongoing" ? "live-pulse-card" : ""} ${getCardClassName ? getCardClassName(m) : ""}`}
             onClick={() => onSelect?.(m.id)}

@@ -12,14 +12,15 @@ import { Link, useNavigate } from "react-router-dom";
 import HorizontalMatchSlider from "../components/collections/HorizontalMatchSlider";
 import fiveV5Icon from "../assets/icons/nav/fivev5.png";
 import { useSelectedTeam } from "../providers/SelectedTeamProvider";
+import { pickTournamentState, tournamentStateLabel } from "./utils/tournamentState";
 
 const byDateAsc = (a: Match, b: Match) => new Date(a.date).getTime() - new Date(b.date).getTime();
 
 const BRASSAGE = [
-  { code: "A", title: "Sam - Brassage Poule A", phase: "Brassage" },
-  { code: "B", title: "Sam - Brassage Poule B", phase: "Brassage" },
-  { code: "C", title: "Sam - Brassage Poule C", phase: "Brassage" },
-  { code: "D", title: "Sam - Brassage Poule D", phase: "Brassage" },
+  { code: "A", title: "Sam Poule A", phase: "Brassage" },
+  { code: "B", title: "Sam Poule B", phase: "Brassage" },
+  { code: "C", title: "Sam Poule C", phase: "Brassage" },
+  { code: "D", title: "Sam Poule D", phase: "Brassage" },
 ];
 
 const QUALIF = [
@@ -27,27 +28,7 @@ const QUALIF = [
   { code: "Beta", title: "Dim - Tournoi Or - Beta", phase: "Qualification" },
   { code: "Gamma", title: "Dim - Tournoi Argent - Gamma", phase: "Qualification" },
   { code: "Delta", title: "Dim - Tournoi Argent - Delta", phase: "Qualification" },
-];
-
-
-type HomeState = "avant" | "pendant" | "apres";
-
-function pickStateByDate(matches: Match[], nowMs: number): HomeState {
-  if (matches.length === 0) return "avant";
-  if (matches.some((m) => m.status === "ongoing")) return "pendant";
-  const sorted = [...matches].sort(byDateAsc);
-  const first = new Date(sorted[0].date).getTime();
-  const last = new Date(sorted[sorted.length - 1].date).getTime();
-  if (nowMs < first) return "avant";
-  if (nowMs > last) return "apres";
-  return "pendant";
-}
-
-function momentumTitle(state: HomeState) {
-  if (state === "avant") return "PrÊts à jouer !";
-  if (state === "pendant") return "Ça joue !";
-  return "Clap de fin !";
-}
+];
 
 export default function Tournament5v5Page() {
   const navigate = useNavigate();
@@ -63,17 +44,19 @@ export default function Tournament5v5Page() {
     surface: "GG",
     teamId: selectedTeam?.id,
   });
+  const { data: allMatches5v5 } = useMatchesFiltered({
+    competitionType: "5v5",
+    surface: "GG",
+  });
   const {
     data: j3FinalSquares,
     isLoading: isJ3SquaresLoading,
     isError: isJ3SquaresError,
   } = useJ3FinalSquares();
-  const [showBrassage, setShowBrassage] = React.useState(true);
-  const [showQualif, setShowQualif] = React.useState(true);
-  const [showFinales, setShowFinales] = React.useState(true);
+  const [selectedDay, setSelectedDay] = React.useState<"J1" | "J2" | "J3">("J1");
   const [layout, setLayout] = useState<{ topOffset: number; paddingTop: number }>({ topOffset: 64, paddingTop: 320 });
   const filtersInitialized = React.useRef(false);
-  const nowValue = nowMs ?? 0;
+  
   useEffect(() => {
     setNowMs(Date.now());
   }, []);
@@ -106,8 +89,23 @@ export default function Tournament5v5Page() {
     const allFinished = momentumSorted.every((m) => m.status === "finished");
     return allFinished ? "end" : "center";
   }, [momentumSorted]);
-  const state = React.useMemo(() => pickStateByDate(momentumSorted, nowValue), [momentumSorted, nowValue]);
-  const momentumLabel = React.useMemo(() => momentumTitle(state), [state]);
+  const state = React.useMemo(
+    () => pickTournamentState(allMatches5v5 ?? momentumSorted),
+    [allMatches5v5, momentumSorted],
+  );
+  const momentumLabel = React.useMemo(() => tournamentStateLabel(state), [state]);
+  const activeDay = React.useMemo<"J1" | "J2" | "J3">(() => {
+    const source = [...(allMatches5v5 ?? [])].sort(byDateAsc);
+    const ongoing = source.filter((m) => m.status === "ongoing").pop();
+    if (ongoing?.jour === "J2" || ongoing?.jour === "J3") return ongoing.jour;
+    if (ongoing?.jour === "J1") return "J1";
+    const next = source.find((m) => m.status === "planned");
+    if (next?.jour === "J2" || next?.jour === "J3") return next.jour;
+    if (next?.jour === "J1") return "J1";
+    const last = source.filter((m) => m.status === "finished").pop();
+    if (last?.jour === "J2" || last?.jour === "J3") return last.jour;
+    return "J1";
+  }, [allMatches5v5]);
   const highlightTeams = React.useMemo(() => {
     const current = momentum5v5?.find((m) => m.status === "ongoing");
     if (!current) return new Set<string>();
@@ -129,6 +127,11 @@ export default function Tournament5v5Page() {
   const listRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const matchRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const j3SquareRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const daySectionRefs = useRef<Record<"J1" | "J2" | "J3", HTMLElement | null>>({
+    J1: null,
+    J2: null,
+    J3: null,
+  });
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const hasAutoScrolled = useRef(false);
   const lastJ3SquareAutoScroll = useRef<string | null>(null);
@@ -158,7 +161,7 @@ export default function Tournament5v5Page() {
   }, [j3FinalSquares]);
 
   useEffect(() => {
-    if (!showFinales || !liveJ3SquareCode) return;
+    if (!liveJ3SquareCode) return;
     if (lastJ3SquareAutoScroll.current === liveJ3SquareCode) return;
     const target = j3SquareRefs.current[liveJ3SquareCode];
     if (!target) return;
@@ -166,24 +169,14 @@ export default function Tournament5v5Page() {
       target.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
     });
     lastJ3SquareAutoScroll.current = liveJ3SquareCode;
-  }, [liveJ3SquareCode, showFinales]);
+  }, [liveJ3SquareCode]);
 
   useEffect(() => {
     if (filtersInitialized.current) return;
-    if (!momentum5v5 || momentum5v5.length === 0) return;
-    const sorted = [...momentum5v5].sort(byDateAsc);
-    const refMatch =
-      sorted.find((m) => m.status === "ongoing") ||
-      sorted.find((m) => m.status === "planned") ||
-      sorted[Math.floor(sorted.length / 2)];
-    const phase = (refMatch?.phase ?? "").toLowerCase();
-    if (phase) {
-      setShowBrassage(phase === "brassage");
-      setShowQualif(phase === "qualification");
-      setShowFinales(phase === "finales");
-      filtersInitialized.current = true;
-    }
-  }, [momentum5v5]);
+    if (!allMatches5v5?.length) return;
+    setSelectedDay(activeDay);
+    filtersInitialized.current = true;
+  }, [activeDay, allMatches5v5]);
 
   const topBlockRef = useRef<HTMLDivElement | null>(null);
 
@@ -205,7 +198,15 @@ export default function Tournament5v5Page() {
 
   useEffect(() => {
     recomputeLayout();
-  }, [recomputeLayout, momentum5v5?.length, showBrassage, showQualif, showFinales]);
+  }, [recomputeLayout, momentum5v5?.length]);
+
+  const handleSelectDay = (day: "J1" | "J2" | "J3") => {
+    setSelectedDay(day);
+    const target = daySectionRefs.current[day];
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
+    }
+  };
 
   return (
     <div className="fixed inset-0 overflow-hidden">
@@ -247,33 +248,33 @@ export default function Tournament5v5Page() {
               <div className="flex items-center gap-2 text-xs font-semibold flex-wrap">
                 <button
                   className={`rounded-full border px-3 py-1 ${
-                    showBrassage
+                    selectedDay === "J1"
                       ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60"
                       : "bg-slate-800 text-slate-200 border-slate-600"
                   }`}
-                  onClick={() => setShowBrassage((v) => !v)}
+                  onClick={() => handleSelectDay("J1")}
                 >
-                  Sam - Brassage
+                  Sam
                 </button>
                 <button
                   className={`rounded-full border px-3 py-1 ${
-                    showQualif
+                    selectedDay === "J2"
                       ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60"
                       : "bg-slate-800 text-slate-200 border-slate-600"
                   }`}
-                  onClick={() => setShowQualif((v) => !v)}
+                  onClick={() => handleSelectDay("J2")}
                 >
-                  Dim - Qualification
+                  Dim
                 </button>
                 <button
                   className={`rounded-full border px-3 py-1 ${
-                    showFinales
+                    selectedDay === "J3"
                       ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60"
                       : "bg-slate-800 text-slate-200 border-slate-600"
                   }`}
-                  onClick={() => setShowFinales((v) => !v)}
+                  onClick={() => handleSelectDay("J3")}
                 >
-                  Lun - Finales
+                  Lun
                 </button>
               </div>
             </div>
@@ -301,77 +302,87 @@ export default function Tournament5v5Page() {
               focusTestId="tournament-momentum-focus"
               withDiagonalBg
               focusAlign={momentumAlign}
+              desktopJustify
             />
           </section>
-          {showBrassage && (
-            <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <h2 className="text-lg font-semibold mb-3">Classements Sam (Brassage)</h2>
+          <section
+            className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+            ref={(el) => {
+              daySectionRefs.current.J3 = el;
+            }}
+          >
+            <h2 className="text-lg font-semibold mb-3">Classements Lun (Finales)</h2>
+            {isJ3SquaresLoading && (
+              <div className="text-sm text-slate-300">Chargement des carrés J3...</div>
+            )}
+            {isJ3SquaresError && (
+              <div className="text-sm text-red-300">
+                Données finales J3 indisponibles pour le moment.
+              </div>
+            )}
+            {!isJ3SquaresLoading && !isJ3SquaresError && (
               <div className="grid md:grid-cols-2 gap-4">
-                {BRASSAGE.map((p) => (
-                  <ClassementCard
-                    key={p.code}
-                    code={p.code}
-                    phase={p.phase}
-                    title={p.title}
-                    refMap={listRefs}
-                    matchRefMap={matchRefs}
-                    highlightTeams={highlightPoule === p.code ? highlightTeams : undefined}
-                    matches={matches5v5}
-                    selectedTeamId={selectedTeam?.id}
+                {(j3FinalSquares?.carres ?? []).map((carre) => (
+                  <J3FinalSquareCard
+                    key={carre.dbCode}
+                    square={carre}
+                    refMap={j3SquareRefs}
                     onSelectMatch={(id) => navigate(`/matches/${id}`)}
                   />
                 ))}
               </div>
-            </section>
-          )}
+            )}
+          </section>
 
-          {showQualif && (
-            <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <h2 className="text-lg font-semibold mb-3">Classements Dim (Qualification)</h2>
-              <div className="grid md:grid-cols-2 gap-4">
-                {QUALIF.map((p) => (
-                  <ClassementCard
-                    key={p.code}
-                    code={p.code}
-                    phase={p.phase}
-                    title={p.title}
-                    refMap={listRefs}
-                    matchRefMap={matchRefs}
-                    highlightTeams={highlightPoule === p.code ? highlightTeams : undefined}
-                    matches={matches5v5}
-                    selectedTeamId={selectedTeam?.id}
-                    onSelectMatch={(id) => navigate(`/matches/${id}`)}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
+          <section
+            className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+            ref={(el) => {
+              daySectionRefs.current.J2 = el;
+            }}
+          >
+            <h2 className="text-lg font-semibold mb-3">Classements Dim (Qualification)</h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              {QUALIF.map((p) => (
+                <ClassementCard
+                  key={p.code}
+                  code={p.code}
+                  phase={p.phase}
+                  title={p.title}
+                  refMap={listRefs}
+                  matchRefMap={matchRefs}
+                  highlightTeams={highlightPoule === p.code ? highlightTeams : undefined}
+                  matches={matches5v5}
+                  selectedTeamId={selectedTeam?.id}
+                  onSelectMatch={(id) => navigate(`/matches/${id}`)}
+                />
+              ))}
+            </div>
+          </section>
 
-          {showFinales && (
-            <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-              <h2 className="text-lg font-semibold mb-3">Classements Lun (Finales)</h2>
-              {isJ3SquaresLoading && (
-                <div className="text-sm text-slate-300">Chargement des carrés J3...</div>
-              )}
-              {isJ3SquaresError && (
-                <div className="text-sm text-red-300">
-                  Données finales J3 indisponibles pour le moment.
-                </div>
-              )}
-              {!isJ3SquaresLoading && !isJ3SquaresError && (
-                <div className="grid md:grid-cols-2 gap-4">
-                  {(j3FinalSquares?.carres ?? []).map((carre) => (
-                    <J3FinalSquareCard
-                      key={carre.dbCode}
-                      square={carre}
-                      refMap={j3SquareRefs}
-                      onSelectMatch={(id) => navigate(`/matches/${id}`)}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
+          <section
+            className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
+            ref={(el) => {
+              daySectionRefs.current.J1 = el;
+            }}
+          >
+            <h2 className="text-lg font-semibold mb-3">Classements Sam (Brassage)</h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              {BRASSAGE.map((p) => (
+                <ClassementCard
+                  key={p.code}
+                  code={p.code}
+                  phase={p.phase}
+                  title={p.title}
+                  refMap={listRefs}
+                  matchRefMap={matchRefs}
+                  highlightTeams={highlightPoule === p.code ? highlightTeams : undefined}
+                  matches={matches5v5}
+                  selectedTeamId={selectedTeam?.id}
+                  onSelectMatch={(id) => navigate(`/matches/${id}`)}
+                />
+              ))}
+            </div>
+          </section>
         </div>
       </div>
     </div>
@@ -563,7 +574,7 @@ function J3FinalSquareCard({
 }
 
 function J3RankingRow({ row }: { row: FinalSquareRankingRow }) {
-  const label = row.team?.name ?? row.placeholder ?? "Inconnu (en attente du résultat)";
+  const label = row.team?.name ?? row.placeholder ?? "En attente du résultat";
   return (
     <tr className="text-slate-100">
       <td className="py-1 pr-2">{row.rankInSquare}</td>

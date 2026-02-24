@@ -35,8 +35,8 @@ const mockMatches: Match[] = [
     status: "planned",
     scoreA: null,
     scoreB: null,
-    pouleCode: "A",
-    pouleName: "Poule A",
+    pouleCode: "B",
+    pouleName: "Poule B",
   },
   {
     id: "3",
@@ -86,7 +86,7 @@ vi.mock("../../hooks/useMeals", () => ({
 }));
 
 
-const mockClassement = {
+const mockClassementJ1 = {
   pouleCode: "A",
   pouleName: "Poule A",
   equipes: [
@@ -105,13 +105,94 @@ const mockClassement = {
   ],
 };
 
+const mockClassementJ2 = {
+  pouleCode: "B",
+  pouleName: "Poule B",
+  equipes: [
+    {
+      id: "team-paris",
+      name: "Paris",
+      rang: 1,
+      points: 7,
+      victoires: 2,
+      nuls: 1,
+      defaites: 0,
+      diff: 4,
+      pouleCode: "B",
+      pouleName: "Poule B",
+    },
+  ],
+};
+
+let mockJ3FinalSquares = {
+  jour: "J3",
+  computedAt: "2026-01-01T00:00:00.000Z",
+  carres: [
+    {
+      dbCode: "E",
+      label: "Carré Or A",
+      placeRange: "1..4",
+      semiFinals: [],
+      finalMatch: null,
+      thirdPlaceMatch: null,
+      ranking: [],
+    },
+    {
+      dbCode: "F",
+      label: "Carré Or B",
+      placeRange: "5..8",
+      semiFinals: [],
+      finalMatch: null,
+      thirdPlaceMatch: null,
+      ranking: [],
+    },
+    {
+      dbCode: "G",
+      label: "Carré Argent C",
+      placeRange: "9..12",
+      semiFinals: [],
+      finalMatch: null,
+      thirdPlaceMatch: null,
+      ranking: [
+        { rankInSquare: 1, place: 9, team: null, placeholder: "Inconnu (en attente du résultat)" },
+        { rankInSquare: 2, place: 10, team: null, placeholder: "Inconnu (en attente du résultat)" },
+        { rankInSquare: 3, place: 11, team: null, placeholder: "Inconnu (en attente du résultat)" },
+        {
+          rankInSquare: 4,
+          place: 12,
+          team: { id: "team-rennes", name: "Rennes", logoUrl: null },
+          placeholder: null,
+        },
+      ],
+    },
+    {
+      dbCode: "H",
+      label: "Carré Argent D",
+      placeRange: "13..16",
+      semiFinals: [],
+      finalMatch: null,
+      thirdPlaceMatch: null,
+      ranking: [],
+    },
+  ],
+};
+
 vi.mock("@tanstack/react-query", async (orig) => {
   const mod = await orig();
   return {
     ...(mod as any),
-    useQuery: () => ({ data: mockClassement }),
+    useQuery: (options: any) => {
+      const key = options?.queryKey;
+      if (Array.isArray(key) && key.includes("J2")) return { data: mockClassementJ2 };
+      if (Array.isArray(key) && key.includes("J1")) return { data: mockClassementJ1 };
+      return { data: mockClassementJ1 };
+    },
   };
 });
+
+vi.mock("../../hooks/useClassement", () => ({
+  useJ3FinalSquares: () => ({ data: mockJ3FinalSquares, isLoading: false, isError: false }),
+}));
 
 vi.mock("react-router-dom", async (orig) => {
   const mod = await orig();
@@ -128,6 +209,58 @@ describe("TeamPage", () => {
 
   beforeEach(() => {
     mockNavigate.mockReset();
+    mockJ3FinalSquares = {
+      jour: "J3",
+      computedAt: "2026-01-01T00:00:00.000Z",
+      carres: [
+        {
+          dbCode: "E",
+          label: "CarrÃ© Or A",
+          placeRange: "1..4",
+          semiFinals: [],
+          finalMatch: null,
+          thirdPlaceMatch: null,
+          ranking: [],
+        },
+        {
+          dbCode: "F",
+          label: "CarrÃ© Or B",
+          placeRange: "5..8",
+          semiFinals: [],
+          finalMatch: null,
+          thirdPlaceMatch: null,
+          ranking: [],
+        },
+        {
+          dbCode: "G",
+          label: "CarrÃ© Argent C",
+          placeRange: "9..12",
+          semiFinals: [],
+          finalMatch: null,
+          thirdPlaceMatch: null,
+              ranking: [
+                { rankInSquare: 1, place: 9, team: null, placeholder: "Inconnu (en attente du résultat)" },
+                { rankInSquare: 2, place: 10, team: null, placeholder: "Inconnu (en attente du résultat)" },
+                { rankInSquare: 3, place: 11, team: null, placeholder: "Inconnu (en attente du résultat)" },
+                {
+                  rankInSquare: 4,
+                  place: 12,
+                  team: { id: "team-rennes", name: "Rennes", logoUrl: null },
+                  placeholder: null,
+                },
+              ],
+        },
+        {
+          dbCode: "H",
+          label: "CarrÃ© Argent D",
+          placeRange: "13..16",
+          semiFinals: [],
+          finalMatch: null,
+          thirdPlaceMatch: null,
+          ranking: [],
+        },
+      ],
+    };
     mockMeals = {
       days: [
         { key: "J1", label: "Samedi", dateTime: "2026-01-17T12:30:00" },
@@ -164,6 +297,93 @@ describe("TeamPage", () => {
     );
 
     expect(screen.getByText(/Classements/i)).toBeInTheDocument();
+  });
+
+  it("affiche les sections Classements dans l'ordre J3, J2, J1", () => {
+    render(
+      <MemoryRouter initialEntries={["/teams/Rennes"]}>
+        <Routes>
+          <Route path="/teams/:id" element={<TeamPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const j3 = screen.getByTestId("team-classement-j3");
+    const j2 = screen.getByTestId("team-classement-j2");
+    const j1 = screen.getByTestId("team-classement-j1");
+
+    expect(j3).toHaveClass("order-1");
+    expect(j2).toHaveClass("order-2");
+    expect(j1).toHaveClass("order-3");
+  });
+
+  it("affiche des classements différents pour J1 et J2 selon la poule du jour", () => {
+    render(
+      <MemoryRouter initialEntries={["/teams/Rennes"]}>
+        <Routes>
+          <Route path="/teams/:id" element={<TeamPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const j1Card = screen.getByTestId("team-classement-j1");
+    const j2Card = screen.getByTestId("team-classement-j2");
+
+    expect(within(j1Card).getByText("Rennes")).toBeInTheDocument();
+    expect(within(j2Card).getByText("Paris")).toBeInTheDocument();
+    expect(within(j1Card).queryByText("Paris")).not.toBeInTheDocument();
+  });
+
+  it("affiche en J3 la place finale absolue (1..16)", () => {
+    render(
+      <MemoryRouter initialEntries={["/teams/Rennes"]}>
+        <Routes>
+          <Route path="/teams/:id" element={<TeamPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const j3Card = screen.getByTestId("team-classement-j3");
+    const rankingRows = within(j3Card).getAllByRole("row").slice(1);
+    expect(rankingRows.length).toBeGreaterThanOrEqual(3);
+    const row = within(j3Card).getByText("Rennes").closest("tr") as HTMLElement;
+    expect(within(row).getByText("12")).toBeInTheDocument();
+    expect(within(j3Card).getAllByText(/En attente du r.sultat/i).length).toBeGreaterThan(0);
+  });
+
+  it("affiche les placeholders J3 non cliquables quand �quipe inconnue", () => {
+    mockJ3FinalSquares = {
+      ...mockJ3FinalSquares,
+      carres: mockJ3FinalSquares.carres.map((c) =>
+        c.dbCode === "G"
+          ? {
+              ...c,
+              ranking: [
+                { rankInSquare: 1, place: 9, team: null, placeholder: "Inconnu (en attente du r�sultat)" },
+                { rankInSquare: 2, place: 10, team: null, placeholder: "Inconnu (en attente du r�sultat)" },
+                { rankInSquare: 3, place: 11, team: null, placeholder: "Inconnu (en attente du r�sultat)" },
+                { rankInSquare: 4, place: 12, team: null, placeholder: "Inconnu (en attente du r�sultat)" },
+              ],
+            }
+          : c,
+      ),
+    };
+
+    render(
+      <MemoryRouter initialEntries={["/teams/Rennes"]}>
+        <Routes>
+          <Route path="/teams/:id" element={<TeamPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const j3Card = screen.getByTestId("team-classement-j3");
+    expect(within(j3Card).getAllByText(/En attente du r.sultat/i).length).toBeGreaterThan(0);
+    const placeholderRow = screen.getByTestId("team-j3-placeholder-9");
+    expect(placeholderRow).not.toHaveAttribute("role", "button");
+    expect(within(placeholderRow).getByText("-")).toBeInTheDocument();
+    expect(screen.getByTestId("team-classement-j2")).toBeInTheDocument();
+    expect(screen.getByTestId("team-classement-j1")).toBeInTheDocument();
   });
 
   it("affiche les repas J1/J2 et le fallback J3", () => {
@@ -208,3 +428,5 @@ describe("TeamPage", () => {
     expect(within(ongoingCard).queryByText("Loki")).not.toBeInTheDocument();
   });
 });
+
+

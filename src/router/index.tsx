@@ -6,6 +6,10 @@ import MatchDetailPage from "../pages/MatchDetailPage";
 import TeamPage from "../pages/TeamPage";
 import NotFoundPage from "../pages/NotFoundPage";
 import HomePage from "../pages/HomePage";
+import Accueil2Page from "../pages/Accueil2Page";
+import Accueil2BroadcastPage from "../pages/Accueil2BroadcastPage";
+import Accueil2PremiumPage from "../pages/Accueil2PremiumPage";
+import Accueil2KiosquePage from "../pages/Accueil2KiosquePage";
 import TeamsPage from "../pages/TeamsPage";
 import Tournament5v5Page from "../pages/Tournament5v5Page";
 import ChallengePage from "../pages/ChallengePage";
@@ -33,6 +37,38 @@ export default function AppRouter() {
         element={
           <LayoutRoot>
             <HomePage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/accueil-2"
+        element={
+          <LayoutRoot>
+            <Accueil2Page />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/accueil-2-broadcast"
+        element={
+          <LayoutRoot>
+            <Accueil2BroadcastPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/accueil-2-premium"
+        element={
+          <LayoutRoot>
+            <Accueil2PremiumPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/accueil-2-kiosque"
+        element={
+          <LayoutRoot>
+            <Accueil2KiosquePage />
           </LayoutRoot>
         }
       />

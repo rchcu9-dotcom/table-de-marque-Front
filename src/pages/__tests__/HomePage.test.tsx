@@ -144,6 +144,123 @@ describe("HomePage dynamique", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/matches/m-live");
   });
 
+
+  it("n'affiche pas de titre dynamique dans le bloc momentum Accueil", async () => {
+    mockMatches = [
+      {
+        id: "m-live",
+        date: "2026-01-17T14:00:00Z",
+        teamA: "C",
+        teamB: "D",
+        status: "ongoing",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+      },
+    ];
+
+    await renderHome("2026-01-17T14:30:00Z");
+
+    const nowBlock = await screen.findByTestId("home-now");
+    expect(within(nowBlock).queryByRole("heading", { level: 2 })).not.toBeInTheDocument();
+  });
+
+  it("centre la valeur score/heure dans les cartes momentum", async () => {
+    mockMatches = [
+      {
+        id: "m-planned",
+        date: "2026-01-17T16:00:00Z",
+        teamA: "A",
+        teamB: "B",
+        status: "planned",
+        scoreA: null,
+        scoreB: null,
+        competitionType: "5v5",
+      },
+    ];
+
+    await renderHome("2026-01-17T14:30:00Z");
+
+    const center = await screen.findByTestId("home-momentum-center-m-planned");
+    expect(center).toHaveClass("justify-self-center");
+    expect(center).toHaveClass("text-center");
+    expect(screen.getByTestId("home-momentum-card-m-planned")).toHaveClass("w-full");
+    expect(screen.getByTestId("home-momentum-card-m-planned")).toHaveClass("md:flex-auto");
+  });
+
+  it("affiche l'heure pour planned et le score pour ongoing/finished dans la zone centrale", async () => {
+    mockMatches = [
+      {
+        id: "m-planned",
+        date: "2026-01-17T16:00:00Z",
+        teamA: "A",
+        teamB: "B",
+        status: "planned",
+        scoreA: null,
+        scoreB: null,
+        competitionType: "5v5",
+      },
+      {
+        id: "m-ongoing",
+        date: "2026-01-17T14:00:00Z",
+        teamA: "C",
+        teamB: "D",
+        status: "ongoing",
+        scoreA: 4,
+        scoreB: 2,
+        competitionType: "5v5",
+      },
+      {
+        id: "m-finished",
+        date: "2026-01-17T12:00:00Z",
+        teamA: "E",
+        teamB: "F",
+        status: "finished",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+      },
+    ];
+
+    await renderHome("2026-01-17T14:30:00Z");
+
+    expect(await screen.findByTestId("home-momentum-center-m-planned")).toHaveTextContent(/\d{2}:\d{2}/);
+    expect(screen.getByTestId("home-momentum-center-m-ongoing")).toHaveTextContent("4-2");
+    expect(screen.getByTestId("home-momentum-center-m-finished")).toHaveTextContent("1-0");
+  });
+
+  it("sans match ongoing, le rendu central momentum reste cohÃ©rent", async () => {
+    mockMatches = [
+      {
+        id: "m-last",
+        date: "2026-01-17T12:00:00Z",
+        teamA: "A",
+        teamB: "B",
+        status: "finished",
+        scoreA: 2,
+        scoreB: 1,
+        competitionType: "5v5",
+      },
+      {
+        id: "m-next",
+        date: "2026-01-17T16:00:00Z",
+        teamA: "C",
+        teamB: "D",
+        status: "planned",
+        scoreA: null,
+        scoreB: null,
+        competitionType: "5v5",
+      },
+    ];
+
+    await renderHome("2026-01-17T14:30:00Z");
+
+    const nextCenter = await screen.findByTestId("home-momentum-center-m-next");
+    expect(screen.getByTestId("home-momentum-center-m-next")).toHaveClass("justify-self-center");
+    expect(nextCenter).toHaveTextContent(/\d{2}:\d{2}/);
+    expect(screen.queryByTestId("home-momentum-card-m-live")).not.toBeInTheDocument();
+  });
+
   it("affiche Aujourd'hui pour l'équipe suivie avec prochain et dernier 5v5 + ligne Challenge/3v3", async () => {
     mockSelectedTeam = {
       selectedTeam: { id: "rennes", name: "Rennes", logoUrl: "logo-rennes" },
@@ -189,6 +306,9 @@ describe("HomePage dynamique", () => {
     expect(within(today).getByTestId("home-today-next")).toHaveTextContent(/Rennes/i);
     expect(within(today).getByTestId("home-today-last")).toHaveTextContent(/Lyon/i);
     expect(within(today).getByTestId("home-today-alt")).toHaveTextContent(/Rennes/i);
+    expect(screen.getByText(/Aujourd'hui · Rennes/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Équipe suivie : Rennes/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: /Équipes/i })).toBeInTheDocument();
   });
 
   it("affiche la bannière mode dégradé quand le flux SSE signale une erreur", async () => {
@@ -230,5 +350,65 @@ describe("HomePage dynamique", () => {
 
     expect(screen.getByText("Repas du jour")).toBeInTheDocument();
     expect(screen.getByText(/Repas indisponible/i)).toBeInTheDocument();
+  });
+
+  it("affiche le fallback hero quand il n'y a pas de match en cours", async () => {
+    mockMatches = [
+      {
+        id: "m-finished",
+        date: "2026-01-17T12:00:00Z",
+        teamA: "Rennes",
+        teamB: "Paris",
+        status: "finished",
+        scoreA: 2,
+        scoreB: 1,
+        competitionType: "5v5",
+      },
+      {
+        id: "m-next",
+        date: "2026-01-17T16:00:00Z",
+        teamA: "Lyon",
+        teamB: "Angers",
+        status: "planned",
+        scoreA: null,
+        scoreB: null,
+        competitionType: "5v5",
+      },
+    ];
+
+    await renderHome("2026-01-17T14:30:00Z");
+
+    expect(await screen.findByTestId("home-hero-title")).toHaveTextContent("Ça joue !");
+    expect(screen.getByTestId("home-hero-commentary")).toHaveTextContent("Prochain match en préparation");
+  });
+
+  it("conserve les accents dans le ticker", async () => {
+    mockMatches = [
+      {
+        id: "m-prev",
+        date: "2026-01-17T10:00:00Z",
+        teamA: "Rennes",
+        teamB: "Paris",
+        status: "finished",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+      },
+      {
+        id: "m-focus",
+        date: "2026-01-17T12:00:00Z",
+        teamA: "Lyon",
+        teamB: "Angers",
+        status: "finished",
+        scoreA: 2,
+        scoreB: 2,
+        competitionType: "5v5",
+      },
+    ];
+
+    await renderHome("2026-01-17T14:30:00Z");
+
+    const ticker = await screen.findByTestId("home-focus-ticker");
+    expect(ticker.textContent).toContain("terminé");
   });
 });
