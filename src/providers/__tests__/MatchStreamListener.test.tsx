@@ -32,12 +32,14 @@ class FakeEventSource {
 
 describe("MatchStreamListener", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     (globalThis as any).EventSource = FakeEventSource;
     FakeEventSource.reset();
     (globalThis as any).__APP_API_BASE_URL__ = "http://localhost:3000";
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     FakeEventSource.reset();
   });
 
@@ -87,5 +89,49 @@ describe("MatchStreamListener", () => {
     expect(qc.getQueryData<Match[]>(["matches", false])).toEqual(payload.matches);
     expect(qc.getQueryData<Match[]>(["matches", true])).toEqual(payload.matches);
     expect(qc.getQueryData<Match>(["matches", "42"])).toEqual(payload.matches[0]);
+  });
+
+  it("declenche un refresh J3 throttlé sur les events matches", async () => {
+    const qc = new QueryClient();
+    const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
+
+    render(
+      <QueryClientProvider client={qc}>
+        <MatchStreamListener />
+      </QueryClientProvider>,
+    );
+
+    const es = FakeEventSource.instances[0];
+    const payload = {
+      type: "matches",
+      matches: [],
+      diff: { changed: true, added: [], updated: [], removed: [] },
+      timestamp: Date.now(),
+    };
+
+    await act(async () => {
+      es.emit(payload);
+    });
+    const getJ3RefreshCalls = () =>
+      invalidateSpy.mock.calls.filter(
+        (args) => JSON.stringify(args[0]?.queryKey) === JSON.stringify(["classement", "j3", "carres"]),
+      );
+    expect(getJ3RefreshCalls()).toHaveLength(1);
+
+    await act(async () => {
+      es.emit(payload);
+      es.emit(payload);
+    });
+    expect(getJ3RefreshCalls()).toHaveLength(1);
+
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(getJ3RefreshCalls()).toHaveLength(2);
+    expect(getJ3RefreshCalls()[0]?.[0]).toMatchObject({
+      queryKey: ["classement", "j3", "carres"],
+      exact: true,
+      refetchType: "active",
+    });
   });
 });

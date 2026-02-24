@@ -1,8 +1,13 @@
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/immutability, @typescript-eslint/no-explicit-any */
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useMatchesFiltered, useMomentumMatches } from "../hooks/useMatches";
-import { useClassement } from "../hooks/useClassement";
+import { useClassement, useJ3FinalSquares } from "../hooks/useClassement";
 import type { Match } from "../api/match";
+import type {
+  FinalSquare,
+  FinalSquareMatch,
+  FinalSquareRankingRow,
+} from "../api/classement";
 import { Link, useNavigate } from "react-router-dom";
 import HorizontalMatchSlider from "../components/collections/HorizontalMatchSlider";
 import fiveV5Icon from "../assets/icons/nav/fivev5.png";
@@ -24,12 +29,6 @@ const QUALIF = [
   { code: "Delta", title: "Dim - Tournoi Argent - Delta", phase: "Qualification" },
 ];
 
-const FINALES = [
-  { code: "Or1", title: "Lun - Carré Or 1", phase: "Finales" },
-  { code: "Argent1", title: "Lun - Carré Argent 1", phase: "Finales" },
-  { code: "Or5", title: "Lun - Carré Or 5", phase: "Finales" },
-  { code: "Argent5", title: "Lun - Carré Argent 5", phase: "Finales" },
-];
 
 type HomeState = "avant" | "pendant" | "apres";
 
@@ -64,6 +63,11 @@ export default function Tournament5v5Page() {
     surface: "GG",
     teamId: selectedTeam?.id,
   });
+  const {
+    data: j3FinalSquares,
+    isLoading: isJ3SquaresLoading,
+    isError: isJ3SquaresError,
+  } = useJ3FinalSquares();
   const [showBrassage, setShowBrassage] = React.useState(true);
   const [showQualif, setShowQualif] = React.useState(true);
   const [showFinales, setShowFinales] = React.useState(true);
@@ -124,8 +128,10 @@ export default function Tournament5v5Page() {
   }, [momentum5v5]);
   const listRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const matchRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const j3SquareRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const scrollAreaRef = useRef<HTMLDivElement | null>(null);
   const hasAutoScrolled = useRef(false);
+  const lastJ3SquareAutoScroll = useRef<string | null>(null);
 
   useEffect(() => {
     hasAutoScrolled.current = false;
@@ -140,6 +146,27 @@ export default function Tournament5v5Page() {
     });
     hasAutoScrolled.current = true;
   }, [targetMatchId, matches5v5]);
+
+  const liveJ3SquareCode = React.useMemo(() => {
+    const squares = j3FinalSquares?.carres ?? [];
+    const liveSquare = squares.find((square) =>
+      [...square.semiFinals, square.finalMatch, square.thirdPlaceMatch]
+        .filter((m): m is FinalSquareMatch => Boolean(m))
+        .some((m) => m.status === "ongoing"),
+    );
+    return liveSquare?.dbCode ?? null;
+  }, [j3FinalSquares]);
+
+  useEffect(() => {
+    if (!showFinales || !liveJ3SquareCode) return;
+    if (lastJ3SquareAutoScroll.current === liveJ3SquareCode) return;
+    const target = j3SquareRefs.current[liveJ3SquareCode];
+    if (!target) return;
+    requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
+    });
+    lastJ3SquareAutoScroll.current = liveJ3SquareCode;
+  }, [liveJ3SquareCode, showFinales]);
 
   useEffect(() => {
     if (filtersInitialized.current) return;
@@ -323,23 +350,26 @@ export default function Tournament5v5Page() {
           {showFinales && (
             <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
               <h2 className="text-lg font-semibold mb-3">Classements Lun (Finales)</h2>
-              <div className="grid md:grid-cols-2 gap-4">
-                {FINALES.map((p) => (
-                  <ClassementCard
-                    key={p.code}
-                    code={p.code}
-                    phase={p.phase}
-                    title={p.title}
-                    refMap={listRefs}
-                    matchRefMap={matchRefs}
-                    highlightTeams={highlightPoule === p.code ? highlightTeams : undefined}
-                    hidePoints
-                    matches={matches5v5}
-                    selectedTeamId={selectedTeam?.id}
-                    onSelectMatch={(id) => navigate(`/matches/${id}`)}
-                  />
-                ))}
-              </div>
+              {isJ3SquaresLoading && (
+                <div className="text-sm text-slate-300">Chargement des carrés J3...</div>
+              )}
+              {isJ3SquaresError && (
+                <div className="text-sm text-red-300">
+                  Données finales J3 indisponibles pour le moment.
+                </div>
+              )}
+              {!isJ3SquaresLoading && !isJ3SquaresError && (
+                <div className="grid md:grid-cols-2 gap-4">
+                  {(j3FinalSquares?.carres ?? []).map((carre) => (
+                    <J3FinalSquareCard
+                      key={carre.dbCode}
+                      square={carre}
+                      refMap={j3SquareRefs}
+                      onSelectMatch={(id) => navigate(`/matches/${id}`)}
+                    />
+                  ))}
+                </div>
+              )}
             </section>
           )}
         </div>
@@ -448,6 +478,110 @@ function ClassementCard({
   );
 }
 
+function toMatchFromFinalSquareMatch(match: FinalSquareMatch): Match {
+  return {
+    id: match.id,
+    date: match.date,
+    teamA: match.teamA.name,
+    teamB: match.teamB.name,
+    teamALogo: match.teamA.logoUrl,
+    teamBLogo: match.teamB.logoUrl,
+    status: match.status,
+    scoreA: match.scoreA,
+    scoreB: match.scoreB,
+    competitionType: "5v5",
+    surface: "GG",
+    phase: "finales",
+    jour: "J3",
+  };
+}
+
+function J3FinalSquareCard({
+  square,
+  refMap,
+  onSelectMatch,
+}: {
+  square: FinalSquare;
+  refMap?: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
+  onSelectMatch?: (id: string) => void;
+}) {
+  const placeLabel = square.placeRange.replace("..", " à ");
+  const allMatches = [
+    ...square.semiFinals,
+    ...(square.finalMatch ? [square.finalMatch] : []),
+    ...(square.thirdPlaceMatch ? [square.thirdPlaceMatch] : []),
+  ];
+  return (
+    <div
+      className="rounded-lg border border-slate-800 bg-slate-900/70 p-3"
+      data-testid={`j3-square-${square.dbCode}`}
+      ref={(el) => {
+        if (refMap) {
+          refMap.current[square.dbCode] = el;
+        }
+      }}
+    >
+      <div className="mb-2">
+        <h3 className="font-semibold text-slate-100">{square.label}</h3>
+        <p className="text-xs text-slate-300">Places jouées: {placeLabel}</p>
+      </div>
+
+      <div className="mt-2 overflow-x-auto" data-testid={`j3-square-ranking-${square.dbCode}`}>
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="text-left text-slate-300">
+              <th className="py-1 pr-2">Rang</th>
+              <th className="py-1 pr-2">Place</th>
+              <th className="py-1 pr-2">Équipe</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800">
+            {square.ranking.map((row) => (
+              <J3RankingRow key={`${square.dbCode}-${row.rankInSquare}`} row={row} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-3 space-y-2" data-testid={`j3-square-matches-${square.dbCode}`}>
+        <p className="text-xs text-slate-300">Matchs</p>
+        {allMatches.length > 0 ? (
+          allMatches.map((m) => (
+            <SmallMatchCard
+              key={m.id}
+              match={toMatchFromFinalSquareMatch(m)}
+              onSelect={onSelectMatch}
+              testId={`j3-match-${m.id}`}
+            />
+          ))
+        ) : (
+          <p className="text-xs text-slate-400">Aucun match</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function J3RankingRow({ row }: { row: FinalSquareRankingRow }) {
+  const label = row.team?.name ?? row.placeholder ?? "Inconnu (en attente du résultat)";
+  return (
+    <tr className="text-slate-100">
+      <td className="py-1 pr-2">{row.rankInSquare}</td>
+      <td className="py-1 pr-2">{row.place}</td>
+      <td className="py-1 pr-2">
+        {row.team ? (
+          <span className="flex items-center gap-2">
+            <Logo name={row.team.name} url={row.team.logoUrl} size={20} />
+            <span>{row.team.name}</span>
+          </span>
+        ) : (
+          <span className="text-slate-400">{label}</span>
+        )}
+      </td>
+    </tr>
+  );
+}
+
 function Logo({ name, url, size = 32 }: { name: string; url?: string | null; size?: number }) {
   if (url) {
     return (
@@ -473,10 +607,12 @@ function SmallMatchCard({
   match,
   onSelect,
   refMap,
+  testId,
 }: {
   match: Match;
   onSelect?: (id: string) => void;
   refMap?: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
+  testId?: string;
 }) {
   const d = new Date(match.date);
   const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
@@ -499,6 +635,7 @@ function SmallMatchCard({
           ? "border-amber-400 live-pulse-card ring-2 ring-amber-300/60"
           : "border-slate-800"
       }`}
+      data-testid={testId}
       ref={(el) => {
         if (refMap) {
           refMap.current[match.id] = el;
@@ -576,5 +713,6 @@ function SmallMatchCard({
     </div>
   );
 }
+
 
 
