@@ -3,7 +3,7 @@ import { act, render } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { ChallengeStreamListener } from "../ChallengeStreamListener";
-import type { ChallengeAllResponse, ClassementGlobalEntry } from "../../api/challenge";
+import type { ChallengeAllResponse, ClassementGlobalEntry, ChallengeJ1MomentumEntry } from "../../api/challenge";
 
 class FakeEventSource {
   static instances: FakeEventSource[] = [];
@@ -108,5 +108,55 @@ describe("ChallengeStreamListener", () => {
       autres: [],
     });
     expect(qc.getQueryData(["challenge", "classement-global"])).toEqual(classementGlobal);
+  });
+
+  it('met a jour la key challenge momentum j1 depuis snapshot.j1Momentum', async () => {
+    const qc = new QueryClient();
+    qc.setQueryData<ChallengeJ1MomentumEntry[]>(["challenge", "momentum", "j1"], [
+      {
+        teamId: "old",
+        teamName: "Old Team",
+        teamLogoUrl: null,
+        slotStart: "2026-01-17T09:00:00.000Z",
+        slotEnd: "2026-01-17T09:40:00.000Z",
+        status: "planned",
+        startedAt: null,
+        finishedAt: null,
+      },
+    ]);
+
+    render(
+      <QueryClientProvider client={qc}>
+        <ChallengeStreamListener />
+      </QueryClientProvider>,
+    );
+
+    const es = FakeEventSource.instances[0];
+    const j1Momentum: ChallengeJ1MomentumEntry[] = [
+      {
+        teamId: "rennes",
+        teamName: "Rennes",
+        teamLogoUrl: null,
+        slotStart: "2026-01-17T10:00:00.000Z",
+        slotEnd: "2026-01-17T10:40:00.000Z",
+        status: "ongoing",
+        startedAt: "2026-01-17T10:00:00.000Z",
+        finishedAt: null,
+      },
+    ];
+
+    await act(async () => {
+      es.emit({
+        type: "challenge",
+        diff: { changed: true, added: [], updated: ["momentum"], removed: [] },
+        snapshot: {
+          all: { jour1: [], jour3: [], autres: [] },
+          j1Momentum,
+        },
+        timestamp: Date.now(),
+      });
+    });
+
+    expect(qc.getQueryData(["challenge", "momentum", "j1"])).toEqual(j1Momentum);
   });
 });

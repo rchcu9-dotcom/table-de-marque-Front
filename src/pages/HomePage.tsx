@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchMatches } from "../api/match";
 import type { Match } from "../api/match";
+import type { ChallengeJ1MomentumEntry } from "../api/challenge";
 import { useTeams } from "../hooks/useTeams";
 import { useMeals } from "../hooks/useMeals";
+import { useChallengeJ1Momentum } from "../hooks/useChallengeJ1Momentum";
 import { useSelectedTeam } from "../providers/SelectedTeamProvider";
 import homeIcon from "../assets/icons/nav/home.png";
 import icon5v5 from "../assets/icons/nav/fivev5.png";
@@ -126,6 +128,28 @@ function autoIndexForList(list: Match[], focusId: string | null) {
 function smallGlaceCompetition(day: number): "3v3" | "challenge" {
   if (day >= 2) return "3v3";
   return "challenge";
+}
+
+function challengeMomentumToMatches(entries: ChallengeJ1MomentumEntry[]): Match[] {
+  return entries
+    .map((entry) => ({
+      id: `challenge-${entry.teamId}`,
+      date: entry.slotStart,
+      teamA: entry.teamName,
+      teamB: "Challenge",
+      status: entry.status,
+      scoreA: null,
+      scoreB: null,
+      teamALogo: entry.teamLogoUrl,
+      teamBLogo: null,
+      pouleCode: "CHALL",
+      pouleName: "Challenge individuel",
+      competitionType: "challenge" as const,
+      surface: "PG" as const,
+      phase: "qualification",
+      jour: "J1",
+    }))
+    .sort(byDateAsc);
 }
 
 function segmentForTeam(matches: Match[], teamId: string, competitionFilter?: "5v5" | "3v3" | "challenge") {
@@ -633,6 +657,7 @@ export default function HomePage() {
   const { data: teams } = useTeams();
   const { selectedTeam } = useSelectedTeam();
   const { matches, isDegraded } = useLiveMatches();
+  const { data: challengeJ1Momentum } = useChallengeJ1Momentum();
   const { data: meals } = useMeals();
   const nowMs = getNowMs();
   const [layout, setLayout] = React.useState<{ topOffset: number; paddingTop: number }>({
@@ -685,20 +710,35 @@ const resolveMatchRoute = React.useCallback(
   }, [recomputeLayout]);
 
   const matches5v5 = React.useMemo(() => filterByCompetition(matches, "5v5"), [matches]);
+  const hasLive5v5 = React.useMemo(
+    () => matches5v5.some((m) => m.status === "ongoing"),
+    [matches5v5],
+  );
   const state = React.useMemo(() => pickTournamentState(matches5v5), [matches5v5]);
   const day = React.useMemo(() => dayIndex(nowMs, matches), [matches, nowMs]);
   const smallGlaceType = React.useMemo(() => smallGlaceCompetition(day), [day]);
   const smallGlaceLabel = smallGlaceType === "3v3" ? "3v3" : "Challenge";
+  const challengeMomentumMatchesJ1 = React.useMemo(
+    () => challengeMomentumToMatches(challengeJ1Momentum ?? []),
+    [challengeJ1Momentum],
+  );
+  const smallGlaceSourceMatches = React.useMemo(
+    () =>
+      day === 1 && smallGlaceType === "challenge"
+        ? challengeMomentumMatchesJ1
+        : filterByCompetition(matches, smallGlaceType),
+    [day, smallGlaceType, challengeMomentumMatchesJ1, matches],
+  );
 
   const triplet5v5 = React.useMemo(() => tripletForCompetition(matches, "5v5"), [matches]);
   const tripletSmallGlace = React.useMemo(
-    () => tripletForCompetition(matches, smallGlaceType),
-    [matches, smallGlaceType],
+    () => tripletForCompetition(smallGlaceSourceMatches, smallGlaceType),
+    [smallGlaceSourceMatches, smallGlaceType],
   );
   const ordered5v5 = React.useMemo(() => liveCenteredOrder(triplet5v5, filterByCompetition(matches, "5v5")), [triplet5v5, matches]);
   const orderedSmallGlace = React.useMemo(
-    () => liveCenteredOrder(tripletSmallGlace, filterByCompetition(matches, smallGlaceType)),
-    [tripletSmallGlace, matches, smallGlaceType],
+    () => liveCenteredOrder(tripletSmallGlace, smallGlaceSourceMatches),
+    [tripletSmallGlace, smallGlaceSourceMatches],
   );
   const autoIndex5v5 = React.useMemo(
     () =>
@@ -800,8 +840,8 @@ const tickerItems = React.useMemo(() => {
 
 const beforeUpcoming5v5 = React.useMemo(() => upcomingMatches(matches, "5v5").slice(0, 3), [matches]);
 const beforeUpcomingSmallGlace = React.useMemo(
-  () => upcomingMatches(matches, smallGlaceType).slice(0, 3),
-  [matches, smallGlaceType],
+  () => upcomingMatches(smallGlaceSourceMatches, smallGlaceType).slice(0, 3),
+  [smallGlaceSourceMatches, smallGlaceType],
 );
 const beforeFocus5v5 = React.useMemo(() => beforeUpcoming5v5[0]?.id ?? null, [beforeUpcoming5v5]);
 const beforeFocusSmallGlace = React.useMemo(
@@ -814,8 +854,8 @@ const focusIdApres5v5 = React.useMemo(
   [afterRecent5v5],
 );
 const afterSmallGlaceWinners = React.useMemo(
-  () => recentMatches(matches, smallGlaceType).slice(-3).reverse(),
-  [matches, smallGlaceType],
+  () => recentMatches(smallGlaceSourceMatches, smallGlaceType).slice(-3).reverse(),
+  [smallGlaceSourceMatches, smallGlaceType],
 );
 const afterFocusSmallGlace = React.useMemo(
   () => (afterSmallGlaceWinners[0]?.id ? afterSmallGlaceWinners[0].id : null),
@@ -844,10 +884,20 @@ const afterFocusSmallGlace = React.useMemo(
           <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-800/80 flex-shrink-0">
             <img src={homeIcon} alt="Accueil" className="h-full w-full object-cover scale-150" loading="lazy" />
           </div>
-          <div className="flex flex-col gap-1">
-            <h1 className="text-xl font-bold text-white" data-testid="home-hero-title">
-              {hero.title}
-            </h1>
+          <div className="flex flex-1 min-w-0 flex-col gap-1">
+            <div className="flex w-full items-center justify-between gap-3">
+              <h1 className="text-xl font-bold text-white" data-testid="home-hero-title">
+                {hero.title}
+              </h1>
+              {state === "pendant" && hasLive5v5 ? (
+                <span
+                  data-testid="home-live-badge"
+                  className="inline-flex shrink-0 items-center rounded-md border border-amber-200/80 bg-gradient-to-r from-red-600 to-amber-500 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-white shadow-[0_0_16px_rgba(245,158,11,0.45)]"
+                >
+                  Live
+                </span>
+              ) : null}
+            </div>
             <p className="text-sm text-slate-200">{hero.subtitle}</p>
             {selectedTeam && (
               <div className="flex items-center gap-2 text-xs text-emerald-200 pr-1">

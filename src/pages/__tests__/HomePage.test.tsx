@@ -5,10 +5,12 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import type { Match } from "../../api/match";
+import type { ChallengeJ1MomentumEntry } from "../../api/challenge";
 
 let HomePage: typeof import("../HomePage").default;
 let mockMatches: Match[] = [];
 let mockMeals: { mealOfDay: { dateTime: string | null; message?: string | null } | null } | null = null;
+let mockChallengeJ1Momentum: ChallengeJ1MomentumEntry[] = [];
 const mockNavigate = vi.fn();
 let dateNowSpy: ReturnType<typeof vi.spyOn> | null = null;
 let mockSelectedTeam: {
@@ -35,6 +37,14 @@ vi.mock("../../hooks/useTeams", () => ({
 vi.mock("../../hooks/useMeals", () => ({
   useMeals: () => ({
     data: mockMeals,
+  }),
+}));
+
+vi.mock("../../hooks/useChallengeJ1Momentum", () => ({
+  useChallengeJ1Momentum: () => ({
+    data: mockChallengeJ1Momentum,
+    isLoading: false,
+    isError: false,
   }),
 }));
 
@@ -71,6 +81,7 @@ async function renderHome(simulatedNow: string) {
 beforeEach(() => {
   mockNavigate.mockReset();
   mockMeals = { mealOfDay: null };
+  mockChallengeJ1Momentum = [];
   mockSelectedTeam = {
     selectedTeam: null,
     setSelectedTeam: vi.fn(),
@@ -142,6 +153,54 @@ describe("HomePage dynamique", () => {
 
     screen.getByTestId("home-momentum-card-m-live").click();
     expect(mockNavigate).toHaveBeenCalledWith("/matches/m-live");
+  });
+
+  it("affiche le badge Live quand un match 5v5 est ongoing", async () => {
+    mockMatches = [
+      {
+        id: "m-live",
+        date: "2026-01-17T14:00:00Z",
+        teamA: "C",
+        teamB: "D",
+        status: "ongoing",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+      },
+    ];
+
+    await renderHome("2026-01-17T14:30:00Z");
+
+    expect(await screen.findByTestId("home-live-badge")).toHaveTextContent(/live/i);
+  });
+
+  it("masque le badge Live s'il n'y a pas de 5v5 ongoing", async () => {
+    mockMatches = [
+      {
+        id: "m-finished",
+        date: "2026-01-17T12:00:00Z",
+        teamA: "Rennes",
+        teamB: "Paris",
+        status: "finished",
+        scoreA: 2,
+        scoreB: 1,
+        competitionType: "5v5",
+      },
+      {
+        id: "m-next",
+        date: "2026-01-17T16:00:00Z",
+        teamA: "Lyon",
+        teamB: "Angers",
+        status: "planned",
+        scoreA: null,
+        scoreB: null,
+        competitionType: "5v5",
+      },
+    ];
+
+    await renderHome("2026-01-17T14:30:00Z");
+
+    expect(screen.queryByTestId("home-live-badge")).not.toBeInTheDocument();
   });
 
 
@@ -411,4 +470,144 @@ describe("HomePage dynamique", () => {
     const ticker = await screen.findByTestId("home-focus-ticker");
     expect(ticker.textContent).toContain("terminé");
   });
+  it("J1 uses challenge momentum source, not legacy challenge matches", async () => {
+    mockMatches = [
+      {
+        id: "m5v5-live",
+        date: "2026-01-17T14:00:00Z",
+        teamA: "A",
+        teamB: "B",
+        status: "ongoing",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+      },
+      {
+        id: "m-challenge-legacy",
+        date: "2026-01-17T14:10:00Z",
+        teamA: "Legacy Team",
+        teamB: "Challenge",
+        status: "ongoing",
+        scoreA: null,
+        scoreB: null,
+        competitionType: "challenge",
+      },
+    ];
+    mockChallengeJ1Momentum = [
+      {
+        teamId: "77",
+        teamName: "Momentum Team",
+        teamLogoUrl: null,
+        slotStart: "2026-01-17T14:05:00Z",
+        slotEnd: "2026-01-17T14:45:00Z",
+        status: "ongoing",
+        startedAt: "2026-01-17T14:05:00Z",
+        finishedAt: null,
+      },
+    ];
+
+    await renderHome("2026-01-17T14:30:00Z");
+
+    const smallGlace = await screen.findByTestId("home-now-smallglace");
+    expect(within(smallGlace).getByText("Momentum Team")).toBeInTheDocument();
+    expect(within(smallGlace).queryByText("Legacy Team")).not.toBeInTheDocument();
+  });
+
+  it("J1 small-glace focuses ongoing, then planned, then finished", async () => {
+    mockMatches = [
+      {
+        id: "m5v5-live",
+        date: "2026-01-17T14:00:00Z",
+        teamA: "A",
+        teamB: "B",
+        status: "ongoing",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+      },
+    ];
+    mockChallengeJ1Momentum = [
+      {
+        teamId: "11",
+        teamName: "Planned Team",
+        teamLogoUrl: null,
+        slotStart: "2026-01-17T14:20:00Z",
+        slotEnd: "2026-01-17T15:00:00Z",
+        status: "planned",
+        startedAt: null,
+        finishedAt: null,
+      },
+      {
+        teamId: "12",
+        teamName: "Ongoing Team",
+        teamLogoUrl: null,
+        slotStart: "2026-01-17T14:10:00Z",
+        slotEnd: "2026-01-17T14:50:00Z",
+        status: "ongoing",
+        startedAt: "2026-01-17T14:10:00Z",
+        finishedAt: null,
+      },
+      {
+        teamId: "13",
+        teamName: "Finished Team",
+        teamLogoUrl: null,
+        slotStart: "2026-01-17T13:10:00Z",
+        slotEnd: "2026-01-17T13:50:00Z",
+        status: "finished",
+        startedAt: "2026-01-17T13:10:00Z",
+        finishedAt: "2026-01-17T13:50:00Z",
+      },
+    ];
+
+    await renderHome("2026-01-17T14:30:00Z");
+
+    const smallGlace = await screen.findByTestId("home-now-smallglace");
+    const focusMarker = within(smallGlace).getByTestId("home-momentum-focus");
+    const focusedCard = focusMarker.closest('[data-testid^="home-momentum-card-"]') as HTMLElement;
+    expect(focusedCard).toHaveAttribute("data-testid", "home-momentum-card-challenge-12");
+  });
+
+  it("J2/J3 small-glace stays on 3v3 and ignores J1 momentum dataset", async () => {
+    mockMatches = [
+      {
+        id: "m5v5-live-j2",
+        date: "2026-01-17T09:00:00Z",
+        teamA: "A",
+        teamB: "B",
+        status: "ongoing",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+      },
+      {
+        id: "m-3v3",
+        date: "2026-01-18T10:00:00Z",
+        teamA: "3v3 Team",
+        teamB: "Opponent",
+        status: "planned",
+        scoreA: null,
+        scoreB: null,
+        competitionType: "3v3",
+      },
+    ];
+    mockChallengeJ1Momentum = [
+      {
+        teamId: "77",
+        teamName: "Momentum Team",
+        teamLogoUrl: null,
+        slotStart: "2026-01-17T14:05:00Z",
+        slotEnd: "2026-01-17T14:45:00Z",
+        status: "ongoing",
+        startedAt: "2026-01-17T14:05:00Z",
+        finishedAt: null,
+      },
+    ];
+
+    await renderHome("2026-01-18T10:30:00Z");
+
+    const smallGlace = await screen.findByTestId("home-now-smallglace");
+    expect(within(smallGlace).getByText("3v3 Team")).toBeInTheDocument();
+    expect(within(smallGlace).queryByText("Momentum Team")).not.toBeInTheDocument();
+  });
 });
+

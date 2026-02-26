@@ -51,6 +51,17 @@ export type ChallengeVitesseJ3Response = {
   winnerId?: string | null;
 };
 
+export type ChallengeJ1MomentumEntry = {
+  teamId: string;
+  teamName: string;
+  teamLogoUrl: string | null;
+  slotStart: string;
+  slotEnd: string;
+  status: "planned" | "ongoing" | "finished";
+  startedAt: string | null;
+  finishedAt: string | null;
+};
+
 const API_BASE_URL = getApiBaseUrl();
 
 export async function fetchClassementGlobalChallenge(): Promise<ClassementGlobalEntry[]> {
@@ -75,5 +86,11 @@ export async function fetchChallengeAll(params?: { teamId?: string | null }): Pr
 export async function fetchChallengeVitesseJ3(): Promise<ChallengeVitesseJ3Response> {
   const res = await fetch(`${API_BASE_URL}/challenge/vitesse/j3`);
   if (!res.ok) throw new Error("Erreur lors du chargement du challenge vitesse J3");
+  return res.json();
+}
+
+export async function fetchChallengeJ1Momentum(): Promise<ChallengeJ1MomentumEntry[]> {
+  const res = await fetch(`${API_BASE_URL}/challenge/j1/momentum`);
+  if (!res.ok) throw new Error("Erreur lors du chargement du momentum challenge J1");
   return res.json();
 }

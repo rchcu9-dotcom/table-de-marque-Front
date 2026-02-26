@@ -88,6 +88,14 @@ function dayKeyFromDate(date: string) {
   return new Date(date).toISOString().split("T")[0];
 }
 
+function hasStartedDay(matches: Match[]) {
+  return matches.some((m) => m.status === "ongoing" || m.status === "finished");
+}
+
+function isFinishedDay(matches: Match[]) {
+  return matches.length > 0 && matches.every((m) => m.status === "finished");
+}
+
 function pickTeamLogo(matches: Match[], focusTeam: string, fallback?: string | null) {
   const needle = normalizeTeamName(focusTeam);
   for (const m of matches) {
@@ -135,20 +143,42 @@ export default function TeamPage() {
     const data = players.data;
     return Array.isArray(data) ? data : [];
   }, [players.data]);
-  const grouped = React.useMemo(() => {
-    const groups = groupByDay(filtered);
+  const all5v5 = React.useMemo(
+    () => (matches ?? []).filter((m) => (m.competitionType ?? "5v5") === "5v5"),
+    [matches],
+  );
+  const groupedGlobal5v5 = React.useMemo(() => {
+    const groups = groupByDay(all5v5);
     return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [filtered]);
-  const dayKeys = grouped.map(([day]) => day);
-  const jour1 = dayKeys[0];
-  const jour2 = dayKeys[1];
-  const jour3 = dayKeys[2];
+  }, [all5v5]);
+  const globalDayKeys = groupedGlobal5v5.map(([day]) => day);
+  const jour1Global = globalDayKeys[0];
+  const jour2Global = globalDayKeys[1];
+  const jour3Global = globalDayKeys[2];
+  const j1MatchesGlobal = React.useMemo(
+    () => all5v5.filter((m) => dayKeyFromDate(m.date) === jour1Global),
+    [all5v5, jour1Global],
+  );
+  const j2MatchesGlobal = React.useMemo(
+    () => all5v5.filter((m) => dayKeyFromDate(m.date) === jour2Global),
+    [all5v5, jour2Global],
+  );
+  const j3MatchesGlobal = React.useMemo(
+    () => all5v5.filter((m) => dayKeyFromDate(m.date) === jour3Global),
+    [all5v5, jour3Global],
+  );
+  const j1FinishedGlobal = isFinishedDay(j1MatchesGlobal);
+  const j2FinishedGlobal = isFinishedDay(j2MatchesGlobal);
+  const j3StartedGlobal = hasStartedDay(j3MatchesGlobal);
   const filtered5v5 = React.useMemo(
     () => filtered.filter((m) => (m.competitionType ?? "5v5") === "5v5"),
     [filtered],
   );
-  const j1MatchSample = filtered5v5.find((m) => dayKeyFromDate(m.date) === jour1);
-  const j2MatchSample = filtered5v5.find((m) => dayKeyFromDate(m.date) === jour2);
+  const showJ1 = !!jour1Global;
+  const showJ2 = !!jour2Global && j1FinishedGlobal;
+  const showJ3 = !!jour3Global && (j2FinishedGlobal || j3StartedGlobal);
+  const j1MatchSample = filtered5v5.find((m) => dayKeyFromDate(m.date) === jour1Global);
+  const j2MatchSample = filtered5v5.find((m) => dayKeyFromDate(m.date) === jour2Global);
   const pouleCodeJ1 = j1MatchSample?.pouleCode ?? j1MatchSample?.pouleName;
   const pouleCodeJ2 = j2MatchSample?.pouleCode ?? j2MatchSample?.pouleName;
 
@@ -160,8 +190,8 @@ export default function TeamPage() {
       square.ranking.some((row) => normalizeTeamName(row.team?.name) === normalizeTeamName(teamName)),
     );
     const fallbackCode =
-      filtered5v5.find((m) => dayKeyFromDate(m.date) === jour3)?.pouleCode ??
-      filtered5v5.find((m) => dayKeyFromDate(m.date) === jour3)?.pouleName;
+      filtered5v5.find((m) => dayKeyFromDate(m.date) === jour3Global)?.pouleCode ??
+      filtered5v5.find((m) => dayKeyFromDate(m.date) === jour3Global)?.pouleName;
     const byCode = fallbackCode ? squares.find((square) => square.dbCode === fallbackCode) : undefined;
     const targetSquare = byTeam ?? byCode ?? squares.find((square) => square.ranking.length > 0) ?? squares[0];
 
@@ -197,7 +227,7 @@ export default function TeamPage() {
   const classementJ2 = useQuery({
     queryKey: ["classement", "team", teamName, "J2", pouleCodeJ2],
     queryFn: () => fetchClassementByPoule(pouleCodeJ2!),
-    enabled: !!pouleCodeJ2,
+    enabled: !!pouleCodeJ2 && showJ2,
     staleTime: 5 * 60_000,
   });
   const handleMatchSelect = React.useCallback(
@@ -359,9 +389,9 @@ export default function TeamPage() {
         <section className="space-y-4 flex flex-col">
           <h3 className="text-lg font-semibold text-slate-50">Classements</h3>
 
-          {jour1 && (
+          {showJ1 && (
             <Card className="order-3 bg-white/5 border-slate-800 backdrop-blur space-y-3" data-testid="team-classement-j1">
-              <div className="text-sm font-semibold text-slate-100">Jour 1 - {formatDay(jour1)}</div>
+              <div className="text-sm font-semibold text-slate-100">Jour 1 - {jour1Global ? formatDay(jour1Global) : "-"}</div>
               <DayClassement
                 title="Classement 5v5"
                 icon={icon5v5}
@@ -408,9 +438,9 @@ export default function TeamPage() {
             </Card>
           )}
 
-          {jour2 && (
+          {showJ2 && (
             <Card className="order-2 bg-white/5 border-slate-800 backdrop-blur space-y-3" data-testid="team-classement-j2">
-              <div className="text-sm font-semibold text-slate-100">Jour 2 - {formatDay(jour2)}</div>
+              <div className="text-sm font-semibold text-slate-100">Jour 2 - {jour2Global ? formatDay(jour2Global) : "-"}</div>
               <DayClassement
                 title="Classement 5v5"
                 icon={icon5v5}
@@ -422,9 +452,9 @@ export default function TeamPage() {
             </Card>
           )}
 
-          {jour3 && (
+          {showJ3 && (
             <Card className="order-1 bg-white/5 border-slate-800 backdrop-blur space-y-3" data-testid="team-classement-j3">
-              <div className="text-sm font-semibold text-slate-100">Jour 3 - {formatDay(jour3)}</div>
+              <div className="text-sm font-semibold text-slate-100">Jour 3 - {jour3Global ? formatDay(jour3Global) : "-"}</div>
               <DayClassement
                 title="Classement Final 5v5"
                 icon={icon5v5}

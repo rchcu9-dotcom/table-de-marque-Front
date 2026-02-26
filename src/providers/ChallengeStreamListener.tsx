@@ -7,6 +7,7 @@ import type {
   ChallengeEquipeResponse,
   ClassementGlobalEntry,
   ChallengeVitesseJ3Response,
+  ChallengeJ1MomentumEntry,
 } from "../api/challenge";
 
 type ChallengeSnapshot = {
@@ -15,6 +16,7 @@ type ChallengeSnapshot = {
   classementGlobal?: ClassementGlobalEntry[];
   classementByAtelier?: Record<string, unknown>;
   vitesseJ3?: ChallengeVitesseJ3Response;
+  j1Momentum?: ChallengeJ1MomentumEntry[];
 };
 
 type ChallengeStreamPayload =
@@ -86,6 +88,12 @@ export function ChallengeStreamListener() {
               snapshot.vitesseJ3,
             );
           }
+          if (snapshot.j1Momentum) {
+            queryClient.setQueryData<ChallengeJ1MomentumEntry[]>(
+              ["challenge", "momentum", "j1"],
+              snapshot.j1Momentum,
+            );
+          }
 
           const challengeQueries = queryClient.getQueryCache().findAll({
             predicate: (query) => query.queryKey[0] === "challenge",
@@ -122,6 +130,11 @@ export function ChallengeStreamListener() {
 
             if (scope === "ateliers" && snapshot.ateliers) {
               queryClient.setQueryData(key, snapshot.ateliers);
+              return;
+            }
+
+            if (scope === "momentum" && key[2] === "j1" && snapshot.j1Momentum) {
+              queryClient.setQueryData<ChallengeJ1MomentumEntry[]>(key, snapshot.j1Momentum);
               return;
             }
 
