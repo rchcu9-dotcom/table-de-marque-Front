@@ -16,6 +16,40 @@ import { pickTournamentState, tournamentStateLabel } from "./utils/tournamentSta
 
 const byDateAsc = (a: Match, b: Match) => new Date(a.date).getTime() - new Date(b.date).getTime();
 
+const normalizeTeamKey = (value?: string | null) => value?.trim().toLowerCase() ?? "";
+
+function dayKeyFromMatch(match: Match) {
+  return match.jour === "J1" || match.jour === "J2" || match.jour === "J3" ? match.jour : null;
+}
+
+function hasStartedDay(matches: Match[]) {
+  return matches.some((m) => m.status === "ongoing" || m.status === "finished");
+}
+
+function isFinishedDay(matches: Match[]) {
+  return matches.length > 0 && matches.every((m) => m.status === "finished");
+}
+
+function squareContainsTeam(square: FinalSquare, selectedTeamId?: string | null) {
+  const targetKey = normalizeTeamKey(selectedTeamId);
+  if (!targetKey) return true;
+
+  const matchesTeam = (team?: { id?: string | null; name?: string | null } | null) =>
+    normalizeTeamKey(team?.id) === targetKey || normalizeTeamKey(team?.name) === targetKey;
+
+  if (square.ranking.some((row) => matchesTeam(row.team))) {
+    return true;
+  }
+
+  const squareMatches = [
+    ...square.semiFinals,
+    ...(square.finalMatch ? [square.finalMatch] : []),
+    ...(square.thirdPlaceMatch ? [square.thirdPlaceMatch] : []),
+  ];
+
+  return squareMatches.some((match) => matchesTeam(match.teamA) || matchesTeam(match.teamB));
+}
+
 const BRASSAGE = [
   { code: "A", title: "Sam Poule A", phase: "Brassage" },
   { code: "B", title: "Sam Poule B", phase: "Brassage" },
@@ -33,6 +67,7 @@ const QUALIF = [
 export default function Tournament5v5Page() {
   const navigate = useNavigate();
   const { selectedTeam } = useSelectedTeam();
+  const selectedTeamId = selectedTeam?.id ?? null;
   const [nowMs, setNowMs] = React.useState<number | null>(null);
   const { data: momentum5v5 } = useMomentumMatches({
     competitionType: "5v5",
@@ -106,6 +141,33 @@ export default function Tournament5v5Page() {
     if (last?.jour === "J2" || last?.jour === "J3") return last.jour;
     return "J1";
   }, [allMatches5v5]);
+  const j1MatchesGlobal = React.useMemo(
+    () => (allMatches5v5 ?? []).filter((match) => dayKeyFromMatch(match) === "J1"),
+    [allMatches5v5],
+  );
+  const j2MatchesGlobal = React.useMemo(
+    () => (allMatches5v5 ?? []).filter((match) => dayKeyFromMatch(match) === "J2"),
+    [allMatches5v5],
+  );
+  const j3MatchesGlobal = React.useMemo(
+    () => (allMatches5v5 ?? []).filter((match) => dayKeyFromMatch(match) === "J3"),
+    [allMatches5v5],
+  );
+  const j1FinishedGlobally = React.useMemo(() => isFinishedDay(j1MatchesGlobal), [j1MatchesGlobal]);
+  const j2FinishedGlobally = React.useMemo(() => isFinishedDay(j2MatchesGlobal), [j2MatchesGlobal]);
+  const j3StartedGlobally = React.useMemo(() => hasStartedDay(j3MatchesGlobal), [j3MatchesGlobal]);
+  const showJ1 = true;
+  const showJ2 = j1FinishedGlobally;
+  const showJ3 = j2FinishedGlobally || j3StartedGlobally;
+  const visibleDays = React.useMemo(
+    () => ({ J1: showJ1, J2: showJ2, J3: showJ3 }),
+    [showJ1, showJ2, showJ3],
+  );
+  const preferredVisibleDay = React.useMemo<"J1" | "J2" | "J3">(() => {
+    if (visibleDays[activeDay]) return activeDay;
+    if (showJ2) return "J2";
+    return "J1";
+  }, [activeDay, showJ2, visibleDays]);
   const highlightTeams = React.useMemo(() => {
     const current = momentum5v5?.find((m) => m.status === "ongoing");
     if (!current) return new Set<string>();
@@ -150,15 +212,20 @@ export default function Tournament5v5Page() {
     hasAutoScrolled.current = true;
   }, [targetMatchId, matches5v5]);
 
-  const liveJ3SquareCode = React.useMemo(() => {
+  const visibleJ3Squares = React.useMemo(() => {
     const squares = j3FinalSquares?.carres ?? [];
-    const liveSquare = squares.find((square) =>
+    if (!selectedTeamId) return squares;
+    return squares.filter((square) => squareContainsTeam(square, selectedTeamId));
+  }, [j3FinalSquares, selectedTeamId]);
+
+  const liveJ3SquareCode = React.useMemo(() => {
+    const liveSquare = visibleJ3Squares.find((square) =>
       [...square.semiFinals, square.finalMatch, square.thirdPlaceMatch]
         .filter((m): m is FinalSquareMatch => Boolean(m))
         .some((m) => m.status === "ongoing"),
     );
     return liveSquare?.dbCode ?? null;
-  }, [j3FinalSquares]);
+  }, [visibleJ3Squares]);
 
   useEffect(() => {
     if (!liveJ3SquareCode) return;
@@ -174,9 +241,14 @@ export default function Tournament5v5Page() {
   useEffect(() => {
     if (filtersInitialized.current) return;
     if (!allMatches5v5?.length) return;
-    setSelectedDay(activeDay);
+    setSelectedDay(preferredVisibleDay);
     filtersInitialized.current = true;
-  }, [activeDay, allMatches5v5]);
+  }, [allMatches5v5, preferredVisibleDay]);
+
+  useEffect(() => {
+    if (visibleDays[selectedDay]) return;
+    setSelectedDay(preferredVisibleDay);
+  }, [preferredVisibleDay, selectedDay, visibleDays]);
 
   const topBlockRef = useRef<HTMLDivElement | null>(null);
 
@@ -198,9 +270,10 @@ export default function Tournament5v5Page() {
 
   useEffect(() => {
     recomputeLayout();
-  }, [recomputeLayout, momentum5v5?.length]);
+  }, [recomputeLayout, momentum5v5?.length, showJ2, showJ3]);
 
   const handleSelectDay = (day: "J1" | "J2" | "J3") => {
+    if (!visibleDays[day]) return;
     setSelectedDay(day);
     const target = daySectionRefs.current[day];
     if (target) {
@@ -251,8 +324,9 @@ export default function Tournament5v5Page() {
                     selectedDay === "J1"
                       ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60"
                       : "bg-slate-800 text-slate-200 border-slate-600"
-                  }`}
+                  } ${!showJ1 ? "opacity-40 cursor-not-allowed" : ""}`}
                   onClick={() => handleSelectDay("J1")}
+                  disabled={!showJ1}
                 >
                   Sam
                 </button>
@@ -261,8 +335,9 @@ export default function Tournament5v5Page() {
                     selectedDay === "J2"
                       ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60"
                       : "bg-slate-800 text-slate-200 border-slate-600"
-                  }`}
+                  } ${!showJ2 ? "opacity-40 cursor-not-allowed" : ""}`}
                   onClick={() => handleSelectDay("J2")}
+                  disabled={!showJ2}
                 >
                   Dim
                 </button>
@@ -271,8 +346,9 @@ export default function Tournament5v5Page() {
                     selectedDay === "J3"
                       ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60"
                       : "bg-slate-800 text-slate-200 border-slate-600"
-                  }`}
+                  } ${!showJ3 ? "opacity-40 cursor-not-allowed" : ""}`}
                   onClick={() => handleSelectDay("J3")}
+                  disabled={!showJ3}
                 >
                   Lun
                 </button>
@@ -305,6 +381,7 @@ export default function Tournament5v5Page() {
               desktopJustify
             />
           </section>
+          {showJ3 && (
           <section
             className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
             ref={(el) => {
@@ -322,7 +399,7 @@ export default function Tournament5v5Page() {
             )}
             {!isJ3SquaresLoading && !isJ3SquaresError && (
               <div className="grid md:grid-cols-2 gap-4">
-                {(j3FinalSquares?.carres ?? []).map((carre) => (
+                {visibleJ3Squares.map((carre) => (
                   <J3FinalSquareCard
                     key={carre.dbCode}
                     square={carre}
@@ -333,7 +410,9 @@ export default function Tournament5v5Page() {
               </div>
             )}
           </section>
+          )}
 
+          {showJ2 && (
           <section
             className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"
             ref={(el) => {
@@ -358,6 +437,7 @@ export default function Tournament5v5Page() {
               ))}
             </div>
           </section>
+          )}
 
           <section
             className="rounded-xl border border-slate-800 bg-slate-900/60 p-4"

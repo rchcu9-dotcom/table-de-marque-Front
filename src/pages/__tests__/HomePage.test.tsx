@@ -78,6 +78,16 @@ async function renderHome(simulatedNow: string) {
   render(<HomePage />, { wrapper: createWrapper() });
 }
 
+function getHeroSection() {
+  return screen.getByTestId("home-hero-title").closest("section") as HTMLElement;
+}
+
+function getHeroSubtitle() {
+  return within(getHeroSection()).getByText(
+    (_content, element) => element?.tagName.toLowerCase() === "p" && !element.hasAttribute("data-testid"),
+  );
+}
+
 beforeEach(() => {
   mockNavigate.mockReset();
   mockMeals = { mealOfDay: null };
@@ -439,6 +449,185 @@ describe("HomePage dynamique", () => {
 
     expect(await screen.findByTestId("home-hero-title")).toHaveTextContent("Ça joue !");
     expect(screen.getByTestId("home-hero-commentary")).toHaveTextContent("Prochain match en préparation");
+  });
+
+  it("affiche 'En cours' dans le sous-titre du hero pendant quand un match 5v5 est ongoing", async () => {
+    mockMatches = [
+      {
+        id: "m-finished",
+        date: "2026-01-17T12:00:00Z",
+        teamA: "Lyon",
+        teamB: "Paris",
+        status: "finished",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+      },
+      {
+        id: "m-live",
+        date: "2026-01-17T14:00:00Z",
+        teamA: "Rennes",
+        teamB: "Meudon",
+        status: "ongoing",
+        scoreA: 2,
+        scoreB: 1,
+        competitionType: "5v5",
+      },
+      {
+        id: "m-next",
+        date: "2026-01-17T16:00:00Z",
+        teamA: "Nice",
+        teamB: "Lille",
+        status: "planned",
+        scoreA: null,
+        scoreB: null,
+        competitionType: "5v5",
+      },
+    ];
+
+    await renderHome("2026-01-17T14:30:00Z");
+
+    expect(await screen.findByTestId("home-hero-title")).toHaveTextContent("Ça joue !");
+    expect(getHeroSubtitle()).toHaveTextContent("En cours : Rennes vs Meudon");
+  });
+
+  it("affiche 'Prochain match' dans le sous-titre du hero pendant sans match 5v5 ongoing", async () => {
+    mockMatches = [
+      {
+        id: "m-finished",
+        date: "2026-01-17T12:00:00Z",
+        teamA: "Rennes",
+        teamB: "Paris",
+        status: "finished",
+        scoreA: 2,
+        scoreB: 1,
+        competitionType: "5v5",
+      },
+      {
+        id: "m-next",
+        date: "2026-01-17T16:00:00Z",
+        teamA: "Lyon",
+        teamB: "Angers",
+        status: "planned",
+        scoreA: null,
+        scoreB: null,
+        competitionType: "5v5",
+      },
+    ];
+
+    await renderHome("2026-01-17T14:30:00Z");
+
+    expect(await screen.findByTestId("home-hero-title")).toHaveTextContent("Ça joue !");
+    expect(getHeroSubtitle()).toHaveTextContent("Prochain match : Lyon vs Angers");
+  });
+
+  it("avec une équipe suivie, garde le sous-titre match et affiche la ligne 'Équipe suivie'", async () => {
+    mockSelectedTeam = {
+      selectedTeam: { id: "rennes", name: "Rennes", logoUrl: "logo-rennes" },
+      setSelectedTeam: vi.fn(),
+      toggleMuted: vi.fn(),
+    };
+    mockMatches = [
+      {
+        id: "m-live",
+        date: "2026-01-17T14:00:00Z",
+        teamA: "Paris",
+        teamB: "Lyon",
+        status: "ongoing",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+      },
+    ];
+
+    await renderHome("2026-01-17T14:30:00Z");
+
+    const heroSection = getHeroSection();
+    await waitFor(() => {
+      expect(getHeroSubtitle()).toHaveTextContent("En cours : Paris vs Lyon");
+    });
+    expect(within(heroSection).queryByText(/^Rennes$/)).not.toBeInTheDocument();
+    expect(within(heroSection).getByText(/Équipe suivie : Rennes/i)).toBeInTheDocument();
+  });
+
+  it("utilise les placeholders du hero si les équipes du match sont absentes", async () => {
+    mockMatches = [
+      {
+        id: "m-live",
+        date: "2026-01-17T14:00:00Z",
+        teamA: "",
+        teamB: undefined as unknown as string,
+        status: "ongoing",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+      },
+    ];
+
+    await renderHome("2026-01-17T14:30:00Z");
+
+    expect(await screen.findByTestId("home-hero-title")).toHaveTextContent("Ça joue !");
+    expect(getHeroSubtitle()).toHaveTextContent("En cours : Equipe A vs Equipe B");
+  });
+
+  it("préserve l'état hero avant avec le premier match planifié", async () => {
+    mockMatches = [
+      {
+        id: "m-first",
+        date: "2026-01-17T10:00:00Z",
+        teamA: "Rennes",
+        teamB: "Paris",
+        status: "planned",
+        scoreA: null,
+        scoreB: null,
+        competitionType: "5v5",
+      },
+      {
+        id: "m-second",
+        date: "2026-01-17T11:00:00Z",
+        teamA: "Lyon",
+        teamB: "Lille",
+        status: "planned",
+        scoreA: null,
+        scoreB: null,
+        competitionType: "5v5",
+      },
+    ];
+
+    await renderHome("2026-01-17T09:00:00Z");
+
+    expect(await screen.findByTestId("home-hero-title")).toHaveTextContent("Prêts à jouer !");
+    expect(getHeroSubtitle()).toHaveTextContent("Rennes vs Paris");
+  });
+
+  it("préserve l'état hero après avec le dernier match terminé", async () => {
+    mockMatches = [
+      {
+        id: "m-finished-1",
+        date: "2026-01-17T10:00:00Z",
+        teamA: "Rennes",
+        teamB: "Paris",
+        status: "finished",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+      },
+      {
+        id: "m-finished-2",
+        date: "2026-01-17T12:00:00Z",
+        teamA: "Lyon",
+        teamB: "Lille",
+        status: "finished",
+        scoreA: 3,
+        scoreB: 2,
+        competitionType: "5v5",
+      },
+    ];
+
+    await renderHome("2026-01-17T18:00:00Z");
+
+    expect(await screen.findByTestId("home-hero-title")).toHaveTextContent("Clap de fin !");
+    expect(getHeroSubtitle()).toHaveTextContent("Lyon vs Lille");
   });
 
   it("conserve les accents dans le ticker", async () => {

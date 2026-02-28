@@ -88,6 +88,13 @@ function recentMatches(matches: Match[], competition: "5v5" | "3v3" | "challenge
     .sort(byDateAsc);
 }
 
+function formatHeroMatchLine(match: Match | null) {
+  if (!match) return "Match non disponible";
+  const teamA = match.teamA?.trim() || "Equipe A";
+  const teamB = match.teamB?.trim() || "Equipe B";
+  return `${teamA} vs ${teamB}`;
+}
+
 function clampWindow(list: Match[], targetId: string | null, desired = 3) {
   if (list.length === 0) return [];
   if (list.length <= desired) return list;
@@ -762,12 +769,19 @@ const resolveMatchRoute = React.useCallback(
     [orderedSmallGlace, autoIndexSmallGlace],
   );
   const focusMatchForHero = React.useMemo(() => {
-  const sorted = [...matches5v5].sort(byDateAsc);
-  if (sorted.length === 0) return null;
-  if (state === "avant") return sorted[0];
-  if (state === "pendant") return sorted.find((m) => m.status === "ongoing") ?? null;
-  return sorted[sorted.length - 1];
-}, [matches5v5, state]);
+    const sorted = [...matches5v5].sort(byDateAsc);
+    if (sorted.length === 0) return null;
+    if (state === "avant") return sorted[0];
+    if (state === "pendant") {
+      return (
+        sorted.find((m) => m.status === "ongoing") ??
+        sorted.find((m) => m.status === "planned") ??
+        [...sorted].reverse().find((m) => m.status === "finished") ??
+        null
+      );
+    }
+    return sorted[sorted.length - 1];
+  }, [matches5v5, state]);
 
 const commentaryMatch = React.useMemo(() => {
   const ongoing = [...matches5v5].filter((m) => m.status === "ongoing").sort(byDateAsc);
@@ -784,14 +798,25 @@ const heroCommentary = React.useMemo(() => {
 }, [commentaryMatch, matches5v5, state]);
 
 const hero = React.useMemo(() => {
-  const focusLine = focusMatchForHero
-    ? `${focusMatchForHero.teamA?.trim() || "Equipe A"} vs ${focusMatchForHero.teamB?.trim() || "Equipe B"}`
-    : "Match non disponible";
+  let subtitle = "Match non disponible";
+
+  if (state === "pendant") {
+    if (focusMatchForHero?.status === "ongoing") {
+      subtitle = `En cours : ${formatHeroMatchLine(focusMatchForHero)}`;
+    } else if (focusMatchForHero?.status === "planned") {
+      subtitle = `Prochain match : ${formatHeroMatchLine(focusMatchForHero)}`;
+    } else if (focusMatchForHero?.status === "finished") {
+      subtitle = `Dernier match : ${formatHeroMatchLine(focusMatchForHero)}`;
+    }
+  } else {
+    subtitle = formatHeroMatchLine(focusMatchForHero);
+  }
+
   return {
     title: tournamentStateLabel(state),
-    subtitle: selectedTeam?.name ?? focusLine,
+    subtitle,
   };
-}, [focusMatchForHero, selectedTeam?.name, state]);
+}, [focusMatchForHero, state]);
 const tickerItems = React.useMemo(() => {
   const focus =
     [...matches5v5].filter((m) => m.status === "ongoing").sort(byDateAsc).pop() ??

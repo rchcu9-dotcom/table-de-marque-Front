@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useChallengeByEquipe } from "../hooks/useChallengeByEquipe";
+import { useChallengeJ1Momentum } from "../hooks/useChallengeJ1Momentum";
 import { useTeams } from "../hooks/useTeams";
 import type { ChallengeAttempt as Attempt } from "../api/challenge";
 import challengeIcon from "../assets/icons/nav/challenge.png";
@@ -17,6 +18,7 @@ export default function ChallengeEquipePage() {
   const { teamId } = useParams<{ teamId: string }>();
   const navigate = useNavigate();
   const { data, isLoading, isError } = useChallengeByEquipe(teamId);
+  const { data: challengeJ1Momentum } = useChallengeJ1Momentum();
   const { data: teams, refetch: refetchTeams } = useTeams();
 
   const [showVitesse, setShowVitesse] = React.useState(true);
@@ -47,6 +49,30 @@ export default function ChallengeEquipePage() {
     const shortName = team?.nameShort || team?.shortName;
     return shortName || team?.name || data?.equipeName || teamId || "Equipe";
   }, [team, data?.equipeName, teamId]);
+  const challengeStatus = React.useMemo(() => {
+    const entries = challengeJ1Momentum ?? [];
+    if (entries.length === 0) return null;
+
+    const keys = new Set(
+      [
+        teamId,
+        team?.id,
+        team?.name,
+        teamLabel,
+        data?.equipeName,
+      ]
+        .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+        .map((value) => value.trim().toLowerCase()),
+    );
+
+    const found = entries.find((entry) => {
+      const idKey = entry.teamId.trim().toLowerCase();
+      const nameKey = entry.teamName.trim().toLowerCase();
+      return keys.has(idKey) || keys.has(nameKey);
+    });
+
+    return found?.status ?? null;
+  }, [challengeJ1Momentum, data?.equipeName, team?.id, team?.name, teamId, teamLabel]);
 
   const teamMap = React.useMemo(() => {
     const map = new Map<string, { name: string; logoUrl?: string | null }>();
@@ -322,7 +348,7 @@ export default function ChallengeEquipePage() {
               </div>
               <div>
                 <h1 className="text-xl font-semibold text-white">{teamLabel}</h1>
-                {(data?.jour1 ?? []).length > 0 ? <span className="text-xs text-amber-200">En cours</span> : null}
+                {challengeStatus === "ongoing" ? <span className="text-xs text-amber-200">En cours</span> : null}
               </div>
             </div>
 

@@ -8,7 +8,9 @@ import HexBadge from "../components/ds/HexBadge";
 import DataTable from "../components/collections/DataTable";
 import HorizontalMatchSlider from "../components/collections/HorizontalMatchSlider";
 import MatchSummaryGrid from "../components/collections/MatchSummaryGrid";
-import { useClassement } from "../hooks/useClassement";
+import type { FinalSquare, FinalSquareMatch } from "../api/classement";
+import type { Match } from "../api/match";
+import { useClassement, useJ3FinalSquares } from "../hooks/useClassement";
 import icon5v5 from "../assets/icons/nav/fivev5.png";
 import icon3v3 from "../assets/icons/nav/threev3.png";
 import iconChallenge from "../assets/icons/nav/challenge.png";
@@ -20,20 +22,77 @@ const compIcon: Record<string, string> = {
   challenge: iconChallenge,
 };
 
+const normalizeTeamKey = (value?: string | null) => value?.trim().toLowerCase() ?? "";
+
+function toMatchFromFinalSquareMatch(match: FinalSquareMatch, square: FinalSquare): Match {
+  return {
+    id: match.id,
+    date: match.date,
+    teamA: match.teamA.name,
+    teamB: match.teamB.name,
+    teamALogo: match.teamA.logoUrl,
+    teamBLogo: match.teamB.logoUrl,
+    status: match.status,
+    scoreA: match.scoreA,
+    scoreB: match.scoreB,
+    competitionType: "5v5",
+    surface: "GG",
+    phase: "finales",
+    jour: "J3",
+    pouleCode: square.dbCode,
+    pouleName: square.label,
+  };
+}
+
+function getSquareMatches(square?: FinalSquare | null) {
+  if (!square) return [];
+  return [
+    ...square.semiFinals,
+    ...(square.finalMatch ? [square.finalMatch] : []),
+    ...(square.thirdPlaceMatch ? [square.thirdPlaceMatch] : []),
+  ];
+}
+
+function squareContainsTeams(square: FinalSquare, teamA: string, teamB: string) {
+  const squareTeamKeys = new Set<string>();
+  square.ranking.forEach((row) => {
+    if (row.team?.id) squareTeamKeys.add(normalizeTeamKey(row.team.id));
+    if (row.team?.name) squareTeamKeys.add(normalizeTeamKey(row.team.name));
+  });
+  getSquareMatches(square).forEach((match) => {
+    [match.teamA, match.teamB].forEach((team) => {
+      if (team.id) squareTeamKeys.add(normalizeTeamKey(team.id));
+      if (team.name) squareTeamKeys.add(normalizeTeamKey(team.name));
+    });
+  });
+  return squareTeamKeys.has(normalizeTeamKey(teamA)) && squareTeamKeys.has(normalizeTeamKey(teamB));
+}
+
+function formatSquareSuffix(label?: string | null) {
+  return (label ?? "").replace(/^carr[ée]\s+/i, "").trim();
+}
+
 export default function MatchDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data, isLoading, isError } = useMatch(id);
   const { data: allMatches } = useMatches();
+  const competitionType = (data?.competitionType ?? "5v5").toLowerCase();
+  const isJ3FiveV5 = competitionType === "5v5" && data?.jour === "J3";
   const classementKey = React.useMemo(
-    () => (data?.pouleCode || data?.pouleName || "").trim(),
-    [data],
+    () => (isJ3FiveV5 ? "" : (data?.pouleCode || data?.pouleName || "").trim()),
+    [data, isJ3FiveV5],
   );
   const {
     data: classement,
     isLoading: isClassementLoading,
     isError: isClassementError,
   } = useClassement(classementKey);
+  const {
+    data: j3FinalSquares,
+    isLoading: isJ3SquaresLoading,
+    isError: isJ3SquaresError,
+  } = useJ3FinalSquares();
 
   const pouleKey = (data?.pouleName || data?.pouleCode || "").trim().toLowerCase();
   const pouleMatches = React.useMemo(() => {
@@ -42,6 +101,37 @@ export default function MatchDetailPage() {
       .filter((m) => (m.pouleName || m.pouleCode || "").trim().toLowerCase() === pouleKey)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [allMatches, pouleKey]);
+  const currentJ3Square = React.useMemo(() => {
+    if (!isJ3FiveV5 || !data) return null;
+    const squares = j3FinalSquares?.carres ?? [];
+    if (squares.length === 0) return null;
+
+    const byMatchId = squares.find((square) => getSquareMatches(square).some((match) => match.id === data.id));
+    if (byMatchId) return byMatchId;
+
+    return squares.find((square) => squareContainsTeams(square, data.teamA, data.teamB)) ?? null;
+  }, [data, isJ3FiveV5, j3FinalSquares]);
+  const relatedMatches = React.useMemo(() => {
+    if (isJ3FiveV5) {
+      return getSquareMatches(currentJ3Square)
+        .map((match) => toMatchFromFinalSquareMatch(match, currentJ3Square!))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    }
+    return pouleMatches;
+  }, [currentJ3Square, isJ3FiveV5, pouleMatches]);
+  const j3ClassementRows = React.useMemo(() => {
+    if (!currentJ3Square) return [];
+    return [...currentJ3Square.ranking]
+      .sort((a, b) => a.place - b.place)
+      .map((row) => ({
+        rank: row.place,
+        place: row.place,
+        teamId: row.team?.id ?? `j3-${currentJ3Square.dbCode}-${row.place}`,
+        teamName: row.team?.name ?? "En attente du résultat",
+        teamLogoUrl: row.team?.logoUrl ?? null,
+        isPlaceholder: !row.team,
+      }));
+  }, [currentJ3Square]);
 
   if (isLoading) {
     return (
@@ -80,9 +170,9 @@ export default function MatchDetailPage() {
       finished: "info",
       deleted: "muted",
     };
-  const competitionType = (data.competitionType ?? "5v5").toLowerCase();
   const competitionIcon = compIcon[competitionType] ?? icon5v5;
   const hasClassement = competitionType === "5v5";
+  const contextLabel = isJ3FiveV5 ? currentJ3Square?.label : (data.pouleName || data.pouleCode);
   const breadcrumbs = [
     { label: "Accueil", path: "/" },
     { label: "Planning", path: "/planning" },
@@ -159,9 +249,9 @@ export default function MatchDetailPage() {
             />
           </div>
           <div className="text-base">{new Date(data.date).toLocaleString()}</div>
-          {(data.pouleName || data.pouleCode) && (
+          {contextLabel && (
             <div className="text-xs text-slate-400">
-              Poule {data.pouleName || data.pouleCode}
+              {isJ3FiveV5 ? contextLabel : `Poule ${contextLabel}`}
             </div>
           )}
 
@@ -192,15 +282,15 @@ export default function MatchDetailPage() {
         </div>
       </Card>
 
-      {pouleMatches.length > 0 && (
+      {relatedMatches.length > 0 && (
         <Card data-testid="summary-section">
           <div className="space-y-4">
             <div data-testid="summary-grid-teamA">
               <MatchSummaryGrid
-                matches={pouleMatches.filter(
+                matches={relatedMatches.filter(
                   (m) =>
-                    m.teamA.toLowerCase() === data.teamA.toLowerCase() ||
-                    m.teamB.toLowerCase() === data.teamA.toLowerCase(),
+                    normalizeTeamKey(m.teamA) === normalizeTeamKey(data.teamA) ||
+                    normalizeTeamKey(m.teamB) === normalizeTeamKey(data.teamA),
                 )}
                 currentMatchId={data.id}
                 focusTeam={data.teamA}
@@ -210,10 +300,10 @@ export default function MatchDetailPage() {
 
             <div data-testid="summary-grid-teamB">
               <MatchSummaryGrid
-                matches={pouleMatches.filter(
+                matches={relatedMatches.filter(
                   (m) =>
-                    m.teamA.toLowerCase() === data.teamB.toLowerCase() ||
-                    m.teamB.toLowerCase() === data.teamB.toLowerCase(),
+                    normalizeTeamKey(m.teamA) === normalizeTeamKey(data.teamB) ||
+                    normalizeTeamKey(m.teamB) === normalizeTeamKey(data.teamB),
                 )}
                 currentMatchId={data.id}
                 focusTeam={data.teamB}
@@ -232,23 +322,78 @@ export default function MatchDetailPage() {
             <span>Classement</span>
           </div>
           <div className="text-sm text-slate-300">
-            {classement?.pouleName ? `Poule ${classement.pouleName}` : ""}
+            {isJ3FiveV5
+              ? currentJ3Square?.label ?? ""
+              : classement?.pouleName ? `Poule ${classement.pouleName}` : ""}
           </div>
 
-          {isClassementLoading && (
+          {isJ3FiveV5 && isJ3SquaresLoading && (
+            <div className="flex items-center gap-2 text-slate-300 text-sm">
+              <Spinner />
+              <span>Chargement du classement du carré...</span>
+            </div>
+          )}
+
+          {!isJ3FiveV5 && isClassementLoading && (
             <div className="flex items-center gap-2 text-slate-300 text-sm">
               <Spinner />
               <span>Chargement du classement...</span>
             </div>
           )}
 
-          {isClassementError && (
+          {isJ3FiveV5 && isJ3SquaresError && (
+            <div className="text-red-400 text-sm">
+              Classement du carré indisponible.
+            </div>
+          )}
+
+          {isJ3FiveV5 && !isJ3SquaresLoading && !isJ3SquaresError && !currentJ3Square && (
+            <div className="text-red-400 text-sm">
+              Carré J3 introuvable pour ce match.
+            </div>
+          )}
+
+          {!isJ3FiveV5 && isClassementError && (
             <div className="text-red-400 text-sm">
               Classement indisponible.
             </div>
           )}
 
-          {classement && (
+          {isJ3FiveV5 && j3ClassementRows.length > 0 && (
+            <DataTable
+              items={j3ClassementRows}
+              columns={[
+                { key: "rank", label: "Pos" },
+                { key: "place", label: "Place" },
+                {
+                  key: "teamName",
+                  label: "Equipe",
+                  render: (_value, item) =>
+                    item.isPlaceholder ? (
+                      <span className="text-slate-400">{item.teamName}</span>
+                    ) : (
+                      <button
+                        onClick={() => navigate(`/teams/${item.teamId}`)}
+                        className="flex items-center gap-3 hover:underline transition text-left"
+                      >
+                        {item.teamLogoUrl ? (
+                          <img
+                            src={item.teamLogoUrl}
+                            alt={item.teamName}
+                            className="h-6 w-6 rounded-full object-cover bg-slate-800"
+                          />
+                        ) : (
+                          <div className="h-6 w-6 rounded-full bg-slate-800" />
+                        )}
+                        <span>{item.teamName}</span>
+                      </button>
+                    ),
+                },
+              ]}
+            />
+          )}
+
+          {!isJ3FiveV5 && classement && (
             <DataTable
               items={classement.equipes}
               columns={[
@@ -293,19 +438,23 @@ export default function MatchDetailPage() {
       </Card>
       )}
 
-      {pouleMatches.length > 0 && (
+      {relatedMatches.length > 0 && (
         <Card data-testid="poule-slider">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-base font-semibold text-slate-100">
                 <img src={competitionIcon} alt={data.competitionType ?? "5v5"} className="h-6 w-6 rounded-md bg-slate-800 object-cover" />
-                <span>Matchs de la poule {pouleMatches[0]?.pouleName || pouleMatches[0]?.pouleCode || ""}</span>
+                <span>
+                  {isJ3FiveV5
+                    ? `Matchs du carré ${formatSquareSuffix(currentJ3Square?.label)}`
+                    : `Matchs de la poule ${relatedMatches[0]?.pouleName || relatedMatches[0]?.pouleCode || ""}`}
+                </span>
               </div>
               <div className="text-xs text-slate-500">Glissez horizontalement</div>
             </div>
 
             <HorizontalMatchSlider
-              matches={pouleMatches}
+              matches={relatedMatches}
               currentMatchId={data.id}
               onSelect={(targetId) => navigate(`/matches/${targetId}`)}
               withDiagonalBg
