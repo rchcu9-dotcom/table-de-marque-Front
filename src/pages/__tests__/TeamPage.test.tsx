@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { Match } from "../../api/match";
 import type { MealsResponse } from "../../api/meals";
@@ -427,6 +427,54 @@ describe("TeamPage", () => {
     expect(within(ongoingCard).getByText(/En cours/i)).toBeInTheDocument();
     expect(within(ongoingCard).queryByText("Loki")).not.toBeInTheDocument();
   });
+  it("affiche le logo competition dans Prochains matchs et activites sans masquer le contenu principal", () => {
+    render(
+      <MemoryRouter initialEntries={["/teams/Rennes"]}>
+        <Routes>
+          <Route path="/teams/:id" element={<TeamPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getAllByAltText("Logo 5v5").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("Paris").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Rennes").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/^5v5$/i)).not.toBeInTheDocument();
+  });
+
+  it("affiche le logo competition dans Derniers matchs et activites avec score lisible et carte cliquable", () => {
+    render(
+      <MemoryRouter initialEntries={["/teams/Rennes"]}>
+        <Routes>
+          <Route path="/teams/:id" element={<TeamPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getAllByAltText("Logo 5v5").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("Meudon")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+
+    const finished5v5 = screen.getByText("Meudon").closest("div.cursor-pointer") as HTMLElement;
+    fireEvent.click(finished5v5);
+    expect(mockNavigate).toHaveBeenCalledWith("/matches/1");
+  });
+
+  it("affiche le logo Challenge sur les cartes compactes sans collision avec le statut", () => {
+    render(
+      <MemoryRouter initialEntries={["/teams/Rennes"]}>
+        <Routes>
+          <Route path="/teams/:id" element={<TeamPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getAllByAltText("Logo Challenge").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText(/Termin/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/En cours/i)).toBeInTheDocument();
+    expect(screen.getAllByText("Rennes").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Odin")).not.toBeInTheDocument();
+    expect(screen.queryByText("Loki")).not.toBeInTheDocument();
+  });
 });
-
-

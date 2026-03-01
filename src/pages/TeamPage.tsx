@@ -12,6 +12,8 @@ import { fetchClassementByPoule, type ClassementEntry } from "../api/classement"
 import { usePlayersByEquipe } from "../hooks/usePlayers";
 import { useJ3FinalSquares } from "../hooks/useClassement";
 import icon5v5 from "../assets/icons/nav/fivev5.png";
+import icon3v3 from "../assets/icons/nav/threev3.png";
+import iconChallenge from "../assets/icons/nav/challenge.png";
 import Breadcrumbs from "../components/navigation/Breadcrumbs";
 import { formatTournamentDayKey, tournamentDateKey } from "../utils/tournamentDate";
 
@@ -45,6 +47,21 @@ function normalizeTeamName(team?: string) {
 
 function formatDay(date: string) {
   return formatTournamentDayKey(date, { weekday: "long", day: "numeric", month: "short" });
+}
+
+function getCompetitionIcon(competitionType?: string | null) {
+  const competition = (competitionType ?? "5v5").trim().toLowerCase();
+  if (competition === "3v3") return { src: icon3v3, label: "3v3" };
+  if (competition === "challenge") return { src: iconChallenge, label: "Challenge" };
+  return { src: icon5v5, label: "5v5" };
+}
+
+function CompetitionBadge({ src, alt }: { src: string; alt: string }) {
+  return (
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-700/80 bg-slate-950/85">
+      <img src={src} alt={alt} className="h-4 w-4 object-contain opacity-85" />
+    </div>
+  );
 }
 
 function formatMealTime(dateTime?: string | null) {
@@ -491,6 +508,7 @@ function InlineMatchCard({
   const d = new Date(match.date);
   const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   const isChallenge = (match.competitionType ?? "").toLowerCase() === "challenge";
+  const competitionIcon = getCompetitionIcon(match.competitionType);
   const isScored =
     (match.status === "finished" || match.status === "ongoing") &&
     match.scoreA !== null &&
@@ -529,18 +547,21 @@ function InlineMatchCard({
               maskImage: "linear-gradient(90deg, rgba(0,0,0,0.75), rgba(0,0,0,0))",
               WebkitMaskImage: "linear-gradient(90deg, rgba(0,0,0,0.75), rgba(0,0,0,0))",
               transform: "skewX(-10deg)",
-              transformOrigin: "left",
-            }}
-          />
-        </div>
-        <div className="relative flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            {match.teamALogo && <img src={match.teamALogo} alt={match.teamA} className="h-5 w-5 rounded-full object-cover" />}
-            <span className="text-[12px] font-semibold truncate">{match.teamA}</span>
+            transformOrigin: "left",
+          }}
+        />
+      </div>
+        <div className="relative grid grid-cols-[32px_minmax(0,1fr)] items-center gap-2">
+          <CompetitionBadge src={competitionIcon.src} alt={`Logo ${competitionIcon.label}`} />
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              {match.teamALogo && <img src={match.teamALogo} alt={match.teamA} className="h-5 w-5 rounded-full object-cover" />}
+              <span className="text-[12px] font-semibold truncate">{match.teamA}</span>
+            </div>
+            <span className={`text-[12px] font-semibold ${match.status === "ongoing" ? "text-amber-200" : "text-slate-100"}`}>
+              {subtitle}
+            </span>
           </div>
-          <span className={`text-[12px] font-semibold ${match.status === "ongoing" ? "text-amber-200" : "text-slate-100"}`}>
-            {subtitle}
-          </span>
         </div>
       </div>
     );
@@ -580,34 +601,36 @@ function InlineMatchCard({
           }}
         />
       </div>
-
-      <div className="relative flex items-center gap-2">
-        <div className="flex items-center gap-1 min-w-0 justify-start flex-1">
-          {match.teamALogo && <img src={match.teamALogo} alt={match.teamA} className="h-5 w-5 rounded-full object-cover" />}
-          <span
-            className={`text-[12px] leading-tight font-normal truncate block whitespace-nowrap ${winnerClass("A")} ${focusHighlight(match.teamA)}`}
-          >
-            {match.teamA}
-          </span>
-        </div>
-        <div className="flex-none w-20 text-center">
-          {isScored ? (
-            <span className="text-[12px] leading-tight font-semibold text-slate-100 whitespace-nowrap">
-              <span className={winnerClass("A")}>{match.scoreA}</span>
-              <span className="mx-1 text-slate-400">-</span>
-              <span className={winnerClass("B")}>{match.scoreB}</span>
+      <div className="relative grid grid-cols-[32px_minmax(0,1fr)] items-center gap-2">
+        <CompetitionBadge src={competitionIcon.src} alt={`Logo ${competitionIcon.label}`} />
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-1 min-w-0 justify-start flex-1">
+            {match.teamALogo && <img src={match.teamALogo} alt={match.teamA} className="h-5 w-5 rounded-full object-cover" />}
+            <span
+              className={`text-[12px] leading-tight font-normal truncate block whitespace-nowrap ${winnerClass("A")} ${focusHighlight(match.teamA)}`}
+            >
+              {match.teamA}
             </span>
-          ) : (
-            <span className="text-[12px] leading-tight font-semibold text-slate-100 whitespace-nowrap">{time}</span>
-          )}
-        </div>
-        <div className="flex items-center gap-1 justify-end min-w-0 flex-1">
-          <span
-            className={`text-[12px] leading-tight font-normal truncate text-right block whitespace-nowrap ${winnerClass("B")} ${focusHighlight(match.teamB)}`}
-          >
-            {match.teamB}
-          </span>
-          {match.teamBLogo && <img src={match.teamBLogo} alt={match.teamB} className="h-5 w-5 rounded-full object-cover" />}
+          </div>
+          <div className="flex-none w-20 text-center">
+            {isScored ? (
+              <span className="text-[12px] leading-tight font-semibold text-slate-100 whitespace-nowrap">
+                <span className={winnerClass("A")}>{match.scoreA}</span>
+                <span className="mx-1 text-slate-400">-</span>
+                <span className={winnerClass("B")}>{match.scoreB}</span>
+              </span>
+            ) : (
+              <span className="text-[12px] leading-tight font-semibold text-slate-100 whitespace-nowrap">{time}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-1 justify-end min-w-0 flex-1">
+            <span
+              className={`text-[12px] leading-tight font-normal truncate text-right block whitespace-nowrap ${winnerClass("B")} ${focusHighlight(match.teamB)}`}
+            >
+              {match.teamB}
+            </span>
+            {match.teamBLogo && <img src={match.teamBLogo} alt={match.teamB} className="h-5 w-5 rounded-full object-cover" />}
+          </div>
         </div>
       </div>
     </div>
