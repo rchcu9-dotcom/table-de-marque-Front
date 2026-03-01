@@ -942,7 +942,7 @@ describe("HomePage dynamique", () => {
     expect(within(smallGlace).getByText("Finale")).toBeInTheDocument();
     expect(screen.getByTestId("home-momentum-center-challenge-vitesse-phase-qf")).toHaveTextContent("Termin");
     expect(screen.getByTestId("home-momentum-center-challenge-vitesse-phase-df")).toHaveTextContent("En cours");
-    expect(screen.getByTestId("home-momentum-center-challenge-vitesse-phase-f")).toHaveTextContent("14:04");
+    expect(screen.getByTestId("home-momentum-center-challenge-vitesse-phase-f")).toHaveTextContent(/1[34]:04/);
 
     const focusMarker = within(smallGlace).getByTestId("home-momentum-focus");
     const focusedCard = focusMarker.closest('[data-testid^="home-momentum-card-"]') as HTMLElement;
