@@ -42,30 +42,6 @@ export default function ChallengePage() {
     };
   }, [data]);
 
-  const selectedTeamId = React.useMemo(() => selectedTeam?.id?.toLowerCase(), [selectedTeam]);
-
-  const finalesByRound = React.useMemo(() => {
-    const jour3 = data?.jour3 ?? [];
-    const byId = (id: string): Attempt[] => jour3.filter((a) => a.atelierId === id);
-    const qf = byId("finale-vitesse-qf");
-    const df = byId("finale-vitesse-df");
-    const finale = byId("finale-vitesse-finale");
-
-    if (!selectedTeamId) {
-      return { qf, df, finale };
-    }
-
-    const filterTeam = (arr: Attempt[]) => arr.filter((a) => (a.equipeId ?? "").toLowerCase() === selectedTeamId);
-    return {
-      qf: filterTeam(qf),
-      df: filterTeam(df),
-      finale: filterTeam(finale),
-    };
-  }, [data, selectedTeamId]);
-  const hasFinales = React.useMemo(() => {
-    return finalesByRound.qf.length > 0 || finalesByRound.df.length > 0 || finalesByRound.finale.length > 0;
-  }, [finalesByRound]);
-
   const evalLabel = React.useMemo(() => {
     const first = (data?.jour1 ?? [])
       .filter((a) => a.attemptDate)
@@ -83,15 +59,6 @@ export default function ChallengePage() {
     const d = new Date(first.attemptDate);
     return new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "2-digit", month: "short" }).format(d);
   }, [data]);
-  const finaleLabel = React.useMemo(() => {
-    const first = (data?.jour3 ?? [])
-      .filter((a) => a.attemptDate)
-      .sort((a, b) => new Date(a.attemptDate ?? 0).getTime() - new Date(b.attemptDate ?? 0).getTime())[0];
-    if (!first?.attemptDate) return null;
-    const d = new Date(first.attemptDate);
-    return new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "2-digit", month: "short" }).format(d);
-  }, [data]);
-
   const renderMetrics = (m: Attempt) => {
     if (m.metrics.type === "vitesse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s`;
     if (m.metrics.type === "tir") return `Points: ${m.metrics.totalPoints} (${m.metrics.tirs.join(", ")})`;
@@ -243,26 +210,6 @@ export default function ChallengePage() {
           };
     return [...filtered].sort(scorer).slice(0, opts.limitTop);
   };
-
-  const qfSlices = React.useMemo(() => {
-    const slices: Attempt[][] = [];
-    for (let i = 0; i < 8; i++) {
-      const slice = finalesByRound.qf.slice(i * 4, (i + 1) * 4);
-      slices.push(slice);
-    }
-    if (!selectedTeamId) return slices;
-    return slices.filter((slice) => slice.some((a) => (a.equipeId ?? "").toLowerCase() === selectedTeamId));
-  }, [finalesByRound.qf, selectedTeamId]);
-
-  const dfSlices = React.useMemo(() => {
-    const slices: Attempt[][] = [];
-    for (let i = 0; i < 4; i++) {
-      const slice = finalesByRound.df.slice(i * 4, (i + 1) * 4);
-      slices.push(slice);
-    }
-    if (!selectedTeamId) return slices;
-    return slices.filter((slice) => slice.some((a) => (a.equipeId ?? "").toLowerCase() === selectedTeamId));
-  }, [finalesByRound.df, selectedTeamId]);
 
   const vitesseSlots = React.useMemo(() => vitesseJ3?.slots ?? {}, [vitesseJ3?.slots]);
   const slotKeys = React.useMemo(() => Object.keys(vitesseSlots), [vitesseSlots]);
@@ -650,46 +597,6 @@ export default function ChallengePage() {
                 </section>
               )}
 
-              {showFinale && hasFinales && (
-                <section className="space-y-3">
-                  <h2 className="text-base font-semibold text-white">{finaleLabel ? `Finale Vitesse ${finaleLabel}` : "Finale Vitesse"}</h2>
-
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-slate-200">Quarts de finale</h3>
-                    <div className="overflow-x-auto">
-                      <div className="flex gap-3 min-w-full">
-                        {qfSlices.map((slice, idx) => (
-                          <div key={`qf-${idx}`} className="min-w-[240px] flex-1">
-                            {renderTable(`Quart de finale ${idx + 1}`, slice, { highlightTop: 2, rankOnly: true })}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-slate-200">Demi-finales</h3>
-                    <div className="overflow-x-auto">
-                      <div className="flex gap-3 min-w-full">
-                        {dfSlices.map((slice, idx) => (
-                          <div key={`df-${idx}`} className="min-w-[240px] flex-1">
-                            {renderTable(`Demi-finale ${idx + 1}`, slice, { highlightTop: 2, rankOnly: true })}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-slate-200">Finale</h3>
-                    {finalesByRound.finale.length > 0 ? (
-                      <div className="grid gap-3 md:grid-cols-2">
-                        {renderTable("Finale", finalesByRound.finale, { highlightTop: 1, rankOnly: true })}
-                      </div>
-                    ) : null}
-                  </div>
-                </section>
-              )}
             </>
           )}
         </div>

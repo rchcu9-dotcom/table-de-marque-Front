@@ -1,18 +1,20 @@
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, within, waitFor, act } from "@testing-library/react";
+import { render, screen, within, waitFor, act, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import type { Match } from "../../api/match";
-import type { ChallengeJ1MomentumEntry } from "../../api/challenge";
+import type { ChallengeJ1MomentumEntry, ChallengeVitesseJ3Response } from "../../api/challenge";
 
 let HomePage: typeof import("../HomePage").default;
 let mockMatches: Match[] = [];
 let mockMeals: { mealOfDay: { dateTime: string | null; message?: string | null } | null } | null = null;
 let mockChallengeJ1Momentum: ChallengeJ1MomentumEntry[] = [];
+let mockChallengeVitesseJ3: ChallengeVitesseJ3Response | null = null;
 const mockNavigate = vi.fn();
 let dateNowSpy: ReturnType<typeof vi.spyOn> | null = null;
+const RealDate = Date;
 let mockSelectedTeam: {
   selectedTeam: { id: string; name: string; logoUrl?: string } | null;
   setSelectedTeam: ReturnType<typeof vi.fn>;
@@ -48,6 +50,14 @@ vi.mock("../../hooks/useChallengeJ1Momentum", () => ({
   }),
 }));
 
+vi.mock("../../hooks/useChallengeVitesseJ3", () => ({
+  useChallengeVitesseJ3: () => ({
+    data: mockChallengeVitesseJ3,
+    isLoading: false,
+    isError: false,
+  }),
+}));
+
 
 vi.mock("../../providers/SelectedTeamProvider", () => ({
   useSelectedTeam: () => mockSelectedTeam,
@@ -73,6 +83,16 @@ function createWrapper() {
 async function renderHome(simulatedNow: string) {
   vi.resetModules();
   dateNowSpy?.mockRestore();
+  const fixedNow = new RealDate(simulatedNow);
+  globalThis.Date = class extends RealDate {
+    constructor(value?: string | number | Date) {
+      super(value === undefined ? fixedNow.toISOString() : value);
+    }
+
+    static now() {
+      return fixedNow.getTime();
+    }
+  } as DateConstructor;
   dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(new Date(simulatedNow).getTime());
   HomePage = (await import("../HomePage")).default;
   render(<HomePage />, { wrapper: createWrapper() });
@@ -92,6 +112,7 @@ beforeEach(() => {
   mockNavigate.mockReset();
   mockMeals = { mealOfDay: null };
   mockChallengeJ1Momentum = [];
+  mockChallengeVitesseJ3 = null;
   mockSelectedTeam = {
     selectedTeam: null,
     setSelectedTeam: vi.fn(),
@@ -102,6 +123,7 @@ beforeEach(() => {
 afterEach(() => {
   dateNowSpy?.mockRestore();
   dateNowSpy = null;
+  globalThis.Date = RealDate;
 });
 
 describe("HomePage dynamique", () => {
@@ -184,6 +206,31 @@ describe("HomePage dynamique", () => {
     expect(await screen.findByTestId("home-live-badge")).toHaveTextContent(/live/i);
   });
 
+  it("rend le badge Live interactif et navigue vers /live au clic", async () => {
+    mockMatches = [
+      {
+        id: "m-live",
+        date: "2026-03-02T14:00:00Z",
+        teamA: "C",
+        teamB: "D",
+        status: "ongoing",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+      },
+    ];
+
+    await renderHome("2026-03-02T14:30:00Z");
+
+    const badge = await screen.findByRole("button", { name: /aller a la page live/i });
+
+    expect(badge).toHaveTextContent(/live/i);
+
+    fireEvent.click(badge);
+
+    expect(mockNavigate).toHaveBeenCalledWith("/live");
+  });
+
   it("masque le badge Live s'il n'y a pas de 5v5 ongoing", async () => {
     mockMatches = [
       {
@@ -211,6 +258,30 @@ describe("HomePage dynamique", () => {
     await renderHome("2026-01-17T14:30:00Z");
 
     expect(screen.queryByTestId("home-live-badge")).not.toBeInTheDocument();
+  });
+
+  it("expose le badge Live comme bouton focusable avec un libelle accessible", async () => {
+    mockMatches = [
+      {
+        id: "m-live",
+        date: "2026-01-17T14:00:00Z",
+        teamA: "C",
+        teamB: "D",
+        status: "ongoing",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+      },
+    ];
+
+    await renderHome("2026-01-17T14:30:00Z");
+
+    const badge = await screen.findByRole("button", { name: /aller a la page live/i });
+
+    badge.focus();
+    expect(badge).toHaveFocus();
+    expect(badge).toHaveAccessibleName("Aller a la page Live");
+    expect(badge).toHaveTextContent(/live/i);
   });
 
 
@@ -797,6 +868,241 @@ describe("HomePage dynamique", () => {
     const smallGlace = await screen.findByTestId("home-now-smallglace");
     expect(within(smallGlace).getByText("3v3 Team")).toBeInTheDocument();
     expect(within(smallGlace).queryByText("Momentum Team")).not.toBeInTheDocument();
+  });
+
+  it("J3 small-glace consomme les phases backend avec leurs labels et statuts", async () => {
+    mockMatches = [
+      {
+        id: "j1",
+        date: "2026-02-28T10:00:00+01:00",
+        teamA: "A",
+        teamB: "B",
+        status: "finished",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+        jour: "J1",
+      },
+      {
+        id: "j2",
+        date: "2026-03-01T10:00:00+01:00",
+        teamA: "C",
+        teamB: "D",
+        status: "finished",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+        jour: "J2",
+      },
+      {
+        id: "j3",
+        date: "2026-03-02T10:00:00+01:00",
+        teamA: "E",
+        teamB: "F",
+        status: "ongoing",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+        jour: "J3",
+      },
+    ];
+    mockChallengeVitesseJ3 = {
+      slots: {},
+      winnerId: null,
+      phases: {
+        QF: {
+          label: "Quart de finale",
+          scheduledAt: "2026-03-02T09:48:00+01:00",
+          status: "finished",
+          visible: true,
+          homeVisible: true,
+        },
+        DF: {
+          label: "Demi-finale",
+          scheduledAt: "2026-03-02T11:56:00+01:00",
+          status: "ongoing",
+          visible: true,
+          homeVisible: true,
+        },
+        F: {
+          label: "Finale",
+          scheduledAt: "2026-03-02T14:04:00+01:00",
+          status: "planned",
+          visible: true,
+          homeVisible: true,
+        },
+      },
+    };
+
+    await renderHome("2026-03-02T11:10:00+01:00");
+
+    const smallGlace = await screen.findByTestId("home-now-smallglace");
+    expect(within(smallGlace).getByText("Quart de finale")).toBeInTheDocument();
+    expect(within(smallGlace).getByText("Demi-finale")).toBeInTheDocument();
+    expect(within(smallGlace).getByText("Finale")).toBeInTheDocument();
+    expect(screen.getByTestId("home-momentum-center-challenge-vitesse-phase-qf")).toHaveTextContent("Termin");
+    expect(screen.getByTestId("home-momentum-center-challenge-vitesse-phase-df")).toHaveTextContent("En cours");
+    expect(screen.getByTestId("home-momentum-center-challenge-vitesse-phase-f")).toHaveTextContent("14:04");
+
+    const focusMarker = within(smallGlace).getByTestId("home-momentum-focus");
+    const focusedCard = focusMarker.closest('[data-testid^="home-momentum-card-"]') as HTMLElement;
+    expect(focusedCard).toHaveAttribute("data-testid", "home-momentum-card-challenge-vitesse-phase-df");
+
+    screen.getByTestId("home-momentum-card-challenge-vitesse-phase-df").click();
+    expect(mockNavigate).toHaveBeenCalledWith("/challenge");
+  });
+
+  it("J2 n'affiche pas les phases J3 sur Accueil meme si le payload backend les expose deja", async () => {
+    mockMatches = [
+      {
+        id: "j1",
+        date: "2026-02-28T10:00:00+01:00",
+        teamA: "A",
+        teamB: "B",
+        status: "finished",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+        jour: "J1",
+      },
+      {
+        id: "j2",
+        date: "2026-03-01T10:00:00+01:00",
+        teamA: "C",
+        teamB: "D",
+        status: "ongoing",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+        jour: "J2",
+      },
+      {
+        id: "m-3v3-j2",
+        date: "2026-03-01T12:00:00+01:00",
+        teamA: "3v3 Team",
+        teamB: "Opponent",
+        status: "finished",
+        scoreA: 2,
+        scoreB: 1,
+        competitionType: "3v3",
+        jour: "J2",
+      },
+      {
+        id: "j3",
+        date: "2026-03-02T10:00:00+01:00",
+        teamA: "E",
+        teamB: "F",
+        status: "planned",
+        scoreA: null,
+        scoreB: null,
+        competitionType: "5v5",
+        jour: "J3",
+      },
+    ];
+    mockChallengeVitesseJ3 = {
+      slots: {
+        QF1: [{ id: "q1", name: "Joueur 1", teamId: "rennes", teamName: "Rennes" }],
+      },
+      winnerId: null,
+      phases: {
+        QF: {
+          label: "Quart de finale",
+          scheduledAt: "2026-03-02T09:48:00+01:00",
+          status: "planned",
+          visible: true,
+          homeVisible: false,
+        },
+        DF: {
+          label: "Demi-finale",
+          scheduledAt: "2026-03-02T11:56:00+01:00",
+          status: "planned",
+          visible: false,
+          homeVisible: false,
+        },
+        F: {
+          label: "Finale",
+          scheduledAt: "2026-03-02T14:04:00+01:00",
+          status: "planned",
+          visible: false,
+          homeVisible: false,
+        },
+      },
+    };
+
+    await renderHome("2026-03-01T12:15:00+01:00");
+
+    const smallGlace = await screen.findByTestId("home-now-smallglace");
+    expect(within(smallGlace).getByText("3v3 Team")).toBeInTheDocument();
+    expect(within(smallGlace).queryByText("Quart de finale")).not.toBeInTheDocument();
+  });
+
+  it("J3 affiche le status backend sans reinterpreter localement scheduledAt", async () => {
+    mockMatches = [
+      {
+        id: "j1",
+        date: "2026-02-28T10:00:00+01:00",
+        teamA: "A",
+        teamB: "B",
+        status: "finished",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+        jour: "J1",
+      },
+      {
+        id: "j2",
+        date: "2026-03-01T10:00:00+01:00",
+        teamA: "C",
+        teamB: "D",
+        status: "finished",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+        jour: "J2",
+      },
+      {
+        id: "j3",
+        date: "2026-03-02T10:00:00+01:00",
+        teamA: "E",
+        teamB: "F",
+        status: "ongoing",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+        jour: "J3",
+      },
+    ];
+    mockChallengeVitesseJ3 = {
+      slots: {},
+      winnerId: null,
+      phases: {
+        QF: {
+          label: "Quart de finale",
+          scheduledAt: "2099-03-02T09:48:00+01:00",
+          status: "ongoing",
+          visible: true,
+          homeVisible: true,
+        },
+        DF: {
+          label: "Demi-finale",
+          scheduledAt: "2099-03-02T11:56:00+01:00",
+          status: "planned",
+          visible: true,
+          homeVisible: true,
+        },
+        F: {
+          label: "Finale",
+          scheduledAt: "2099-03-02T14:04:00+01:00",
+          status: "planned",
+          visible: true,
+          homeVisible: true,
+        },
+      },
+    };
+
+    await renderHome("2026-03-02T11:10:00+01:00");
+
+    expect(await screen.findByTestId("home-momentum-center-challenge-vitesse-phase-qf")).toHaveTextContent("En cours");
   });
 });
 

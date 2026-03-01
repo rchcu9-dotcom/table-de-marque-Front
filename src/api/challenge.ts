@@ -49,6 +49,16 @@ export type VitesseJ3Player = {
 export type ChallengeVitesseJ3Response = {
   slots: Record<string, VitesseJ3Player[]>;
   winnerId?: string | null;
+  phases?: Record<
+    "QF" | "DF" | "F",
+    {
+      label: string;
+      scheduledAt: string | null;
+      status: "planned" | "ongoing" | "finished";
+      visible: boolean;
+      homeVisible: boolean;
+    }
+  >;
 };
 
 export type ChallengeJ1MomentumEntry = {

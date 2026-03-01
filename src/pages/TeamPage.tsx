@@ -13,6 +13,7 @@ import { usePlayersByEquipe } from "../hooks/usePlayers";
 import { useJ3FinalSquares } from "../hooks/useClassement";
 import icon5v5 from "../assets/icons/nav/fivev5.png";
 import Breadcrumbs from "../components/navigation/Breadcrumbs";
+import { formatTournamentDayKey, tournamentDateKey } from "../utils/tournamentDate";
 
 type RankedPlayer = {
   name: string;
@@ -43,7 +44,7 @@ function normalizeTeamName(team?: string) {
 }
 
 function formatDay(date: string) {
-  return new Date(date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "short" });
+  return formatTournamentDayKey(date, { weekday: "long", day: "numeric", month: "short" });
 }
 
 function formatMealTime(dateTime?: string | null) {
@@ -78,14 +79,14 @@ function computeForm(matches: Match[], team: string) {
 
 function groupByDay(matches: Match[]) {
   return matches.reduce<Record<string, Match[]>>((acc, m) => {
-    const day = new Date(m.date).toISOString().split("T")[0];
+    const day = tournamentDateKey(m.date);
     acc[day] = acc[day] ? [...acc[day], m] : [m];
     return acc;
   }, {});
 }
 
 function dayKeyFromDate(date: string) {
-  return new Date(date).toISOString().split("T")[0];
+  return tournamentDateKey(date);
 }
 
 function hasStartedDay(matches: Match[]) {

@@ -8,6 +8,7 @@ import { useSelectedTeam } from "../providers/SelectedTeamProvider";
 import icon5v5 from "../assets/icons/nav/fivev5.png";
 import icon3v3 from "../assets/icons/nav/threev3.png";
 import iconChallenge from "../assets/icons/nav/challenge.png";
+import { formatTournamentDayKey, tournamentDateKey } from "../utils/tournamentDate";
 
 function normalize(value?: string | null) {
   return (value ?? "").trim().toLowerCase();
@@ -33,10 +34,10 @@ export default function PlanningPage() {
   const [layout, setLayout] = React.useState<{ topOffset: number; paddingTop: number }>({ topOffset: 64, paddingTop: 320 });
 
   const dayOptions = React.useMemo(() => {
-    const uniques = Array.from(new Set((matches ?? []).map((m) => new Date(m.date).toISOString().split("T")[0]))).sort();
+    const uniques = Array.from(new Set((matches ?? []).map((m) => tournamentDateKey(m.date)))).sort();
     return uniques.map((d) => ({
       value: d,
-      label: new Date(d).toLocaleDateString("fr-FR", { weekday: "long" }),
+      label: formatTournamentDayKey(d, { weekday: "long" }),
     }));
   }, [matches]);
 
@@ -52,7 +53,7 @@ export default function PlanningPage() {
     return [...matches]
       .filter((m) => {
         if (competitionFilter.size > 0 && !competitionFilter.has(m.competitionType ?? "")) return false;
-        const matchDay = new Date(m.date).toISOString().split("T")[0];
+        const matchDay = tournamentDateKey(m.date);
         if (dayFilter.size > 0 && !dayFilter.has(matchDay)) return false;
         if (selectedTeam?.id) {
           const needle = normalize(selectedTeam.id);
