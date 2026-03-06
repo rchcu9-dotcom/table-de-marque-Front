@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { useChallengeByEquipe } from "../hooks/useChallengeByEquipe";
 import { useTeams } from "../hooks/useTeams";
 import type { ChallengeAttempt as Attempt } from "../api/challenge";
+import Breadcrumbs from "../components/navigation/Breadcrumbs";
 
 export default function ChallengeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -102,7 +103,7 @@ export default function ChallengeDetailPage() {
           <p className="text-slate-300 text-xs">Aucune donnée.</p>
         ) : (
           <div className="overflow-auto">
-            <table className="min-w-full text-xs text-slate-100">
+            <table className="min-w-full text-xs text-slate-100" data-testid="challenge-attempts">
               <thead className="text-[11px] uppercase text-slate-400">
                 <tr>
                   <th className="py-1 pr-3 text-left">Joueur</th>
@@ -114,7 +115,10 @@ export default function ChallengeDetailPage() {
                   const rank = needsRanking ? idx + 1 : undefined;
                   const highlight = rank && opts?.highlightTop && rank <= opts.highlightTop;
                   return (
-                    <tr key={`${a.atelierId}-${a.joueurId}-${idx}`}>
+                    <tr
+                      key={`${a.atelierId}-${a.joueurId}-${idx}`}
+                      data-testid={`challenge-attempt-${a.atelierId}-${a.joueurId}-${idx}`}
+                    >
                       <td className={`py-1 pr-3 font-semibold ${highlight ? "text-emerald-200" : "text-slate-100"}`}>
                         <span className="inline-flex items-center gap-2">
                           {team?.logoUrl && (
@@ -169,6 +173,10 @@ export default function ChallengeDetailPage() {
     }
     return slices;
   }, [finalesByRound.df]);
+  const hasFinales =
+    qfSlices.some((slice) => slice.length > 0) ||
+    dfSlices.some((slice) => slice.length > 0) ||
+    finalesByRound.finale.length > 0;
 
   React.useLayoutEffect(() => {
     const updateLayout = () => {
@@ -188,20 +196,26 @@ export default function ChallengeDetailPage() {
   return (
     <div className="fixed inset-0 overflow-hidden">
       <div className="absolute left-0 right-0 px-4" style={{ top: `${layout.topOffset}px` }}>
-        <div
-          ref={headerRef}
-          className="relative max-w-6xl mx-auto rounded-xl border border-slate-800 bg-slate-950/90 backdrop-blur p-3 flex items-center gap-3 shadow-md shadow-slate-950"
-        >
-          <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-800 flex items-center justify-center">
-            {team?.logoUrl ? (
-              <img src={team.logoUrl} alt={team.name} className="h-full w-full object-cover" />
-            ) : (
-              <span className="text-white text-sm font-semibold">{(team?.name ?? id ?? "?").slice(0, 2).toUpperCase()}</span>
-            )}
-          </div>
-          <div className="flex flex-col">
-            <span className="text-xs uppercase text-slate-400">Challenge</span>
-            <h1 className="text-lg font-semibold text-white leading-tight">{team?.name ?? data?.equipeName ?? id}</h1>
+        <div ref={headerRef} className="max-w-6xl mx-auto space-y-2">
+          <Breadcrumbs
+            items={[
+              { label: "Accueil", path: "/" },
+              { label: "Challenge", path: "/challenge" },
+              { label: team?.name ?? data?.equipeName ?? id ?? "Equipe" },
+            ]}
+          />
+          <div className="rounded-xl border border-slate-800 bg-slate-950/90 backdrop-blur p-3 flex items-center gap-3 shadow-md shadow-slate-950">
+            <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-800 flex items-center justify-center">
+              {team?.logoUrl ? (
+                <img src={team.logoUrl} alt={team.name} className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-white text-sm font-semibold">{(team?.name ?? id ?? "?").slice(0, 2).toUpperCase()}</span>
+              )}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs uppercase text-slate-400">Challenge</span>
+              <h1 className="text-lg font-semibold text-white leading-tight">{team?.name ?? data?.equipeName ?? id}</h1>
+            </div>
           </div>
         </div>
       </div>
@@ -215,6 +229,58 @@ export default function ChallengeDetailPage() {
           {isError && <p className="text-red-400 text-sm">Erreur lors du chargement.</p>}
           {data && (
             <div className="grid gap-4">
+              {hasFinales && (
+                <section className="space-y-3">
+                  <h2 className="text-base font-semibold text-white">
+                    {finalsLabel ? `Finales du Challenge Vitesse - ${finalsLabel}` : "Finales du Challenge Vitesse"}
+                  </h2>
+
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-slate-200">Vitesse</h3>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {finalesByRound.finale.length > 0 ? (
+                        renderTable(
+                          "Finale",
+                          applyFilters(finalesByRound.finale, "vitesse", { top3: false, players: [] }),
+                          { highlightTop: 1, rankOnly: true },
+                        )
+                      ) : (
+                        <p className="text-slate-300 text-xs">Pas de joueur.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-slate-200">Demi Finales</h3>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {dfSlices
+                        .filter((slice) => slice.length > 0)
+                        .map((slice, idx) =>
+                          renderTable(
+                            `Demi Finale ${idx + 1}`,
+                            applyFilters(slice, "vitesse", { top3: false, players: [] }),
+                            { highlightTop: 2, rankOnly: true },
+                          ),
+                        )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-slate-200">Quart de finale</h3>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {qfSlices
+                        .filter((slice) => slice.length > 0)
+                        .map((slice, idx) =>
+                          renderTable(
+                            `Quart de Finale ${idx + 1}`,
+                            applyFilters(slice, "vitesse", { top3: false, players: [] }),
+                            { highlightTop: 2, rankOnly: true },
+                          ),
+                        )}
+                    </div>
+                  </div>
+                </section>
+              )}
               <section className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-col">
@@ -245,7 +311,7 @@ export default function ChallengeDetailPage() {
                       className={`rounded-full border px-3 py-1 ${showGlisse ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-300 border-slate-700"}`}
                       onClick={() => setShowGlisse((v) => !v)}
                     >
-                      Glisse & Crosse
+                      Agilité
                     </button>
                     <select
                       className="rounded-md border border-slate-700 bg-slate-900/80 px-2 py-1 text-slate-100 min-w-[160px]"
@@ -284,52 +350,6 @@ export default function ChallengeDetailPage() {
                 </div>
               </section>
 
-              <section className="space-y-3">
-                <h2 className="text-base font-semibold text-white">{finalsLabel ? `Finale Vitesse ${finalsLabel}` : "Finale Vitesse"}</h2>
-
-                <div className="space-y-2">
-                  <h3 className="text-sm font-semibold text-slate-200">Quarts de finale</h3>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {qfSlices
-                      .filter((slice) => slice.length > 0)
-                      .map((slice, idx) =>
-                        renderTable(
-                          `Quart de finale ${idx + 1}`,
-                          applyFilters(slice, "vitesse", { top3: false, players: [] }),
-                          { highlightTop: 2, rankOnly: true },
-                        ),
-                      )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <h3 className="text-sm font-semibold text-slate-200">Demi-finales</h3>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {dfSlices
-                      .filter((slice) => slice.length > 0)
-                      .map((slice, idx) =>
-                        renderTable(
-                          `Demi-finale ${idx + 1}`,
-                          applyFilters(slice, "vitesse", { top3: false, players: [] }),
-                          { highlightTop: 2, rankOnly: true },
-                        ),
-                      )}
-                  </div>
-                </div>
-
-                {finalesByRound.finale.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-semibold text-slate-200">Finale</h3>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      {renderTable(
-                        "Finale",
-                        applyFilters(finalesByRound.finale, "vitesse", { top3: false, players: [] }),
-                        { highlightTop: 1, rankOnly: true },
-                      )}
-                    </div>
-                  </div>
-                )}
-              </section>
             </div>
           )}
         </div>

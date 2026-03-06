@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, within, type queries, type BoundFunctions } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 import MatchListPage from "../MatchListPage";
@@ -26,6 +26,12 @@ vi.mock("react-router-dom", async (orig) => {
 });
 
 describe("MatchListPage", () => {
+  const collectMomentumIds = (root: BoundFunctions<typeof queries>) =>
+    root
+      .queryAllByTestId(/^momentum-match-/)
+      .map((el: HTMLElement) => el.getAttribute("data-testid"))
+      .filter((id: string | null): id is string => Boolean(id) && id !== "momentum-match-track");
+
   beforeEach(() => {
     mockData = [
       {
@@ -96,9 +102,7 @@ describe("MatchListPage", () => {
     );
 
     const momentum = within(screen.getByTestId("momentum-list"));
-    const ids = momentum
-      .queryAllByTestId(/momentum-match-/)
-      .map((el) => el.getAttribute("data-testid"));
+    const ids = collectMomentumIds(momentum);
     expect(ids).toEqual(["momentum-match-a", "momentum-match-b", "momentum-match-c"]);
 
     const planning = within(screen.getByTestId("planning-list"));
@@ -120,9 +124,7 @@ describe("MatchListPage", () => {
     );
 
     const momentum = within(screen.getByTestId("momentum-list"));
-    const ids = momentum
-      .getAllByTestId(/momentum-match-/)
-      .map((el) => el.getAttribute("data-testid"));
+    const ids = collectMomentumIds(momentum);
     expect(ids).toEqual(["momentum-match-a", "momentum-match-b", "momentum-match-c"]);
   });
 
@@ -141,9 +143,7 @@ describe("MatchListPage", () => {
     );
 
     const momentum = within(screen.getByTestId("momentum-list"));
-    const ids = momentum
-      .getAllByTestId(/momentum-match-/)
-      .map((el) => el.getAttribute("data-testid"));
+    const ids = collectMomentumIds(momentum);
     expect(ids).toEqual(["momentum-match-a", "momentum-match-b", "momentum-match-c"]);
   });
 
@@ -162,10 +162,7 @@ describe("MatchListPage", () => {
     );
 
     const momentum = within(screen.getByTestId("momentum-list"));
-    const ids = momentum
-      .getAllByTestId(/momentum-match-/)
-      .slice(0, 3)
-      .map((el) => el.getAttribute("data-testid"));
+    const ids = collectMomentumIds(momentum).slice(0, 3);
     expect(ids).toEqual(["momentum-match-b", "momentum-match-c", "momentum-match-d"]);
   });
 
@@ -177,8 +174,8 @@ describe("MatchListPage", () => {
     );
 
     const momentum = within(screen.getByTestId("momentum-list"));
-    const items = momentum.getAllByTestId(/momentum-match-/);
-    const cardClasses = items.map((el) => el.closest(".rounded-2xl")?.className ?? "");
+    const items = collectMomentumIds(momentum).map((id: string) => momentum.getByTestId(id));
+    const cardClasses = items.map((el: HTMLElement) => el.closest(".rounded-2xl")?.className ?? "");
     expect(cardClasses[0]).toMatch(/border-sky-400/); // finished (oldest)
     expect(cardClasses[1]).toMatch(/border-amber-300/); // ongoing (middle)
     expect(cardClasses[1]).toMatch(/live-pulse-card/);

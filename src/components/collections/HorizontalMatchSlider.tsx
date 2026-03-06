@@ -10,9 +10,12 @@ type Props = {
   currentMatchId?: string;
   onSelect?: (id: string) => void;
   testIdPrefix?: string;
+  focusTestId?: string;
   getCardClassName?: (match: Match) => string;
   centered?: boolean;
   withDiagonalBg?: boolean;
+  focusAlign?: "center" | "end";
+  desktopJustify?: boolean;
 };
 
 const compIcon: Record<string, string> = {
@@ -34,9 +37,12 @@ export default function HorizontalMatchSlider({
   currentMatchId,
   onSelect,
   testIdPrefix = "poule-slider-card",
+  focusTestId,
   getCardClassName,
   centered = false,
   withDiagonalBg = false,
+  focusAlign = "center",
+  desktopJustify = false,
 }: Props) {
   const sliderRef = React.useRef<HTMLDivElement | null>(null);
   const cardRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
@@ -54,7 +60,6 @@ export default function HorizontalMatchSlider({
 
   const selectedBorder = (m: Match) => {
     if (m.status === "ongoing") return "!border-amber-300/80";
-    if (m.status === "finished") return "!border-sky-400/80";
     return "!border-slate-600/80";
   };
 
@@ -64,21 +69,33 @@ export default function HorizontalMatchSlider({
     if (!target) return;
     const container = sliderRef.current;
     const targetCenter = target.offsetLeft + target.offsetWidth / 2;
-    const scrollLeft = Math.max(targetCenter - container.clientWidth / 2, 0);
+    const scrollLeft =
+      focusAlign === "end"
+        ? Math.max(target.offsetLeft + target.offsetWidth - container.clientWidth, 0)
+        : Math.max(targetCenter - container.clientWidth / 2, 0);
     if (typeof container.scrollTo === "function") {
       container.scrollTo({ left: scrollLeft, behavior: "smooth" });
     } else {
       container.scrollLeft = scrollLeft;
     }
-  }, [matches, currentMatchId]);
+  }, [matches, currentMatchId, focusAlign]);
 
   if (!matches || matches.length === 0) return null;
+
+  const desktopGridClass = desktopJustify
+    ? matches.length <= 1
+      ? "md:grid md:grid-cols-1 md:overflow-visible md:snap-none"
+      : matches.length === 2
+        ? "md:grid md:grid-cols-2 md:overflow-visible md:snap-none"
+        : "md:grid md:grid-cols-3 md:overflow-visible md:snap-none"
+    : "";
 
   return (
     <div className="relative">
       <div
         ref={sliderRef}
-        className={`flex gap-3 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory ${centered ? "justify-center" : ""}`}
+        data-testid={`${testIdPrefix}-track`}
+        className={`flex gap-3 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory ${centered ? "justify-center" : ""} ${desktopGridClass}`}
       >
         {matches.map((m) => (
           <div
@@ -88,10 +105,15 @@ export default function HorizontalMatchSlider({
               cardRefs.current[m.id] = el;
             }}
             className={`relative overflow-hidden snap-center min-w-[220px] max-w-[240px] flex-shrink-0 rounded-2xl border border-slate-800 bg-slate-900/70 p-3 shadow-inner shadow-slate-950 cursor-pointer hover:-translate-y-0.5 transition ${
+              desktopJustify ? "md:min-w-0 md:max-w-none md:w-full md:flex-shrink" : ""
+            } ${
               m.id === currentMatchId ? selectedBorder(m) : ""
             } ${m.status === "ongoing" ? "live-pulse-card" : ""} ${getCardClassName ? getCardClassName(m) : ""}`}
             onClick={() => onSelect?.(m.id)}
           >
+            {m.id === currentMatchId && focusTestId ? (
+              <span data-testid={focusTestId} />
+            ) : null}
             <div className="absolute top-2 right-2 z-10">
               <img
                 src={compIcon[(m.competitionType ?? "5v5").toLowerCase()] ?? icon5v5}
@@ -128,12 +150,37 @@ export default function HorizontalMatchSlider({
                 />
               </div>
             )}
-            <div className="text-sm font-semibold text-slate-100 text-center">
-              {formatInfo(m).headerPrimary}
-            </div>
-            {formatInfo(m).headerSecondary && (
-              <div className="text-xs text-slate-400 text-center">{formatInfo(m).headerSecondary}</div>
-            )}
+            {(() => {
+              const info = formatInfo(m);
+              const isScored =
+                (m.status === "finished" || m.status === "ongoing") &&
+                m.scoreA !== null &&
+                m.scoreB !== null;
+              const hasWinner =
+                m.status === "finished" &&
+                m.scoreA !== null &&
+                m.scoreB !== null &&
+                m.scoreA !== m.scoreB;
+              const winnerSide = hasWinner ? (m.scoreA! > m.scoreB! ? "A" : "B") : null;
+              return (
+                <>
+                  <div className="text-sm font-semibold text-slate-100 text-center">
+                    {isScored ? (
+                      <span className="inline-flex items-center gap-1">
+                        <span className={hasWinner && winnerSide === "A" ? "text-emerald-300" : ""}>{m.scoreA}</span>
+                        <span className="text-slate-400">-</span>
+                        <span className={hasWinner && winnerSide === "B" ? "text-emerald-300" : ""}>{m.scoreB}</span>
+                      </span>
+                    ) : (
+                      info.headerPrimary
+                    )}
+                  </div>
+                  {info.headerSecondary && (
+                    <div className="text-xs text-slate-400 text-center">{info.headerSecondary}</div>
+                  )}
+                </>
+              );
+            })()}
             <div className="mt-3 flex items-center justify-between gap-2">
               <HexBadge name={m.teamA} imageUrl={m.teamALogo ?? undefined} size={40} />
               <div className="flex-1 text-center">

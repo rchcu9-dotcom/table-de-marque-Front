@@ -50,7 +50,6 @@ export default function MatchSummaryGrid({ matches, currentMatchId, onSelect, fo
 
   const selectedBorder = (m: Match) => {
     if (m.status === "ongoing") return "!border-amber-300/80";
-    if (m.status === "finished") return "!border-sky-400/80";
     return "!border-slate-600/80";
   };
 

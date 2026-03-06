@@ -1,20 +1,25 @@
 import React from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import LayoutRoot from "../components/layout/LayoutRoot";
 import MatchListPage from "../pages/MatchListPage";
 import MatchDetailPage from "../pages/MatchDetailPage";
 import TeamPage from "../pages/TeamPage";
 import NotFoundPage from "../pages/NotFoundPage";
 import HomePage from "../pages/HomePage";
+import Accueil2Page from "../pages/Accueil2Page";
+import Accueil2BroadcastPage from "../pages/Accueil2BroadcastPage";
+import Accueil2PremiumPage from "../pages/Accueil2PremiumPage";
+import Accueil2KiosquePage from "../pages/Accueil2KiosquePage";
 import TeamsPage from "../pages/TeamsPage";
 import Tournament5v5Page from "../pages/Tournament5v5Page";
 import ChallengePage from "../pages/ChallengePage";
 import ThreeVThreePage from "../pages/ThreeVThreePage";
 import ChallengeDetailPage from "../pages/ChallengeDetailPage";
+import ChallengeEquipePage from "../pages/ChallengeEquipePage";
 import PlanningPage from "../pages/PlanningPage";
 import ChallengeAtelierPage from "../pages/ChallengeAtelierPage";
+import LivePage from "../pages/LivePage";
 import SearchBar from "../components/ds/SearchBar";
-import Button from "../components/ds/Button";
 import type { SortConfig } from "../components/collections/List";
 import type { Match } from "../api/match";
 
@@ -36,10 +41,50 @@ export default function AppRouter() {
         }
       />
       <Route
+        path="/accueil-2"
+        element={
+          <LayoutRoot>
+            <Accueil2Page />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/accueil-2-broadcast"
+        element={
+          <LayoutRoot>
+            <Accueil2BroadcastPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/accueil-2-premium"
+        element={
+          <LayoutRoot>
+            <Accueil2PremiumPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/accueil-2-kiosque"
+        element={
+          <LayoutRoot>
+            <Accueil2KiosquePage />
+          </LayoutRoot>
+        }
+      />
+      <Route
         path="/planning"
         element={
           <LayoutRoot>
             <PlanningPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/live"
+        element={
+          <LayoutRoot>
+            <LivePage />
           </LayoutRoot>
         }
       />
@@ -76,9 +121,17 @@ export default function AppRouter() {
         }
       />
       <Route
+        path="/challenge/equipe/:teamId"
+        element={
+          <LayoutRoot>
+            <ChallengeEquipePage />
+          </LayoutRoot>
+        }
+      />
+      <Route
         path="/challenge/:id"
         element={
-          <LayoutRoot topBarContent={<BackToListButton />}>
+          <LayoutRoot>
             <ChallengeDetailPage />
           </LayoutRoot>
         }
@@ -115,7 +168,7 @@ export default function AppRouter() {
       <Route
         path="/matches/:id"
         element={
-          <LayoutRoot topBarContent={<BackToListButton />}>
+          <LayoutRoot>
             <MatchDetailPage />
           </LayoutRoot>
         }
@@ -123,7 +176,7 @@ export default function AppRouter() {
       <Route
         path="/teams/:id"
         element={
-          <LayoutRoot topBarContent={<BackToListButton />}>
+          <LayoutRoot>
             <TeamPage />
           </LayoutRoot>
         }
@@ -137,14 +190,5 @@ export default function AppRouter() {
         }
       />
     </Routes>
-  );
-}
-
-function BackToListButton() {
-  const navigate = useNavigate();
-  return (
-    <Button variant="ghost" onClick={() => navigate("/")}>
-      Retour
-    </Button>
   );
 }

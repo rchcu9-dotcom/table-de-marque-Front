@@ -91,6 +91,28 @@ export default function MatchListPage({
   const [allMatches, setAllMatches] = React.useState<Match[]>([]);
   const [teamFilter, setTeamFilter] = React.useState<string>("all");
   const [pouleFilter, setPouleFilter] = React.useState<string>("all");
+  const navigateForMatch = React.useCallback(
+    (match: Match) => {
+      const isChallenge = (match.competitionType ?? "").toLowerCase() === "challenge";
+      if (isChallenge) {
+        navigate(`/challenge/equipe/${encodeURIComponent(match.teamA)}`);
+      } else {
+        navigate(`/matches/${match.id}`);
+      }
+    },
+    [navigate],
+  );
+  const handleMatchSelect = React.useCallback(
+    (id: string) => {
+      const match = allMatches.find((item) => item.id === id);
+      if (match) {
+        navigateForMatch(match);
+      } else {
+        navigate(`/matches/${id}`);
+      }
+    },
+    [allMatches, navigate, navigateForMatch],
+  );
 
   React.useEffect(() => {
     if (planningData) {
@@ -306,7 +328,7 @@ export default function MatchListPage({
               currentMatchId={currentMomentumId}
               testIdPrefix="momentum-match"
               centered
-              onSelect={(id) => navigate(`/matches/${id}`)}
+              onSelect={handleMatchSelect}
               getCardClassName={(item) =>
                 `${momentumBorderForStatus(item)} ${
                   item.status === "ongoing" ? "live-pulse-card" : ""
@@ -367,7 +389,7 @@ export default function MatchListPage({
               cardClassName={(item) =>
                 `${item.status === "ongoing" ? "live-pulse-card !border-amber-300/60" : ""}`
               }
-              onItemClick={(m) => navigate(`/matches/${m.id}`)}
+              onItemClick={(m) => navigateForMatch(m)}
             />
           </div>
         </div>

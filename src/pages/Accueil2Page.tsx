@@ -3,23 +3,22 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchMatches } from "../api/match";
 import type { Match } from "../api/match";
-import type { ChallengeJ1MomentumEntry, ChallengeVitesseJ3Response } from "../api/challenge";
 import { useTeams } from "../hooks/useTeams";
 import { useMeals } from "../hooks/useMeals";
-import { useChallengeJ1Momentum } from "../hooks/useChallengeJ1Momentum";
-import { useChallengeVitesseJ3 } from "../hooks/useChallengeVitesseJ3";
 import { useSelectedTeam } from "../providers/SelectedTeamProvider";
 import homeIcon from "../assets/icons/nav/home.png";
 import icon5v5 from "../assets/icons/nav/fivev5.png";
 import icon3v3 from "../assets/icons/nav/threev3.png";
 import iconChallenge from "../assets/icons/nav/challenge.png";
 import { getLiveCommentary } from "./utils/homeCommentary";
-import { pickTournamentState, tournamentStateLabel } from "./utils/tournamentState";
-import { deriveTournamentDay as deriveTournamentDayFromMatches, type TournamentDay } from "../utils/tournamentDate";
+
+type HomeState = "avant" | "pendant" | "apres";
 
 type Triplet = { last: Match | null; live: Match | null; next: Match | null };
-type SmallGlaceMode = "3v3" | "challenge-j1" | "challenge-vitesse-j3";
-type MomentumItem = { label?: string; match: Match };
+
+function getNowMs() {
+  return Date.now();
+}
 
 function useLiveMatches() {
   const queryClient = useQueryClient();
@@ -58,6 +57,21 @@ function filterByCompetition(matches: Match[], competition: "5v5" | "3v3" | "cha
   return matches.filter((m) => (m.competitionType ?? "5v5") === competition);
 }
 
+function pickStateByDate(matches: Match[]): HomeState {
+  if (matches.length === 0) return "avant";
+  if (matches.some((m) => m.status === "ongoing")) return "pendant";
+  if (matches.every((m) => m.status === "finished")) return "apres";
+  if (matches.some((m) => m.status === "finished") && matches.some((m) => m.status === "planned")) return "pendant";
+  return "avant";
+}
+
+function dayIndex(nowMs: number, matches: Match[]) {
+  const sorted = [...matches].sort(byDateAsc);
+  const start = sorted[0] ? new Date(sorted[0].date).getTime() : nowMs;
+  const diffDays = Math.floor((nowMs - start) / 86_400_000);
+  return Math.max(1, diffDays + 1);
+}
+
 function tripletForCompetition(matches: Match[], competition: "5v5" | "3v3" | "challenge"): Triplet {
   const list = filterByCompetition(matches, competition).sort(byDateAsc);
   const liveCandidates = list.filter((m) => m.status === "ongoing");
@@ -79,13 +93,6 @@ function recentMatches(matches: Match[], competition: "5v5" | "3v3" | "challenge
   return filterByCompetition(matches, competition)
     .filter((m) => m.status === "finished")
     .sort(byDateAsc);
-}
-
-function formatHeroMatchLine(match: Match | null) {
-  if (!match) return "Match non disponible";
-  const teamA = match.teamA?.trim() || "Equipe A";
-  const teamB = match.teamB?.trim() || "Equipe B";
-  return `${teamA} vs ${teamB}`;
 }
 
 function clampWindow(list: Match[], targetId: string | null, desired = 3) {
@@ -125,84 +132,47 @@ function autoIndexForList(list: Match[], focusId: string | null) {
   return 0;
 }
 
-function smallGlaceModeForDay(day: TournamentDay): SmallGlaceMode {
-  if (day === 1) return "challenge-j1";
+function focusIndexForTourniquet(list: Match[]) {
+  if (list.length === 0) return -1;
+  const ongoingIdx = list.findIndex((m) => m.status === "ongoing");
+  if (ongoingIdx >= 0) return ongoingIdx;
+  for (let i = list.length - 1; i >= 0; i -= 1) {
+    if (list[i].status === "finished") return i;
+  }
+  const plannedIdx = list.findIndex((m) => m.status === "planned");
+  if (plannedIdx >= 0) return plannedIdx;
+  return 0;
+}
+
+function kiosqueTripletWindowWithOscillation(
+  list: Match[],
+  focusIndex: number,
+  oscillationStep: number,
+) {
+  if (list.length === 0 || focusIndex < 0 || focusIndex >= list.length) return [];
+  if (list.length <= 3) return list;
+
+  const poolStart = Math.max(0, focusIndex - 2);
+  const poolEnd = Math.min(list.length - 1, focusIndex + 2);
+  const pool = list.slice(poolStart, poolEnd + 1);
+  const focusInPool = focusIndex - poolStart;
+
+  if (pool.length <= 3) return pool;
+
+  // Focus position oscillation in the visible triplet: right -> center -> left -> center.
+  const desiredPositionCycle = [2, 1, 0, 1];
+  const desiredFocusPosition = desiredPositionCycle[oscillationStep % desiredPositionCycle.length];
+
+  let tripletStart = focusInPool - desiredFocusPosition;
+  if (tripletStart < 0) tripletStart = 0;
+  if (tripletStart + 3 > pool.length) tripletStart = pool.length - 3;
+
+  return pool.slice(tripletStart, tripletStart + 3);
+}
+
+function smallGlaceCompetition(day: number): "3v3" | "challenge" {
   if (day === 2) return "3v3";
-  return "challenge-vitesse-j3";
-}
-
-function smallGlaceLabel(mode: SmallGlaceMode) {
-  if (mode === "3v3") return "3v3";
-  if (mode === "challenge-vitesse-j3") return "Challenge Vitesse";
-  return "Challenge";
-}
-
-function smallGlaceIcon(mode: SmallGlaceMode) {
-  return mode === "3v3" ? icon3v3 : iconChallenge;
-}
-
-function challengeMomentumToMatches(entries: ChallengeJ1MomentumEntry[]): Match[] {
-  return entries
-    .map((entry) => ({
-      id: `challenge-${entry.teamId}`,
-      date: entry.slotStart,
-      teamA: entry.teamName,
-      teamB: "Challenge",
-      status: entry.status,
-      scoreA: null,
-      scoreB: null,
-      teamALogo: entry.teamLogoUrl,
-      teamBLogo: null,
-      pouleCode: "CHALL",
-      pouleName: "Challenge individuel",
-      competitionType: "challenge" as const,
-      surface: "PG" as const,
-      phase: "qualification",
-      jour: "J1",
-    }))
-    .sort(byDateAsc);
-}
-
-function challengeVitesseJ3ToMomentumItems(
-  data: ChallengeVitesseJ3Response | undefined,
-): MomentumItem[] {
-  const phases = data?.phases;
-  if (!phases) return [];
-
-  return (["QF", "DF", "F"] as const)
-    .map((phaseKey) => {
-      const phase = phases[phaseKey];
-      if (!phase?.homeVisible || !phase.scheduledAt) return null;
-      return {
-        match: {
-          id: `challenge-vitesse-phase-${phaseKey.toLowerCase()}`,
-          date: phase.scheduledAt,
-          teamA: phase.label,
-          teamB: "",
-          status: phase.status as Match["status"],
-          scoreA: null,
-          scoreB: null,
-          competitionType: "challenge" as const,
-          surface: "PG" as const,
-          phase: "vitesse-j3",
-          pouleCode: phaseKey,
-          pouleName: phase.label,
-          jour: "J3",
-        },
-      };
-    })
-    .filter((item): item is NonNullable<typeof item> => item !== null);
-}
-
-function momentumItemsById(items: MomentumItem[]) {
-  return new Map(items.map((item) => [item.match.id, item]));
-}
-
-function mapMatchesToMomentumItems(matches: Match[], items: MomentumItem[]) {
-  const byId = momentumItemsById(items);
-  return matches
-    .map((match) => byId.get(match.id))
-    .filter((item): item is MomentumItem => !!item);
+  return "challenge";
 }
 
 function segmentForTeam(matches: Match[], teamId: string, competitionFilter?: "5v5" | "3v3" | "challenge") {
@@ -297,6 +267,106 @@ function CompactLine({
               onSelect={onSelect}
             />
           ))}
+      </div>
+    </div>
+  );
+}
+
+function KiosqueMomentumLine({
+  title,
+  icon,
+  matches,
+  testId,
+  cardTestIdPrefix,
+  focusTestId,
+  focusId,
+  onSelect,
+  tourniquet = false,
+}: {
+  title: string;
+  icon: string;
+  matches: Match[];
+  testId: string;
+  cardTestIdPrefix?: string;
+  focusTestId?: string;
+  focusId?: string | null;
+  onSelect?: (id: string) => void;
+  tourniquet?: boolean;
+}) {
+  const sorted = React.useMemo(() => [...matches].sort(byDateAsc), [matches]);
+  const [focusCursor, setFocusCursor] = React.useState(() => focusIndexForTourniquet(sorted));
+  const [oscillationStep, setOscillationStep] = React.useState(0);
+  const [isFading, setIsFading] = React.useState(false);
+
+  React.useEffect(() => {
+    if (sorted.length === 0) {
+      setFocusCursor(-1);
+      return;
+    }
+    const byFocusId =
+      focusId && sorted.findIndex((m) => m.id === focusId) >= 0
+        ? sorted.findIndex((m) => m.id === focusId)
+        : -1;
+    setFocusCursor(byFocusId >= 0 ? byFocusId : focusIndexForTourniquet(sorted));
+  }, [focusId, sorted]);
+
+  const display = React.useMemo(
+    () =>
+      tourniquet
+        ? kiosqueTripletWindowWithOscillation(sorted, focusCursor, oscillationStep)
+        : sorted,
+    [sorted, focusCursor, oscillationStep, tourniquet],
+  );
+
+  const effectiveFocusId = React.useMemo(() => {
+    if (tourniquet) {
+      if (focusCursor >= 0 && focusCursor < sorted.length) return sorted[focusCursor].id;
+      return null;
+    }
+    return focusId ?? null;
+  }, [focusCursor, focusId, sorted, tourniquet]);
+
+  React.useEffect(() => {
+    if (!tourniquet || sorted.length <= 1) return;
+    const timer = window.setInterval(() => {
+      setIsFading(true);
+      window.setTimeout(() => {
+        setOscillationStep((prev) => (prev + 1) % 4);
+        setIsFading(false);
+      }, 130);
+    }, 7000);
+    return () => window.clearInterval(timer);
+  }, [sorted, tourniquet]);
+
+  const containerClass = tourniquet
+    ? `grid gap-3 grid-cols-1 ${
+        display.length <= 1 ? "md:grid-cols-1" : display.length === 2 ? "md:grid-cols-2" : "md:grid-cols-3"
+      }`
+    : "flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory";
+
+  return (
+    <div className="space-y-2" data-testid={testId}>
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          <img src={icon} alt={title} className="h-8 w-8 rounded-md bg-slate-800 object-cover" loading="lazy" />
+          <p className="text-sm font-semibold text-slate-100">{title}</p>
+        </div>
+      </div>
+      <div className={`${containerClass} transition-opacity duration-150 ${isFading ? "opacity-0" : "opacity-100"}`}>
+        {display.map((match) => (
+          <CompactMatchCard
+            key={`${testId}-${match.id}`}
+            match={match}
+            testId={cardTestIdPrefix && match.id ? `${cardTestIdPrefix}-${match.id}` : `${testId}-${match.id}`}
+            autoFocus={!!effectiveFocusId && match.id === effectiveFocusId}
+            autoFocusAlign="center"
+            isFocused={!!effectiveFocusId && match.id === effectiveFocusId}
+            focusTestId={focusTestId}
+            gridMode={tourniquet}
+            fixedCenter
+            onSelect={onSelect}
+          />
+        ))}
       </div>
     </div>
   );
@@ -473,7 +543,8 @@ function CompactMatchCard({
   isFocused,
   focusTone,
   focusTestId,
-  gridMode = false,
+  gridMode,
+  fixedCenter,
   onSelect,
 }: {
   match: Match;
@@ -485,6 +556,7 @@ function CompactMatchCard({
   focusTone?: "blue";
   focusTestId?: string;
   gridMode?: boolean;
+  fixedCenter?: boolean;
   onSelect?: (id: string) => void;
 }) {
   const d = new Date(match.date);
@@ -522,13 +594,15 @@ function CompactMatchCard({
   const showTeamB = !isChallenge;
   const focusClass =
     isFocused && focusTone === "blue" && !isLive ? "border-sky-400 ring-2 ring-sky-300/70" : "";
+  const widthClass = gridMode
+    ? "w-full"
+    : "min-w-[220px] sm:min-w-[240px] max-w-[320px] flex-[0_0_78vw] md:flex-[0_0_280px] snap-center";
+  const centerZoneClass = fixedCenter
+    ? "grid grid-cols-[minmax(0,1fr)_92px_minmax(0,1fr)] items-center gap-2"
+    : "flex items-center justify-between gap-2";
   return (
     <div
-      className={`relative overflow-hidden rounded-lg border px-4 py-3 text-sm text-slate-100 shadow-inner snap-center cursor-pointer transition duration-200 hover:-translate-y-0.5 hover:bg-slate-900/80 hover:shadow-lg active:scale-[0.99] ${
-        gridMode
-          ? "w-full min-w-0 max-w-none md:flex-auto"
-          : "min-w-[220px] sm:min-w-[240px] max-w-[320px] flex-[0_0_78vw] md:flex-[0_0_280px]"
-      } ${
+      className={`relative overflow-hidden rounded-lg border px-4 py-3 text-sm text-slate-100 shadow-inner ${widthClass} cursor-pointer transition duration-200 hover:-translate-y-0.5 hover:bg-slate-900/80 hover:shadow-lg active:scale-[0.99] ${
         isLive ? "border-amber-400 ring-2 ring-amber-300/60 live-pulse-card" : "border-slate-800"
       } ${focusClass} bg-slate-950/80`}
       data-testid={testId}
@@ -537,9 +611,9 @@ function CompactMatchCard({
       role={onSelect ? "button" : undefined}
       tabIndex={onSelect ? 0 : -1}
       onClick={() => onSelect?.(match.id)}
-      >
-        {isFocused && focusTestId ? <span data-testid={focusTestId} /> : null}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-25">
+    >
+      {isFocused && focusTestId ? <span data-testid={focusTestId} /> : null}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-25">
         <div
           className="absolute inset-y-0 left-0 w-1/3"
           style={{
@@ -565,8 +639,8 @@ function CompactMatchCard({
           }}
         />
       </div>
-      <div className={`relative items-center gap-2 ${showTeamB ? "grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]" : "flex justify-between"}`}>
-        <div className="flex items-center gap-2 min-w-0">
+      <div className={`relative ${centerZoneClass}`}>
+        <div className={`flex items-center gap-2 min-w-0 ${fixedCenter ? "justify-start" : ""}`}>
           {match.teamALogo && <img src={match.teamALogo} alt={match.teamA} className="h-5 w-5 rounded-full object-cover" />}
           <span
             className={`text-[12px] font-semibold truncate ${
@@ -576,17 +650,14 @@ function CompactMatchCard({
             {match.teamA}
           </span>
         </div>
-        <div
-          className="flex flex-col items-center min-w-[60px] text-center justify-self-center"
-          data-testid={`home-momentum-center-${match.id}`}
-        >
+        <div className="flex w-[92px] flex-col items-center justify-center text-center">
           {label && <span className="text-[10px] uppercase text-slate-400">{label}</span>}
           <span className={`text-[12px] font-semibold ${isLive ? "text-amber-200" : "text-slate-100"}`}>
             {subtitle}
           </span>
         </div>
         {showTeamB && (
-          <div className="flex items-center gap-2 min-w-0 justify-end justify-self-end">
+          <div className="flex items-center gap-2 min-w-0 justify-end">
             <span
               className={`text-[12px] font-semibold truncate text-right ${
                 hasWinner && winnerSide === "B" ? "text-emerald-300" : ""
@@ -710,43 +781,39 @@ export default function HomePage() {
   const { data: teams } = useTeams();
   const { selectedTeam } = useSelectedTeam();
   const { matches, isDegraded } = useLiveMatches();
-  const { data: challengeJ1Momentum } = useChallengeJ1Momentum();
-  const { data: challengeVitesseJ3 } = useChallengeVitesseJ3();
   const { data: meals } = useMeals();
+  const nowMs = getNowMs();
   const [layout, setLayout] = React.useState<{ topOffset: number; paddingTop: number }>({
     topOffset: 64,
     paddingTop: 320,
   });
   const topBlockRef = React.useRef<HTMLDivElement | null>(null);
-  const resolveHomeRoute = React.useCallback(
-    (match: Match) => {
-      const isChallenge = (match.competitionType ?? "").toLowerCase() === "challenge";
-      if (isChallenge && match.phase === "vitesse-j3") {
-        return "/challenge";
-      }
-      if (isChallenge) {
-        return `/challenge/equipe/${encodeURIComponent(match.teamA)}`;
-      }
-      return `/matches/${match.id}`;
-    },
-    [],
-  );
-
-  const makeSelectHandler = React.useCallback(
+    const makeSelectHandler = React.useCallback(
     (list: Match[]) => (id: string) => {
       const match = list.find((m) => m.id == id);
-      navigate(match ? resolveHomeRoute(match) : `/matches/${id}`);
+      if (match) {
+        const isChallenge = (match.competitionType ?? "").toLowerCase() == "challenge";
+        if (isChallenge) {
+          navigate(`/challenge/equipe/${encodeURIComponent(match.teamA)}`);
+          return;
+        }
+      }
+      navigate(`/matches/${id}`);
     },
-    [navigate, resolveHomeRoute],
+    [navigate],
   );
 
-  const resolveMatchRoute = React.useCallback(
+const resolveMatchRoute = React.useCallback(
     (id: string) => {
       const match = matches.find((m) => m.id === id);
       if (!match) return `/matches/${id}`;
-      return resolveHomeRoute(match);
+      const isChallenge = (match.competitionType ?? "").toLowerCase() === "challenge";
+      if (isChallenge) {
+        return `/challenge/equipe/${encodeURIComponent(match.teamA)}`;
+      }
+      return `/matches/${id}`;
     },
-    [matches, resolveHomeRoute],
+    [matches],
   );
 
   const recomputeLayout = React.useCallback(() => {
@@ -765,193 +832,163 @@ export default function HomePage() {
     return () => window.removeEventListener("resize", recomputeLayout);
   }, [recomputeLayout]);
 
-  const matches5v5 = React.useMemo(() => filterByCompetition(matches, "5v5"), [matches]);
-  const hasLive5v5 = React.useMemo(
-    () => matches5v5.some((m) => m.status === "ongoing"),
-    [matches5v5],
-  );
-  const state = React.useMemo(() => pickTournamentState(matches5v5), [matches5v5]);
-  const tournamentDay = React.useMemo(() => deriveTournamentDayFromMatches(matches), [matches]);
-  const smallGlaceMode = React.useMemo(() => smallGlaceModeForDay(tournamentDay), [tournamentDay]);
-  const smallGlaceType = React.useMemo(
-    () => (smallGlaceMode === "3v3" ? "3v3" : "challenge"),
-    [smallGlaceMode],
-  );
-  const smallGlaceLabelValue = React.useMemo(() => smallGlaceLabel(smallGlaceMode), [smallGlaceMode]);
-  const challengeMomentumMatchesJ1 = React.useMemo(
-    () => challengeMomentumToMatches(challengeJ1Momentum ?? []),
-    [challengeJ1Momentum],
-  );
-  const smallGlaceMomentumItems = React.useMemo(
-    () => {
-      if (smallGlaceMode === "challenge-j1") {
-        return challengeMomentumMatchesJ1.map((match) => ({ match }));
-      }
-      if (smallGlaceMode === "challenge-vitesse-j3") {
-        return challengeVitesseJ3ToMomentumItems(challengeVitesseJ3);
-      }
-      return filterByCompetition(matches, "3v3").map((match) => ({ match }));
-    },
-    [challengeMomentumMatchesJ1, challengeVitesseJ3, matches, smallGlaceMode],
-  );
-  const smallGlaceSourceMatches = React.useMemo(
-    () => smallGlaceMomentumItems.map((item) => item.match),
-    [smallGlaceMomentumItems],
-  );
+  const state = React.useMemo(() => pickStateByDate(matches), [matches]);
+  const day = React.useMemo(() => dayIndex(nowMs, matches), [matches, nowMs]);
+  const smallGlaceType = React.useMemo(() => smallGlaceCompetition(day), [day]);
+  const smallGlaceLabel = smallGlaceType === "3v3" ? "3v3" : "Challenge";
 
   const triplet5v5 = React.useMemo(() => tripletForCompetition(matches, "5v5"), [matches]);
   const tripletSmallGlace = React.useMemo(
-    () => tripletForCompetition(smallGlaceSourceMatches, smallGlaceType),
-    [smallGlaceSourceMatches, smallGlaceType],
+    () => tripletForCompetition(matches, smallGlaceType),
+    [matches, smallGlaceType],
   );
-  const ordered5v5 = React.useMemo(() => liveCenteredOrder(triplet5v5, filterByCompetition(matches, "5v5")), [triplet5v5, matches]);
   const orderedSmallGlace = React.useMemo(
-    () => mapMatchesToMomentumItems(liveCenteredOrder(tripletSmallGlace, smallGlaceSourceMatches), smallGlaceMomentumItems),
-    [tripletSmallGlace, smallGlaceSourceMatches, smallGlaceMomentumItems],
-  );
-  const orderedSmallGlaceMatches = React.useMemo(
-    () => orderedSmallGlace.map((item) => item.match),
-    [orderedSmallGlace],
-  );
-  const autoIndex5v5 = React.useMemo(
-    () =>
-      autoIndexForList(ordered5v5, triplet5v5.live?.id ?? triplet5v5.next?.id ?? triplet5v5.last?.id ?? null),
-    [ordered5v5, triplet5v5.live, triplet5v5.next, triplet5v5.last],
+    () => liveCenteredOrder(tripletSmallGlace, filterByCompetition(matches, smallGlaceType)),
+    [tripletSmallGlace, matches, smallGlaceType],
   );
   const autoIndexSmallGlace = React.useMemo(
     () =>
       autoIndexForList(
-        orderedSmallGlaceMatches,
+        orderedSmallGlace,
         tripletSmallGlace.live?.id ?? tripletSmallGlace.next?.id ?? tripletSmallGlace.last?.id ?? null,
       ),
-    [orderedSmallGlaceMatches, tripletSmallGlace.live, tripletSmallGlace.next, tripletSmallGlace.last],
-  );
-  const focusId5v5 = React.useMemo(
-    () => (ordered5v5[autoIndex5v5]?.id ? ordered5v5[autoIndex5v5].id : null),
-    [ordered5v5, autoIndex5v5],
+    [orderedSmallGlace, tripletSmallGlace.live, tripletSmallGlace.next, tripletSmallGlace.last],
   );
   const focusIdSmallGlace = React.useMemo(
-    () => (orderedSmallGlaceMatches[autoIndexSmallGlace]?.id ? orderedSmallGlaceMatches[autoIndexSmallGlace].id : null),
-    [orderedSmallGlaceMatches, autoIndexSmallGlace],
+    () => (orderedSmallGlace[autoIndexSmallGlace]?.id ? orderedSmallGlace[autoIndexSmallGlace].id : null),
+    [orderedSmallGlace, autoIndexSmallGlace],
   );
-  const focusMatchForHero = React.useMemo(() => {
-    const sorted = [...matches5v5].sort(byDateAsc);
-    if (sorted.length === 0) return null;
-    if (state === "avant") return sorted[0];
-    if (state === "pendant") {
-      return (
-        sorted.find((m) => m.status === "ongoing") ??
-        sorted.find((m) => m.status === "planned") ??
-        [...sorted].reverse().find((m) => m.status === "finished") ??
-        null
-      );
-    }
-    return sorted[sorted.length - 1];
-  }, [matches5v5, state]);
+  const countdown = React.useMemo(() => {
+    const next = [...matches].sort(byDateAsc).find((m) => new Date(m.date).getTime() > nowMs);
+    if (!next) return null;
+    const diff = new Date(next.date).getTime() - nowMs;
+    const totalSeconds = Math.max(0, Math.floor(diff / 1000));
+    const days = Math.floor(totalSeconds / 86_400);
+    const hours = Math.floor((totalSeconds % 86_400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${days}j ${hours.toString().padStart(2, "0")}h ${minutes
+      .toString()
+      .padStart(2, "0")}m ${seconds.toString().padStart(2, "0")}s`;
+  }, [matches, nowMs]);
 
-const commentaryMatch = React.useMemo(() => {
-  const ongoing = [...matches5v5].filter((m) => m.status === "ongoing").sort(byDateAsc);
-  if (ongoing.length > 0) return ongoing[ongoing.length - 1];
-  const finished = [...matches5v5].filter((m) => m.status === "finished").sort(byDateAsc);
-  if (finished.length > 0) return finished[finished.length - 1];
-  return null;
-}, [matches5v5]);
+  const heroTitle = React.useMemo(() => {
+    if (state === "avant") return "Prêts à jouer !";
+    if (state === "pendant") return "Ça joue !";
+    return "Clap de fin !";
+  }, [state]);
+  const heroFocusLine = React.useMemo(() => {
+    const sorted = [...matches].sort(byDateAsc);
+    if (sorted.length === 0) return "Match non disponible";
 
-const heroCommentary = React.useMemo(() => {
-  const hasOngoing = matches5v5.some((m) => m.status === "ongoing");
-  if (state === "pendant" && !hasOngoing) return "Prochain match en préparation";
-  return getLiveCommentary(commentaryMatch);
-}, [commentaryMatch, matches5v5, state]);
+    const first = sorted[0] ?? null;
+    const last = sorted[sorted.length - 1] ?? null;
+    const ongoing = sorted.filter((m) => m.status === "ongoing").pop() ?? null;
+    const lastFinished = sorted.filter((m) => m.status === "finished").pop() ?? null;
 
-const hero = React.useMemo(() => {
-  let subtitle = "Match non disponible";
+    let focus: Match | null = null;
+    if (state === "avant") focus = first;
+    else if (state === "pendant") focus = ongoing ?? lastFinished;
+    else focus = last;
 
-  if (state === "pendant") {
-    if (focusMatchForHero?.status === "ongoing") {
-      subtitle = `En cours : ${formatHeroMatchLine(focusMatchForHero)}`;
-    } else if (focusMatchForHero?.status === "planned") {
-      subtitle = `Prochain match : ${formatHeroMatchLine(focusMatchForHero)}`;
-    } else if (focusMatchForHero?.status === "finished") {
-      subtitle = `Dernier match : ${formatHeroMatchLine(focusMatchForHero)}`;
-    }
-  } else {
-    subtitle = formatHeroMatchLine(focusMatchForHero);
-  }
+    if (!focus) return "Match non disponible";
+    const teamA = focus.teamA?.trim() || "Equipe A";
+    const teamB = focus.teamB?.trim() || "Equipe B";
+    return `${teamA} vs ${teamB}`;
+  }, [matches, state]);
+  const hero = React.useMemo(() => {
+    return {
+      title: heroTitle,
+      subtitle: heroFocusLine,
+    };
+  }, [heroFocusLine, heroTitle]);
+  const commentaryMatch = React.useMemo(() => {
+    const ongoing = [...matches].filter((m) => m.status === "ongoing").sort(byDateAsc);
+    if (ongoing.length > 0) return ongoing[ongoing.length - 1];
+    const finished = [...matches].filter((m) => m.status === "finished").sort(byDateAsc);
+    if (finished.length > 0) return finished[finished.length - 1];
+    return null;
+  }, [matches]);
+  const heroCommentary = React.useMemo(() => getLiveCommentary(commentaryMatch), [commentaryMatch]);
+  const hasLiveMatch = commentaryMatch?.status === "ongoing";
+  const momentumTitle = "Focus";
+  const [tickerPaused, setTickerPaused] = React.useState(false);
+  const tickerItems = React.useMemo(() => {
+    const matches5v5 = filterByCompetition(matches, "5v5").sort(byDateAsc);
+    const focus =
+      [...matches5v5].filter((m) => m.status === "ongoing").pop() ??
+      [...matches5v5].filter((m) => m.status === "finished").pop() ??
+      null;
+    const focusText = (() => {
+      if (!focus) return "Focus: Le tournoi 5v5 va commencer.";
+      const a = focus.teamA?.trim() || "Equipe A";
+      const b = focus.teamB?.trim() || "Equipe B";
+      const commentary = getLiveCommentary(focus);
+      if (focus.status === "ongoing") {
+        return `Focus: ${a} vs ${b}, en cours. ${commentary}`;
+      }
+      if (focus.status === "finished") {
+        return `Focus: ${a} vs ${b}, termine. ${commentary}`;
+      }
+      return `Focus: ${a} vs ${b}. ${commentary}`;
+    })();
 
-  return {
-    title: tournamentStateLabel(state),
-    subtitle,
-  };
-}, [focusMatchForHero, state]);
-const tickerItems = React.useMemo(() => {
-  const focus =
-    [...matches5v5].filter((m) => m.status === "ongoing").sort(byDateAsc).pop() ??
-    [...matches5v5].filter((m) => m.status === "finished").sort(byDateAsc).pop() ??
-    null;
+    const previousText = (() => {
+      if (!focus) return "Precedent: Aucun match 5v5 termine avant focus.";
+      const focusTime = new Date(focus.date).getTime();
+      const previous = [...matches5v5]
+        .filter((m) => m.status === "finished" && new Date(m.date).getTime() < focusTime)
+        .sort(byDateAsc)
+        .pop();
+      if (!previous) return "Precedent: Aucun match 5v5 termine avant focus.";
+      const a = previous.teamA?.trim() || "Equipe A";
+      const b = previous.teamB?.trim() || "Equipe B";
+      const scoreKnown = typeof previous.scoreA === "number" && typeof previous.scoreB === "number";
+      if (scoreKnown) return `${a} - ${b}: ${previous.scoreA} - ${previous.scoreB}, termine.`;
+      return `${a} - ${b}, termine.`;
+    })();
 
-  const focusText = (() => {
-    if (!focus) return "Focus: Le tournoi 5v5 va commencer.";
-    const a = focus.teamA?.trim() || "Equipe A";
-    const b = focus.teamB?.trim() || "Equipe B";
-    const commentary = getLiveCommentary(focus);
-    if (focus.status === "ongoing") return `Focus: ${a} vs ${b}, en cours. ${commentary}`;
-    if (focus.status === "finished") return `Focus: ${a} vs ${b}, terminé. ${commentary}`;
-    return `Focus: ${a} vs ${b}. ${commentary}`;
-  })();
+    const nextText = (() => {
+      if (!focus) return "Prochain match: Aucun prochain match 5v5.";
+      const focusTime = new Date(focus.date).getTime();
+      const next = [...matches5v5]
+        .filter((m) => m.status === "planned" && new Date(m.date).getTime() > focusTime)
+        .sort(byDateAsc)[0];
+      if (!next) return "Prochain match: Aucun prochain match 5v5.";
+      const a = next.teamA?.trim() || "Equipe A";
+      const b = next.teamB?.trim() || "Equipe B";
+      return `Prochain match: ${a} - ${b}.`;
+    })();
 
-  const previousText = (() => {
-    if (!focus) return "Précédent: Aucun match 5v5 terminé avant focus.";
-    const focusTime = new Date(focus.date).getTime();
-    const previous = [...matches5v5]
-      .filter((m) => m.status === "finished" && new Date(m.date).getTime() < focusTime)
-      .sort(byDateAsc)
-      .pop();
-    if (!previous) return "Précédent: Aucun match 5v5 terminé avant focus.";
-    const a = previous.teamA?.trim() || "Equipe A";
-    const b = previous.teamB?.trim() || "Equipe B";
-    const scoreKnown = typeof previous.scoreA === "number" && typeof previous.scoreB === "number";
-    if (scoreKnown) return `${a} - ${b}: ${previous.scoreA} - ${previous.scoreB}, terminé.`;
-    return `${a} - ${b}, terminé.`;
-  })();
+    return [focusText, previousText, nextText];
+  }, [matches]);
 
-  const nextText = (() => {
-    if (!focus) return "Prochain match: Aucun prochain match 5v5.";
-    const focusTime = new Date(focus.date).getTime();
-    const next = [...matches5v5]
-      .filter((m) => m.status === "planned" && new Date(m.date).getTime() > focusTime)
-      .sort(byDateAsc)[0];
-    if (!next) return "Prochain match: Aucun prochain match 5v5.";
-    const a = next.teamA?.trim() || "Equipe A";
-    const b = next.teamB?.trim() || "Equipe B";
-    return `Prochain match: ${a} - ${b}.`;
-  })();
-
-  return [focusText, previousText, nextText];
-}, [matches5v5]);
-
-const beforeUpcoming5v5 = React.useMemo(() => upcomingMatches(matches, "5v5").slice(0, 3), [matches]);
-const beforeUpcomingSmallGlace = React.useMemo(
-  () => mapMatchesToMomentumItems(upcomingMatches(smallGlaceSourceMatches, smallGlaceType).slice(0, 3), smallGlaceMomentumItems),
-  [smallGlaceMomentumItems, smallGlaceSourceMatches, smallGlaceType],
-);
-const beforeFocus5v5 = React.useMemo(() => beforeUpcoming5v5[0]?.id ?? null, [beforeUpcoming5v5]);
-const beforeFocusSmallGlace = React.useMemo(
-  () => beforeUpcomingSmallGlace[0]?.match.id ?? null,
-  [beforeUpcomingSmallGlace],
-);
-const afterRecent5v5 = React.useMemo(() => recentMatches(matches, "5v5").slice(-3), [matches]);
-const focusIdApres5v5 = React.useMemo(
-  () => (afterRecent5v5.length > 0 ? afterRecent5v5[afterRecent5v5.length - 1].id : null),
-  [afterRecent5v5],
-);
-const afterSmallGlaceWinners = React.useMemo(
-  () => mapMatchesToMomentumItems(recentMatches(smallGlaceSourceMatches, smallGlaceType).slice(-3).reverse(), smallGlaceMomentumItems),
-  [smallGlaceMomentumItems, smallGlaceSourceMatches, smallGlaceType],
-);
-const afterFocusSmallGlace = React.useMemo(
-  () => (afterSmallGlaceWinners[0]?.match.id ? afterSmallGlaceWinners[0].match.id : null),
-  [afterSmallGlaceWinners],
-);
+  const beforeUpcoming5v5 = React.useMemo(() => upcomingMatches(matches, "5v5").slice(0, 3), [matches]);
+  const beforeUpcomingChallenge = React.useMemo(
+    () => upcomingMatches(matches, "challenge").slice(0, 3),
+    [matches],
+  );
+  const beforeFocus5v5 = React.useMemo(() => beforeUpcoming5v5[0]?.id ?? null, [beforeUpcoming5v5]);
+  const beforeFocusChallenge = React.useMemo(
+    () => beforeUpcomingChallenge[0]?.id ?? null,
+    [beforeUpcomingChallenge],
+  );
+  const afterChallengeWinners = React.useMemo(
+    () => recentMatches(matches, "challenge").slice(-3).reverse(),
+    [matches],
+  );
+  const afterFocusChallenge = React.useMemo(
+    () => (afterChallengeWinners[0]?.id ? afterChallengeWinners[0].id : null),
+    [afterChallengeWinners],
+  );
+  const kiosque5v5Matches = React.useMemo(() => {
+    if (state === "avant") return beforeUpcoming5v5;
+    return filterByCompetition(matches, "5v5").sort(byDateAsc);
+  }, [beforeUpcoming5v5, matches, state]);
+  const kiosque5v5FocusId = React.useMemo(() => {
+    if (state === "avant") return beforeFocus5v5;
+    return triplet5v5.live?.id ?? triplet5v5.last?.id ?? null;
+  }, [beforeFocus5v5, state, triplet5v5.last?.id, triplet5v5.live?.id]);
 
   React.useEffect(() => {
     recomputeLayout();
@@ -959,6 +996,7 @@ const afterFocusSmallGlace = React.useMemo(
     recomputeLayout,
     isDegraded,
     state,
+    countdown,
     selectedTeam?.id,
     selectedTeam?.name,
     selectedTeam?.logoUrl,
@@ -971,68 +1009,72 @@ const afterFocusSmallGlace = React.useMemo(
       <div className="absolute left-0 right-0 px-4" style={{ top: `${layout.topOffset}px` }}>
         <div className="max-w-6xl mx-auto" ref={topBlockRef}>
           <section className="rounded-xl border border-cyan-400/35 bg-[linear-gradient(125deg,rgba(8,20,44,0.95),rgba(7,18,38,0.9),rgba(12,30,52,0.92))] backdrop-blur px-4 py-3 shadow-[0_20px_48px_-28px_rgba(34,211,238,0.5)]">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-800/80 flex-shrink-0">
-            <img src={homeIcon} alt="Accueil" className="h-full w-full object-cover scale-150" loading="lazy" />
-          </div>
-          <div className="flex flex-1 min-w-0 flex-col gap-1">
-            <div className="flex w-full items-center justify-between gap-3">
+        <div className="mb-1 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-800/80 flex-shrink-0 border border-cyan-300/30">
+              <img src={homeIcon} alt="Accueil 2" className="h-full w-full object-cover scale-150" loading="lazy" />
+            </div>
+            <div className="flex flex-col gap-1">
               <h1 className="text-xl font-bold text-white" data-testid="home-hero-title">
                 {hero.title}
               </h1>
-              {state === "pendant" && hasLive5v5 ? (
-                <button
-                  type="button"
-                  onClick={() => navigate("/live")}
-                  aria-label="Aller a la page Live"
-                  data-testid="home-live-badge"
-                  className="inline-flex shrink-0 items-center rounded-md border border-amber-200/80 bg-gradient-to-r from-red-600 to-amber-500 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-white shadow-[0_0_16px_rgba(245,158,11,0.45)] transition hover:-translate-y-0.5 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-                >
-                  Live
-                </button>
-              ) : null}
+              <p className="text-sm text-slate-200">{hero.subtitle}</p>
             </div>
-            <p className="text-sm text-slate-200">{hero.subtitle}</p>
-            {selectedTeam && (
-              <div className="flex items-center gap-2 text-xs text-emerald-200 pr-1">
-                <span>{"\u00C9quipe suivie :"} {selectedTeam.name}</span>
-                {selectedTeam.logoUrl && (
-                  <img
-                    src={selectedTeam.logoUrl}
-                    alt={selectedTeam.name}
-                    className="h-6 w-6 rounded-full object-cover border border-emerald-300/60 bg-slate-900"
-                  />
-                )}
-              </div>
-            )}
           </div>
+          {hasLiveMatch ? (
+            <span className="inline-flex rounded-md border border-amber-300/80 bg-amber-500/20 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-100">
+              live
+            </span>
+          ) : null}
         </div>
         <p className="rounded-md border border-slate-700/80 bg-slate-900/55 px-3 py-2 text-sm text-cyan-100" data-testid="home-hero-commentary">
           {heroCommentary}
         </p>
+        {selectedTeam && (
+          <div className="mt-2 flex items-center gap-2 text-xs text-emerald-200 pr-1">
+            <span>Équipe suivie : {selectedTeam.name}</span>
+            {selectedTeam.logoUrl && (
+              <img
+                src={selectedTeam.logoUrl}
+                alt={selectedTeam.name}
+                className="h-6 w-6 rounded-full object-cover border border-emerald-300/60 bg-slate-900"
+              />
+            )}
+          </div>
+        )}
         {isDegraded && (
           <div
             className="mt-2 rounded-md border border-amber-500/60 bg-amber-500/10 px-3 py-2 text-xs text-amber-100"
             data-testid="home-degraded-banner"
           >
-            Mode dégradé (reconnexion en cours) – actualisation toutes les 30s.
+            Mode degrade (reconnexion en cours) - actualisation toutes les 30s.
           </div>
         )}
           </section>
-          <section className="mt-2 overflow-hidden rounded-lg border border-slate-700/80 bg-slate-950/75 px-3 py-2" data-testid="home-focus-ticker">
+          <section
+            className="mt-2 overflow-hidden rounded-lg border border-slate-700/80 bg-slate-950/75 px-3 py-2"
+            data-testid="home-focus-ticker"
+            onMouseEnter={() => setTickerPaused(true)}
+            onMouseLeave={() => setTickerPaused(false)}
+            onTouchStart={() => setTickerPaused(true)}
+            onTouchEnd={() => setTickerPaused(false)}
+          >
             <style>{`
-              .home-ticker-track {
+              .home2-ticker-track {
                 display: flex;
                 width: max-content;
                 gap: 1.25rem;
-                animation: homeTickerMove 24s linear infinite;
+                animation: home2TickerMove 24s linear infinite;
               }
-              @keyframes homeTickerMove {
+              .home2-ticker-track.pause {
+                animation-play-state: paused;
+              }
+              @keyframes home2TickerMove {
                 from { transform: translateX(0); }
                 to { transform: translateX(-50%); }
               }
             `}</style>
-            <div className="home-ticker-track">
+            <div className={`home2-ticker-track ${tickerPaused ? "pause" : ""}`}>
               {[...tickerItems, ...tickerItems].map((item, idx) => (
                 <span key={`${item}-${idx}`} className="whitespace-nowrap text-xs text-cyan-100">
                   {item}
@@ -1043,7 +1085,8 @@ const afterFocusSmallGlace = React.useMemo(
         </div>
       </div>
 
-      <div className="absolute inset-x-4 bottom-4"
+      <div
+        className="absolute inset-x-4 bottom-4"
         style={{
           top: `${layout.paddingTop}px`,
           height: `calc(100vh - ${layout.paddingTop}px - 24px)`,
@@ -1051,88 +1094,88 @@ const afterFocusSmallGlace = React.useMemo(
       >
         <div className="max-w-6xl mx-auto h-full overflow-y-auto space-y-6 pb-24 md:pb-6">
           <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-4" data-testid="home-now">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">{momentumTitle}</h2>
+            </div>
             <div data-testid="home-momentum" className="space-y-4">
               {state === "avant" && (
                 <>
-                  <CompactLine
+                  <KiosqueMomentumLine
                     title="5v5"
                     icon={icon5v5}
-                    items={beforeUpcoming5v5.map((m) => ({ match: m }))}
+                    matches={kiosque5v5Matches}
                     testId="home-now-5v5"
                     cardTestIdPrefix="home-momentum-card"
-                    focusId={beforeFocus5v5}
+                    focusId={kiosque5v5FocusId}
                     focusTestId="home-momentum-focus"
-                    autoFocusIndex={0}
-                    gridJustify
-                    onSelect={makeSelectHandler(beforeUpcoming5v5)}
+                    tourniquet
+                    onSelect={makeSelectHandler(kiosque5v5Matches)}
                   />
                   <CompactLine
-                    title={smallGlaceLabelValue}
-                    icon={smallGlaceIcon(smallGlaceMode)}
-                    items={beforeUpcomingSmallGlace}
+                    title="Challenge"
+                    icon={iconChallenge}
+                    items={beforeUpcomingChallenge.map((m) => ({ match: m }))}
                     testId="home-challenge-compact"
                     cardTestIdPrefix="home-momentum-card"
-                    focusId={beforeFocusSmallGlace}
+                    focusId={beforeFocusChallenge}
                     focusTestId="home-momentum-focus"
                     gridJustify
-                    onSelect={makeSelectHandler(beforeUpcomingSmallGlace.map((item) => item.match))}
+                    onSelect={makeSelectHandler(beforeUpcomingChallenge)}
                   />
                 </>
               )}
               {state === "pendant" && (
                 <>
-                  <CompactLine
+                  <KiosqueMomentumLine
                     title="5v5"
                     icon={icon5v5}
-                    items={ordered5v5.map((m) => ({ match: m }))}
+                    matches={kiosque5v5Matches}
                     testId="home-now-5v5"
                     cardTestIdPrefix="home-momentum-card"
-                    focusId={focusId5v5}
+                    focusId={kiosque5v5FocusId}
                     focusTestId="home-momentum-focus"
-                    autoFocusIndex={autoIndex5v5}
-                    gridJustify
-                    onSelect={makeSelectHandler(ordered5v5)}
+                    tourniquet
+                    onSelect={makeSelectHandler(kiosque5v5Matches)}
                   />
                   <CompactLine
-                    title={smallGlaceLabelValue}
-                    icon={smallGlaceIcon(smallGlaceMode)}
-                    items={orderedSmallGlace}
+                    title={smallGlaceLabel}
+                    icon={smallGlaceType === "3v3" ? icon3v3 : iconChallenge}
+                    items={orderedSmallGlace.map((m) => ({ match: m }))}
                     testId="home-now-smallglace"
                     cardTestIdPrefix="home-momentum-card"
                     focusId={focusIdSmallGlace}
                     focusTestId="home-momentum-focus"
                     autoFocusIndex={autoIndexSmallGlace}
                     gridJustify
-                    onSelect={makeSelectHandler(orderedSmallGlaceMatches)}
+                    onSelect={makeSelectHandler(orderedSmallGlace)}
                   />
                 </>
               )}
               {state === "apres" && (
                 <>
-                  <CompactLine
+                  <KiosqueMomentumLine
                     title="5v5"
                     icon={icon5v5}
-                    items={afterRecent5v5.map((m) => ({ match: m }))}
+                    matches={kiosque5v5Matches}
                     testId="home-now-5v5"
                     cardTestIdPrefix="home-momentum-card"
-                    autoFocusIndex={afterRecent5v5.length > 0 ? afterRecent5v5.length - 1 : -1}
-                    autoFocusAlign="end"
-                    focusId={focusIdApres5v5}
+                    focusId={kiosque5v5FocusId}
                     focusTestId="home-momentum-focus"
-                    focusTone="blue"
-                    gridJustify
-                    onSelect={makeSelectHandler(afterRecent5v5)}
+                    tourniquet
+                    onSelect={makeSelectHandler(kiosque5v5Matches)}
                   />
                   <CompactLine
-                    title={smallGlaceLabelValue}
-                    icon={smallGlaceIcon(smallGlaceMode)}
-                    items={afterSmallGlaceWinners}
+                    title="Challenge"
+                    icon={iconChallenge}
+                    items={afterChallengeWinners.map((m) => ({
+                      match: m,
+                    }))}
                     testId="home-challenge-compact"
                     cardTestIdPrefix="home-momentum-card"
-                    focusId={afterFocusSmallGlace}
+                    focusId={afterFocusChallenge}
                     focusTestId="home-momentum-focus"
                     gridJustify
-                    onSelect={makeSelectHandler(afterSmallGlaceWinners.map((item) => item.match))}
+                    onSelect={makeSelectHandler(afterChallengeWinners)}
                   />
                 </>
               )}
@@ -1149,7 +1192,7 @@ const afterFocusSmallGlace = React.useMemo(
                 className="text-lg font-semibold text-white hover:text-emerald-200"
                 onClick={() => navigate(`/teams/${encodeURIComponent(selectedTeam.id)}`)}
               >
-                {"Aujourd'hui \u00B7"} {selectedTeam.name}
+                Aujourd'hui · {selectedTeam.name}
               </button>
             </div>
             <button
@@ -1165,7 +1208,7 @@ const afterFocusSmallGlace = React.useMemo(
             selectedTeamId={selectedTeam.id}
             focusTeamName={selectedTeam.name}
             onSelect={(id) => navigate(resolveMatchRoute(id))}
-            smallGlaceLabel={smallGlaceLabelValue}
+            smallGlaceLabel={smallGlaceLabel}
             smallGlaceType={smallGlaceType}
             mealOfDay={meals?.mealOfDay ?? null}
           />
@@ -1174,8 +1217,8 @@ const afterFocusSmallGlace = React.useMemo(
 
         <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-3" data-testid="home-teams-grid">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-white">{"\u00C9quipes"}</h2>
-            {selectedTeam?.name && <span className="text-xs text-emerald-200">{"\u00C9quipe suivie :"} {selectedTeam.name}</span>}
+            <h2 className="text-lg font-semibold text-white">Le Plateau des Équipes</h2>
+            {selectedTeam?.name && <span className="text-xs text-emerald-200">Équipe suivie : {selectedTeam.name}</span>}
           </div>
           <TeamGrid
             teams={(teams ?? []).slice(0, 16)}
@@ -1187,3 +1230,6 @@ const afterFocusSmallGlace = React.useMemo(
     </div>
   );
 }
+
+
+
