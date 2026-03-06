@@ -14,6 +14,8 @@ const FACEBOOK_PAGE_URL = "https://www.facebook.com/profile.php?id=6158385614377
 const FACEBOOK_SDK_SRC = "https://connect.facebook.net/fr_FR/sdk.js#xfbml=1&version=v25.0&appId=227474631852040";
 const FACEBOOK_SDK_ID = "facebook-jssdk";
 const FACEBOOK_PLUGIN_HEIGHT = 700;
+const FACEBOOK_REEL_URL = "https://www.facebook.com/reel/1291499379546221";
+const FACEBOOK_REEL_EMBED_URL = `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(FACEBOOK_REEL_URL)}&show_text=false&autoplay=true&mute=false`;
 
 type LoadState = "loading" | "ready" | "error";
 type SourceType = "live" | "fallback";
@@ -463,6 +465,34 @@ export default function LivePage() {
               </div>
             </div>
           )}
+        </div>
+      </Card>
+      <Card className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-200">Reel du tournoi</h2>
+            <p className="text-xs text-slate-400">Vidéo officielle</p>
+          </div>
+          <a
+            href={FACEBOOK_REEL_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs font-semibold text-sky-300 transition hover:text-sky-200"
+            data-testid="reel-link"
+          >
+            Voir sur Facebook
+          </a>
+        </div>
+        <div className="relative w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
+          <div className="w-full pb-[56.25%]" />
+          <iframe
+            title="Reel du tournoi"
+            src={FACEBOOK_REEL_EMBED_URL}
+            className="absolute inset-0 h-full w-full"
+            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+            allowFullScreen
+            data-testid="reel-iframe"
+          />
         </div>
       </Card>
       </div>

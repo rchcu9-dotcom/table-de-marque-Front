@@ -287,6 +287,37 @@ describe("LivePage", () => {
     expect(iframe.src).toContain("fallback-id");
   });
 
+  it("affiche le bloc reel avec l'iframe pointant vers le bon embed Facebook", async () => {
+    mockFetchLiveStatus.mockResolvedValue({
+      isLive: false,
+      fallbackEmbedUrl: "https://www.youtube.com/embed/at3v7WepbDg",
+    });
+
+    render(<LivePage />);
+    await screen.findByTestId("live-iframe");
+
+    const reelIframe = screen.getByTestId("reel-iframe") as HTMLIFrameElement;
+    expect(reelIframe).toBeInTheDocument();
+    expect(reelIframe.getAttribute("src")).toContain("1291499379546221");
+    expect(reelIframe.getAttribute("src")).toContain("autoplay=true");
+  });
+
+  it("affiche le lien 'Voir sur Facebook' pointant vers le reel", async () => {
+    mockFetchLiveStatus.mockResolvedValue({
+      isLive: false,
+      fallbackEmbedUrl: "https://www.youtube.com/embed/at3v7WepbDg",
+    });
+
+    render(<LivePage />);
+    await screen.findByTestId("live-iframe");
+
+    const reelLink = screen.getByTestId("reel-link") as HTMLAnchorElement;
+    expect(reelLink).toBeInTheDocument();
+    expect(reelLink.href).toBe("https://www.facebook.com/reel/1291499379546221");
+    expect(reelLink).toHaveAttribute("target", "_blank");
+    expect(reelLink).toHaveAttribute("rel", "noreferrer");
+  });
+
   it("affiche un live force comme un live normal", async () => {
     mockFetchLiveStatus.mockResolvedValue({
       isLive: true,
