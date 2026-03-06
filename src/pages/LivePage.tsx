@@ -10,9 +10,25 @@ import type { LiveStatus, LiveStreamEnvelope } from "../api/live";
 const DEFAULT_FALLBACK_EMBED_URL = "https://www.youtube.com/embed/at3v7WepbDg";
 const FALLBACK_POLLING_MS = 30_000;
 const STREAM_RECONNECT_MS = 5_000;
+const FACEBOOK_PAGE_URL = "https://www.facebook.com/profile.php?id=61583856143770";
+const FACEBOOK_SDK_SRC = "https://connect.facebook.net/fr_FR/sdk.js#xfbml=1&version=v25.0&appId=227474631852040";
+const FACEBOOK_SDK_ID = "facebook-jssdk";
+const FACEBOOK_PLUGIN_HEIGHT = 700;
 
 type LoadState = "loading" | "ready" | "error";
 type SourceType = "live" | "fallback";
+type FacebookSdkState = "loading" | "ready" | "error";
+
+declare global {
+  interface Window {
+    FB?: {
+      XFBML?: {
+        parse: (element?: Element) => void;
+      };
+    };
+    fbAsyncInit?: () => void;
+  }
+}
 
 function withAutoplayParams(url: string) {
   const separator = url.includes("?") ? "&" : "?";
@@ -62,10 +78,14 @@ export default function LivePage() {
   const [liveStatus, setLiveStatus] = React.useState<LiveStatus | null>(null);
   const [source, setSource] = React.useState<SourceType | null>(null);
   const [streamNonce, setStreamNonce] = React.useState(0);
+  const [facebookSdkState, setFacebookSdkState] = React.useState<FacebookSdkState>("loading");
+  const [facebookWidth, setFacebookWidth] = React.useState(500);
 
   const eventSourceRef = React.useRef<EventSource | null>(null);
   const pollingTimerRef = React.useRef<number | null>(null);
   const reconnectTimerRef = React.useRef<number | null>(null);
+  const facebookHostRef = React.useRef<HTMLDivElement | null>(null);
+  const facebookPluginRef = React.useRef<HTMLDivElement | null>(null);
 
   const clearPolling = React.useCallback(() => {
     if (pollingTimerRef.current !== null) {
@@ -231,8 +251,108 @@ export default function LivePage() {
     void loadStatus(true);
   }, [loadStatus]);
 
+  React.useEffect(() => {
+    const updateWidth = () => {
+      const nextWidth = facebookHostRef.current?.clientWidth ?? 500;
+      setFacebookWidth(Math.max(280, Math.floor(nextWidth)));
+    };
+
+    updateWidth();
+
+    if (typeof ResizeObserver === "undefined" || !facebookHostRef.current) {
+      window.addEventListener("resize", updateWidth);
+      return () => window.removeEventListener("resize", updateWidth);
+    }
+
+    const observer = new ResizeObserver(() => updateWidth());
+    observer.observe(facebookHostRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  React.useEffect(() => {
+    if (facebookSdkState !== "ready") return;
+    if (!window.FB?.XFBML || !facebookPluginRef.current) return;
+    window.FB.XFBML.parse(facebookPluginRef.current);
+  }, [facebookSdkState, facebookWidth]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    const timeoutId = window.setTimeout(() => {
+      if (!cancelled && !window.FB?.XFBML) {
+        setFacebookSdkState("error");
+      }
+    }, 10_000);
+
+    const markReady = () => {
+      if (cancelled) return;
+      window.clearTimeout(timeoutId);
+      setFacebookSdkState("ready");
+      if (window.FB?.XFBML && facebookPluginRef.current) {
+        window.FB.XFBML.parse(facebookPluginRef.current);
+      }
+    };
+
+    const markError = () => {
+      if (cancelled) return;
+      window.clearTimeout(timeoutId);
+      setFacebookSdkState("error");
+    };
+
+    if (window.FB?.XFBML) {
+      markReady();
+      return () => {
+        cancelled = true;
+        window.clearTimeout(timeoutId);
+      };
+    }
+
+    const previousAsyncInit = window.fbAsyncInit;
+    window.fbAsyncInit = () => {
+      previousAsyncInit?.();
+      markReady();
+    };
+
+    const existingScript = document.getElementById(FACEBOOK_SDK_ID) as HTMLScriptElement | null;
+    const targetScript = existingScript ?? document.createElement("script");
+
+    const handleLoad = () => {
+      if (window.FB?.XFBML) {
+        markReady();
+        return;
+      }
+      window.setTimeout(() => {
+        if (window.FB?.XFBML) {
+          markReady();
+        } else {
+          markError();
+        }
+      }, 300);
+    };
+
+    targetScript.addEventListener("load", handleLoad);
+    targetScript.addEventListener("error", markError);
+
+    if (!existingScript) {
+      targetScript.id = FACEBOOK_SDK_ID;
+      targetScript.async = true;
+      targetScript.defer = true;
+      targetScript.crossOrigin = "anonymous";
+      targetScript.src = FACEBOOK_SDK_SRC;
+      document.body.appendChild(targetScript);
+    }
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+      targetScript.removeEventListener("load", handleLoad);
+      targetScript.removeEventListener("error", markError);
+      window.fbAsyncInit = previousAsyncInit;
+    };
+  }, []);
+
   return (
     <Page title="Live du tournoi">
+      <div className="space-y-6">
       <Card className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-200">Diffusion</h2>
@@ -279,7 +399,73 @@ export default function LivePage() {
           </div>
         )}
       </Card>
+      <Card className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-200">Facebook</h2>
+            <p className="text-xs text-slate-400">
+              Fil officiel du tournoi
+            </p>
+          </div>
+          <a
+            href={FACEBOOK_PAGE_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs font-semibold text-sky-300 transition hover:text-sky-200"
+          >
+            Ouvrir la page
+          </a>
+        </div>
+
+        <div
+          ref={facebookHostRef}
+          className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/70"
+        >
+          <div id="fb-root" />
+          {facebookSdkState === "error" ? (
+            <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 px-6 py-8 text-center">
+              <p className="text-sm text-slate-300">
+                Le flux Facebook n&apos;a pas pu se charger.
+              </p>
+              <a
+                href={FACEBOOK_PAGE_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-sky-400 hover:text-sky-200"
+              >
+                Voir la page Facebook
+              </a>
+            </div>
+          ) : (
+            <div
+              ref={facebookPluginRef}
+              className="flex min-h-[320px] items-start justify-center px-2 py-3 sm:px-4"
+            >
+              <div
+                className="fb-page"
+                data-href={FACEBOOK_PAGE_URL}
+                data-tabs="timeline"
+                data-width={String(facebookWidth)}
+                data-height={String(FACEBOOK_PLUGIN_HEIGHT)}
+                data-adapt-container-width="true"
+                data-hide-cover="false"
+                data-show-facepile="false"
+                data-small-header="false"
+              >
+                <blockquote
+                  cite={FACEBOOK_PAGE_URL}
+                  className="fb-xfbml-parse-ignore"
+                >
+                  <a href={FACEBOOK_PAGE_URL} target="_blank" rel="noreferrer">
+                    Page Facebook officielle du tournoi
+                  </a>
+                </blockquote>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+      </div>
     </Page>
   );
 }
-

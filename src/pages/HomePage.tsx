@@ -537,9 +537,9 @@ function CompactMatchCard({
       role={onSelect ? "button" : undefined}
       tabIndex={onSelect ? 0 : -1}
       onClick={() => onSelect?.(match.id)}
-    >
-      {isFocused && focusTestId ? <span data-testid={focusTestId} /> : null}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-25">
+      >
+        {isFocused && focusTestId ? <span data-testid={focusTestId} /> : null}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-25">
         <div
           className="absolute inset-y-0 left-0 w-1/3"
           style={{
