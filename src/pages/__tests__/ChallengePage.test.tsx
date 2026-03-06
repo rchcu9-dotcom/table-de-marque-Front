@@ -312,6 +312,10 @@ describe("ChallengePage", () => {
   });
 
   it("respecte les regles d affichage challenge: pas equipe 2, pas score, centre statut/heure", () => {
+    const expectedPlannedTime = new Date("2026-05-23T10:15:00.000Z").toLocaleTimeString("fr-FR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
     mockChallengeMomentumJ1 = [
       buildMomentumEntry({ teamId: "ongoing", teamName: "Ongoing Team", status: "ongoing", slotStart: "2026-05-23T09:00:00.000Z" }),
       buildMomentumEntry({ teamId: "finished", teamName: "Finished Team", status: "finished", slotStart: "2026-05-23T08:00:00.000Z" }),
@@ -323,7 +327,7 @@ describe("ChallengePage", () => {
     const momentumSection = getMomentumSection();
     expect(within(momentumSection).getByText("En cours")).toBeInTheDocument();
     expect(within(momentumSection).getByText("Terminé")).toBeInTheDocument();
-    expect(within(momentumSection).getByText("12:15")).toBeInTheDocument();
+    expect(within(momentumSection).getByText(expectedPlannedTime)).toBeInTheDocument();
     expect(within(momentumSection).queryByText(/vs/i)).not.toBeInTheDocument();
     expect(within(momentumSection).queryByText(/\d+\s*-\s*\d+/)).not.toBeInTheDocument();
   });
