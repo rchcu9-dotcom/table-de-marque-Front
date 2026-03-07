@@ -1,4 +1,5 @@
 ﻿import { getApiBaseUrl } from "./env";
+import { fetchWithRetry } from "./fetchWithRetry";
 
 export type ClassementGlobalEntry = {
   joueurId: string;
@@ -75,32 +76,27 @@ export type ChallengeJ1MomentumEntry = {
 const API_BASE_URL = getApiBaseUrl();
 
 export async function fetchClassementGlobalChallenge(): Promise<ClassementGlobalEntry[]> {
-  const res = await fetch(`${API_BASE_URL}/challenge/classement-global`);
-  if (!res.ok) throw new Error("Erreur lors du chargement du classement challenge");
+  const res = await fetchWithRetry(`${API_BASE_URL}/challenge/classement-global`);
   return res.json();
 }
 
 export async function fetchChallengeByEquipe(equipeId: string): Promise<ChallengeEquipeResponse> {
-  const res = await fetch(`${API_BASE_URL}/challenge/equipes/${encodeURIComponent(equipeId)}`);
-  if (!res.ok) throw new Error("Erreur lors du chargement du challenge pour l'équipe");
+  const res = await fetchWithRetry(`${API_BASE_URL}/challenge/equipes/${encodeURIComponent(equipeId)}`);
   return res.json();
 }
 
 export async function fetchChallengeAll(params?: { teamId?: string | null }): Promise<ChallengeAllResponse> {
   const query = params?.teamId ? `?teamId=${encodeURIComponent(params.teamId)}` : "";
-  const res = await fetch(`${API_BASE_URL}/challenge/all${query}`);
-  if (!res.ok) throw new Error("Erreur lors du chargement du challenge");
+  const res = await fetchWithRetry(`${API_BASE_URL}/challenge/all${query}`);
   return res.json();
 }
 
 export async function fetchChallengeVitesseJ3(): Promise<ChallengeVitesseJ3Response> {
-  const res = await fetch(`${API_BASE_URL}/challenge/vitesse/j3`);
-  if (!res.ok) throw new Error("Erreur lors du chargement du challenge vitesse J3");
+  const res = await fetchWithRetry(`${API_BASE_URL}/challenge/vitesse/j3`);
   return res.json();
 }
 
 export async function fetchChallengeJ1Momentum(): Promise<ChallengeJ1MomentumEntry[]> {
-  const res = await fetch(`${API_BASE_URL}/challenge/j1/momentum`);
-  if (!res.ok) throw new Error("Erreur lors du chargement du momentum challenge J1");
+  const res = await fetchWithRetry(`${API_BASE_URL}/challenge/j1/momentum`);
   return res.json();
 }

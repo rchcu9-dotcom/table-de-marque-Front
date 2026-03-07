@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from "./env";
+import { fetchWithRetry } from "./fetchWithRetry";
 
 export type Joueur = {
   id: string;
@@ -15,9 +16,6 @@ const API_BASE_URL = getApiBaseUrl();
 export async function fetchJoueursByEquipe(equipeId: string): Promise<Joueur[]> {
   const params = new URLSearchParams();
   params.set("equipe", equipeId);
-  const res = await fetch(`${API_BASE_URL}/joueurs?${params.toString()}`);
-  if (!res.ok) {
-    throw new Error("Erreur lors du chargement des joueurs");
-  }
+  const res = await fetchWithRetry(`${API_BASE_URL}/joueurs?${params.toString()}`);
   return res.json();
 }

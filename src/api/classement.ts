@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from "./env";
+import { fetchWithRetry } from "./fetchWithRetry";
 
 export type ClassementEquipe = {
   id: string;
@@ -71,22 +72,18 @@ export async function fetchClassementByPoule(
   phase?: string,
 ): Promise<PouleClassement> {
   const params = phase ? `?phase=${encodeURIComponent(phase)}` : "";
-  const res = await fetch(`${API_BASE_URL}/poules/${code}/classement${params}`);
-  if (!res.ok) throw new Error("Erreur lors du chargement du classement");
+  const res = await fetchWithRetry(`${API_BASE_URL}/poules/${code}/classement${params}`);
   return res.json();
 }
 
 export async function fetchClassementByMatch(
   matchId: string,
 ): Promise<PouleClassement> {
-  const res = await fetch(`${API_BASE_URL}/matches/${matchId}/classement`);
-  if (!res.ok)
-    throw new Error("Erreur lors du chargement du classement du match");
+  const res = await fetchWithRetry(`${API_BASE_URL}/matches/${matchId}/classement`);
   return res.json();
 }
 
 export async function fetchJ3FinalSquares(): Promise<J3FinalSquaresResponse> {
-  const res = await fetch(`${API_BASE_URL}/tournoi/5v5/j3/carres`);
-  if (!res.ok) throw new Error("Erreur lors du chargement des carrés J3");
+  const res = await fetchWithRetry(`${API_BASE_URL}/tournoi/5v5/j3/carres`);
   return res.json();
 }

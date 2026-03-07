@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from "./env";
+import { fetchWithRetry } from "./fetchWithRetry";
 
 export type MealDayKey = "J1" | "J2" | "J3";
 
@@ -17,7 +18,6 @@ export type MealsResponse = {
 const API_BASE_URL = getApiBaseUrl();
 
 export async function fetchMeals(): Promise<MealsResponse> {
-  const res = await fetch(`${API_BASE_URL}/meals`);
-  if (!res.ok) throw new Error("Erreur lors du chargement des repas");
+  const res = await fetchWithRetry(`${API_BASE_URL}/meals`);
   return res.json();
 }
