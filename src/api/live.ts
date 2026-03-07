@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from "./env";
+import { fetchWithRetry } from "./fetchWithRetry";
 
 export type LiveSourceState =
   | "ok"
@@ -32,7 +33,6 @@ export type LiveStreamEnvelope = {
 
 export async function fetchLiveStatus(): Promise<LiveStatus> {
   const url = `${API_BASE_URL}/live/status`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Erreur lors du chargement du live");
+  const res = await fetchWithRetry(url);
   return res.json();
 }

@@ -1,4 +1,5 @@
 import { getApiBaseUrl } from "./env";
+import { fetchWithRetry } from "./fetchWithRetry";
 
 export type Team = {
   id: string;
@@ -12,13 +13,11 @@ export type Team = {
 const API_BASE_URL = getApiBaseUrl();
 
 export async function fetchTeams(): Promise<Team[]> {
-  const res = await fetch(`${API_BASE_URL}/equipes`);
-  if (!res.ok) throw new Error("Erreur lors du chargement des équipes");
+  const res = await fetchWithRetry(`${API_BASE_URL}/equipes`);
   return res.json();
 }
 
 export async function fetchTeamById(id: string): Promise<Team> {
-  const res = await fetch(`${API_BASE_URL}/equipes/${id}`);
-  if (!res.ok) throw new Error("Équipe introuvable");
+  const res = await fetchWithRetry(`${API_BASE_URL}/equipes/${id}`);
   return res.json();
 }

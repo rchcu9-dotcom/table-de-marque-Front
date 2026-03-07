@@ -1,4 +1,6 @@
 import { getApiBaseUrl } from "./env";
+import { fetchWithRetry } from "./fetchWithRetry";
+import { ServerError } from "./errors";
 
 export type MatchStatus = "planned" | "ongoing" | "finished" | "deleted";
 
@@ -38,16 +40,28 @@ export async function fetchMatches(filters: MatchFilters = {}): Promise<Match[]>
   if (filters.teamId) params.set("teamId", filters.teamId);
   if (filters.jour) params.set("jour", filters.jour);
   const url = `${API_BASE_URL}/matches${params.toString() ? `?${params.toString()}` : ""}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Erreur lors du chargement des matchs");
-  return res.json();
+  try {
+    const res = await fetchWithRetry(url);
+    return res.json();
+  } catch (error: unknown) {
+    if (error instanceof ServerError && error.status === 404) {
+      throw new Error("Erreur lors du chargement des matchs");
+    }
+    throw error;
+  }
 }
 
 export async function fetchMatchById(id: string): Promise<Match> {
   const url = `${API_BASE_URL}/matches/${id}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Match introuvable");
-  return res.json();
+  try {
+    const res = await fetchWithRetry(url);
+    return res.json();
+  } catch (error: unknown) {
+    if (error instanceof ServerError && error.status === 404) {
+      throw new Error("Match introuvable");
+    }
+    throw error;
+  }
 }
 
 export async function fetchMomentumMatches(filters: MatchFilters = {}): Promise<Match[]> {
@@ -55,7 +69,13 @@ export async function fetchMomentumMatches(filters: MatchFilters = {}): Promise<
   if (filters.surface) params.set("surface", filters.surface);
   if (filters.competitionType) params.set("competition", filters.competitionType);
   const url = `${API_BASE_URL}/matches/momentum${params.toString() ? `?${params.toString()}` : ""}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Erreur lors du chargement du momentum");
-  return res.json();
+  try {
+    const res = await fetchWithRetry(url);
+    return res.json();
+  } catch (error: unknown) {
+    if (error instanceof ServerError && error.status === 404) {
+      throw new Error("Erreur lors du chargement du momentum");
+    }
+    throw error;
+  }
 }
