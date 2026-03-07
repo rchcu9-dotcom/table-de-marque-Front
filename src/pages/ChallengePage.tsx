@@ -747,7 +747,7 @@ function ChallengeMomentumSlider({
               ref={(el) => {
                 cardRefs.current[item.id] = el;
               }}
-              to={`/challenge/equipe/${encodeURIComponent(item.teamId)}`}
+              to={`/challenge/equipe/${encodeURIComponent(item.teamName)}`}
               className={`relative snap-center min-w-[220px] max-w-[240px] flex-shrink-0 rounded-2xl border border-slate-800 bg-slate-900/70 p-3 shadow-inner shadow-slate-950 transition hover:-translate-y-0.5 md:min-w-0 md:max-w-none md:w-full md:flex-shrink ${
                 isFocused ? "border-slate-600/80" : ""
               } ${item.status === "ongoing" ? "live-pulse-card border-amber-300/70 ring-2 ring-amber-300/40" : ""}`}
