@@ -10,6 +10,7 @@ import { ChallengeStreamListener } from './providers/ChallengeStreamListener';
 import { SelectedTeamProvider } from './providers/SelectedTeamProvider';
 import { queryClient } from './queryClient';
 import { setupQueryPersistence } from './queryPersist';
+import { AuthProvider } from './contexts/AuthContext';
 
 setupQueryPersistence();
 
@@ -24,9 +25,11 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
       <SelectedTeamProvider>
         <MatchStreamListener />
         <ChallengeStreamListener />
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <AuthProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </AuthProvider>
       </SelectedTeamProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
