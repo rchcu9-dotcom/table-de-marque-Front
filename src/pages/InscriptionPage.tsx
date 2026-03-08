@@ -856,7 +856,9 @@ export default function InscriptionPage() {
   // Charger le profil + token quand l'utilisateur est authentifié
   useEffect(() => {
     if (!user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setProfil(null);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setToken(null);
       return;
     }
