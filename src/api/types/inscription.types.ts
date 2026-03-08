@@ -44,11 +44,32 @@ export type StatutInscription =
   | 'LISTE_ATTENTE'
   | 'RESERVEE'
   | 'PAIEMENT_ATTENDU'
-  | 'VALIDEE';
+  | 'VALIDEE'
+  | 'DOSSIER_EN_COURS'
+  | 'DOSSIER_COMPLET'
+  | 'REFUSEE';
 
 export type InscriptionEquipe = {
   id: number;
   equipeId: number;
   statut: StatutInscription;
   userId?: number;
+};
+
+export type MaCandidature = {
+  id: number;
+  equipeNom: string;
+  equipeLogoUrl: string | null;
+  statut: StatutInscription;
+  createdAt: string;
+} | null;
+
+export type CandidatureOrganisateur = {
+  id: number;
+  equipeNom: string;
+  equipeLogoUrl: string | null;
+  utilisateurEmail: string;
+  utilisateurDisplayName: string | null;
+  statut: StatutInscription;
+  createdAt: string;
 };

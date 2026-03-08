@@ -1,12 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   fetchEditionCourante,
   fetchEquipesReferentiel,
   createEquipeDemande,
   fetchProfilInscription,
+  fetchMaCandidature,
+  soumettreCanditature,
+  fetchToutesCandidatures,
+  accepterCandidature,
+  mettreListeAttente,
+  refuserCandidature,
+  validerPaiement,
 } from '../api/inscription';
-import type { Edition, EquipeRef, ProfilInscription } from '../api/types/inscription.types';
+import type {
+  Edition,
+  EquipeRef,
+  ProfilInscription,
+  MaCandidature,
+  CandidatureOrganisateur,
+  StatutInscription,
+} from '../api/types/inscription.types';
 
 // ─── Composants utilitaires ────────────────────────────────────────────────
 
@@ -23,6 +37,31 @@ function ErrorBanner({ message }: { message: string }) {
     <div className="bg-red-100 border border-red-300 text-red-800 rounded p-3 my-2 text-sm">
       {message}
     </div>
+  );
+}
+
+// ─── Badge statut ─────────────────────────────────────────────────────────
+
+const STATUT_CONFIG: Record<
+  StatutInscription,
+  { label: string; className: string }
+> = {
+  CANDIDATE: { label: 'En attente', className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+  LISTE_ATTENTE: { label: "Liste d'attente", className: 'bg-orange-100 text-orange-800 border-orange-200' },
+  RESERVEE: { label: 'Réservée', className: 'bg-blue-100 text-blue-800 border-blue-200' },
+  PAIEMENT_ATTENDU: { label: 'Paiement attendu', className: 'bg-purple-100 text-purple-800 border-purple-200' },
+  VALIDEE: { label: 'Validée', className: 'bg-green-100 text-green-800 border-green-200' },
+  DOSSIER_EN_COURS: { label: 'Dossier en cours', className: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
+  DOSSIER_COMPLET: { label: 'Dossier complet', className: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+  REFUSEE: { label: 'Refusée', className: 'bg-red-100 text-red-800 border-red-200' },
+};
+
+function StatutBadge({ statut }: { statut: StatutInscription }) {
+  const config = STATUT_CONFIG[statut] ?? { label: statut, className: 'bg-gray-100 text-gray-700 border-gray-200' };
+  return (
+    <span className={`inline-block px-2 py-0.5 rounded border text-xs font-medium ${config.className}`}>
+      {config.label}
+    </span>
   );
 }
 
@@ -49,7 +88,6 @@ function AddEquipeModal({ token, onClose, onCreated }: AddEquipeModalProps) {
     setSubmitting(true);
     setError(null);
     try {
-      // logoUrl: pour l'instant on passe l'URL objet local si fichier sélectionné
       const logoUrl = logoFile ? URL.createObjectURL(logoFile) : undefined;
       const equipe = await createEquipeDemande({ nom: nom.trim(), logoUrl }, token);
       onCreated(equipe);
@@ -109,6 +147,89 @@ function AddEquipeModal({ token, onClose, onCreated }: AddEquipeModalProps) {
               className="px-4 py-2 rounded bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
             >
               {submitting ? 'Envoi...' : 'Soumettre'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── Modal Valider paiement ───────────────────────────────────────────────
+
+interface ValiderPaiementModalProps {
+  candidatureId: number;
+  equipeNom: string;
+  token: string;
+  onClose: () => void;
+  onValidated: () => void;
+}
+
+function ValiderPaiementModal({
+  candidatureId,
+  equipeNom,
+  token,
+  onClose,
+  onValidated,
+}: ValiderPaiementModalProps) {
+  const [dateVirement, setDateVirement] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!dateVirement) {
+      setError('La date de virement est obligatoire.');
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      await validerPaiement(candidatureId, dateVirement, token);
+      onValidated();
+      onClose();
+    } catch {
+      setError('Erreur lors de la validation. Réessaie.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+        <h2 className="text-lg font-bold mb-1">Valider le paiement</h2>
+        <p className="text-sm text-gray-500 mb-4">{equipeNom}</p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1" htmlFor="date-virement">
+              Date du virement
+            </label>
+            <input
+              id="date-virement"
+              type="date"
+              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+              value={dateVirement}
+              onChange={(e) => setDateVirement(e.target.value)}
+              disabled={submitting}
+            />
+          </div>
+          {error && <ErrorBanner message={error} />}
+          <div className="flex gap-3 justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={submitting}
+              className="px-4 py-2 rounded border border-gray-300 text-sm hover:bg-gray-50"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || !dateVirement}
+              className="px-4 py-2 rounded bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50"
+            >
+              {submitting ? 'Validation...' : 'Valider'}
             </button>
           </div>
         </form>
@@ -269,6 +390,436 @@ function Footer({ edition }: FooterProps) {
   );
 }
 
+// ─── Vue Organisateur ─────────────────────────────────────────────────────
+
+interface VueOrganisateurProps {
+  edition: Edition | null;
+  token: string;
+}
+
+function VueOrganisateur({ edition, token }: VueOrganisateurProps) {
+  const [candidatures, setCandidatures] = useState<CandidatureOrganisateur[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [paiementModal, setPaiementModal] = useState<{
+    id: number;
+    equipeNom: string;
+  } | null>(null);
+
+  const loadCandidatures = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchToutesCandidatures(token);
+      setCandidatures(data);
+    } catch {
+      setError('Impossible de charger les candidatures.');
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    void loadCandidatures();
+  }, [loadCandidatures]);
+
+  async function handleAction(
+    action: () => Promise<unknown>,
+  ) {
+    setActionError(null);
+    try {
+      await action();
+      await loadCandidatures();
+    } catch (e: unknown) {
+      const msg =
+        e && typeof e === 'object' && 'message' in e
+          ? String((e as { message: string }).message)
+          : 'Erreur lors de l\'action. Réessaie.';
+      setActionError(msg);
+    }
+  }
+
+  const STATUTS_ACTIFS: StatutInscription[] = [
+    'RESERVEE',
+    'PAIEMENT_ATTENDU',
+    'VALIDEE',
+    'DOSSIER_EN_COURS',
+    'DOSSIER_COMPLET',
+  ];
+  const nbReservees = candidatures.filter((c) =>
+    STATUTS_ACTIFS.includes(c.statut),
+  ).length;
+  const maxPlaces = edition?.nbPlacesMax ?? 16;
+
+  if (loading) return <Spinner />;
+  if (error) return <ErrorBanner message={error} />;
+
+  return (
+    <div className="space-y-4">
+      {/* Compteur */}
+      <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+        <span className="text-sm font-medium text-blue-800">Équipes réservées</span>
+        <span
+          className={`text-lg font-bold ${nbReservees >= maxPlaces ? 'text-red-600' : 'text-blue-700'}`}
+        >
+          {nbReservees} / {maxPlaces}
+        </span>
+      </div>
+
+      {actionError && <ErrorBanner message={actionError} />}
+
+      {candidatures.length === 0 ? (
+        <p className="text-sm text-gray-500 text-center py-4">Aucune candidature reçue.</p>
+      ) : (
+        <div className="space-y-3">
+          {candidatures.map((c) => (
+            <div
+              key={c.id}
+              className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
+            >
+              <div className="flex items-start gap-3">
+                {c.equipeLogoUrl && (
+                  <img
+                    src={c.equipeLogoUrl}
+                    alt=""
+                    className="w-10 h-10 object-contain rounded-full border border-gray-100 shrink-0"
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-gray-900 truncate">{c.equipeNom}</span>
+                    <StatutBadge statut={c.statut} />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5 truncate">
+                    {c.utilisateurDisplayName
+                      ? `${c.utilisateurDisplayName} — `
+                      : ''}
+                    {c.utilisateurEmail}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Soumis le {new Date(c.createdAt).toLocaleDateString('fr-FR')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Actions */}
+              {c.statut === 'CANDIDATE' && (
+                <div className="flex gap-2 mt-3 flex-wrap">
+                  <button
+                    onClick={() =>
+                      void handleAction(() => accepterCandidature(c.id, token))
+                    }
+                    className="px-3 py-1.5 rounded bg-green-600 text-white text-xs font-medium hover:bg-green-700"
+                  >
+                    Accepter
+                  </button>
+                  <button
+                    onClick={() =>
+                      void handleAction(() => mettreListeAttente(c.id, token))
+                    }
+                    className="px-3 py-1.5 rounded bg-orange-500 text-white text-xs font-medium hover:bg-orange-600"
+                  >
+                    Liste d'attente
+                  </button>
+                  <button
+                    onClick={() =>
+                      void handleAction(() => refuserCandidature(c.id, token))
+                    }
+                    className="px-3 py-1.5 rounded bg-red-600 text-white text-xs font-medium hover:bg-red-700"
+                  >
+                    Refuser
+                  </button>
+                </div>
+              )}
+
+              {c.statut === 'PAIEMENT_ATTENDU' && (
+                <div className="mt-3">
+                  <button
+                    onClick={() =>
+                      setPaiementModal({ id: c.id, equipeNom: c.equipeNom })
+                    }
+                    className="px-3 py-1.5 rounded bg-purple-600 text-white text-xs font-medium hover:bg-purple-700"
+                  >
+                    Valider paiement
+                  </button>
+                </div>
+              )}
+
+              {c.statut === 'LISTE_ATTENTE' && (
+                <div className="flex gap-2 mt-3">
+                  {nbReservees < maxPlaces && (
+                    <button
+                      onClick={() =>
+                        void handleAction(() => accepterCandidature(c.id, token))
+                      }
+                      className="px-3 py-1.5 rounded bg-green-600 text-white text-xs font-medium hover:bg-green-700"
+                    >
+                      Promouvoir
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {paiementModal && (
+        <ValiderPaiementModal
+          candidatureId={paiementModal.id}
+          equipeNom={paiementModal.equipeNom}
+          token={token}
+          onClose={() => setPaiementModal(null)}
+          onValidated={() => void loadCandidatures()}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Vue Responsable ──────────────────────────────────────────────────────
+
+interface VueResponsableProps {
+  edition: Edition | null;
+  equipes: EquipeRef[];
+  token: string;
+  onEquipeCreated: (equipe: EquipeRef) => void;
+}
+
+function VueResponsable({
+  edition,
+  equipes,
+  token,
+  onEquipeCreated,
+}: VueResponsableProps) {
+  const [candidature, setCandidature] = useState<MaCandidature>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedEquipe, setSelectedEquipe] = useState<EquipeRef | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchMaCandidature(token)
+      .then((data) => {
+        if (!cancelled) setCandidature(data);
+      })
+      .catch(() => {
+        if (!cancelled) setError('Impossible de charger votre candidature.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  async function handleSoumettre() {
+    if (!selectedEquipe) return;
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const result = await soumettreCanditature(selectedEquipe.id, token);
+      setCandidature({
+        id: result.id,
+        equipeNom: result.equipeNom,
+        equipeLogoUrl: selectedEquipe.logoUrl ?? null,
+        statut: result.statut as MaCandidature extends null ? never : NonNullable<MaCandidature>['statut'],
+        createdAt: result.createdAt,
+      });
+    } catch (e: unknown) {
+      const msg =
+        e && typeof e === 'object' && 'message' in e
+          ? String((e as { message: string }).message)
+          : "Erreur lors de la soumission. Réessaie.";
+      setSubmitError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (loading) return <Spinner />;
+  if (error) return <ErrorBanner message={error} />;
+
+  // Candidature existante → afficher le tableau de bord
+  if (candidature) {
+    return (
+      <div className="space-y-6">
+        {/* Récapitulatif candidature */}
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
+          <div className="flex items-center gap-3 mb-3">
+            {candidature.equipeLogoUrl && (
+              <img
+                src={candidature.equipeLogoUrl}
+                alt=""
+                className="w-12 h-12 object-contain rounded-full border border-gray-100"
+              />
+            )}
+            <div>
+              <p className="font-semibold text-gray-900">{candidature.equipeNom}</p>
+              <p className="text-xs text-gray-500">
+                Soumis le {new Date(candidature.createdAt).toLocaleDateString('fr-FR')}
+              </p>
+            </div>
+            <div className="ml-auto">
+              <StatutBadge statut={candidature.statut} />
+            </div>
+          </div>
+
+          {/* Message selon statut */}
+          {candidature.statut === 'CANDIDATE' && (
+            <p className="text-sm text-gray-600 whitespace-pre-line">
+              {edition?.msgDemandeSoumise ?? 'Ta demande a bien été soumise. En attente de validation.'}
+            </p>
+          )}
+          {candidature.statut === 'LISTE_ATTENTE' && (
+            <p className="text-sm text-orange-700 whitespace-pre-line">
+              {edition?.msgListeAttente ?? "Tu es sur liste d'attente."}
+            </p>
+          )}
+          {(candidature.statut === 'RESERVEE' || candidature.statut === 'PAIEMENT_ATTENDU') && (
+            <div className="space-y-2 text-sm">
+              <p className="text-gray-700 whitespace-pre-line">
+                {edition?.msgPaiementAttendu ?? 'Paiement attendu.'}
+              </p>
+              {edition?.msgChequeInfo1 && (
+                <p className="text-gray-600">{edition.msgChequeInfo1}</p>
+              )}
+              {edition?.msgRibUrl && (
+                <a
+                  href={edition.msgRibUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  Voir le RIB
+                </a>
+              )}
+            </div>
+          )}
+          {candidature.statut === 'VALIDEE' && (
+            <div className="space-y-3">
+              <p className="text-sm text-green-700 whitespace-pre-line">
+                {edition?.msgInscriptionConfirmee ?? 'Inscription confirmée !'}
+              </p>
+              <button className="w-full bg-green-600 text-white rounded-lg py-2 font-medium hover:bg-green-700 text-sm">
+                Renseigner mes joueurs
+              </button>
+            </div>
+          )}
+          {candidature.statut === 'REFUSEE' && (
+            <p className="text-sm text-red-700">
+              Ta candidature a été refusée. Contacte l'organisateur pour plus d'informations.
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Pas de candidature → formulaire de soumission (3 étapes)
+  return (
+    <div className="space-y-6">
+      {edition?.msgBienvenue && (
+        <p className="text-gray-700 whitespace-pre-line">{edition.msgBienvenue}</p>
+      )}
+
+      <p className="text-center font-semibold text-gray-800">
+        Pour inscrire ton équipe, suis ces 3 étapes !
+      </p>
+
+      {/* Étape 1 */}
+      <section>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold shrink-0">
+            1
+          </span>
+          <h2 className="font-semibold text-gray-800">Sélectionne ton équipe favorite</h2>
+        </div>
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
+          {edition?.msgSelectionEquipe && (
+            <p className="text-sm text-gray-600 whitespace-pre-line">{edition.msgSelectionEquipe}</p>
+          )}
+          <p className="text-xs text-gray-400 italic">
+            Note : une fois l'inscription lancée tu ne pourras plus changer d'équipe.
+          </p>
+          <EquipeDropdown
+            equipes={equipes}
+            selected={selectedEquipe}
+            onSelect={setSelectedEquipe}
+          />
+          <button
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            className="text-sm text-blue-600 hover:underline"
+          >
+            Ton équipe n'est pas présente ? Ajoute la !
+          </button>
+        </div>
+      </section>
+
+      {/* Étape 2 */}
+      <section>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold shrink-0">
+            2
+          </span>
+          <h2 className="font-semibold text-gray-800">Lance son inscription</h2>
+        </div>
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
+          {edition?.msgLancerDemande && (
+            <p className="text-sm text-gray-600 whitespace-pre-line">{edition.msgLancerDemande}</p>
+          )}
+          {submitError && <ErrorBanner message={submitError} />}
+          {selectedEquipe ? (
+            <button
+              onClick={() => void handleSoumettre()}
+              disabled={submitting}
+              className="w-full bg-blue-600 text-white rounded-lg py-2 font-medium hover:bg-blue-700 disabled:opacity-50"
+            >
+              {submitting ? 'Envoi...' : 'Lancer la demande'}
+            </button>
+          ) : (
+            <p className="text-sm text-gray-400 italic">
+              Sélectionne d'abord ton équipe à l'étape 1.
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* Étape 3 */}
+      <section>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold shrink-0">
+            3
+          </span>
+          <h2 className="font-semibold text-gray-800">Valide sa participation</h2>
+        </div>
+        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+          <p className="text-sm text-gray-400 italic">
+            Cette étape sera disponible une fois l'inscription validée.
+          </p>
+        </div>
+      </section>
+
+      {showAddModal && (
+        <AddEquipeModal
+          token={token}
+          onClose={() => setShowAddModal(false)}
+          onCreated={(equipe) => {
+            onEquipeCreated(equipe);
+            setSelectedEquipe(equipe);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
 // ─── Page principale ──────────────────────────────────────────────────────
 
 export default function InscriptionPage() {
@@ -277,11 +828,9 @@ export default function InscriptionPage() {
   const [edition, setEdition] = useState<Edition | null>(null);
   const [equipes, setEquipes] = useState<EquipeRef[]>([]);
   const [profil, setProfil] = useState<ProfilInscription | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [pageLoading, setPageLoading] = useState(true);
   const [pageError, setPageError] = useState<string | null>(null);
-
-  const [selectedEquipe, setSelectedEquipe] = useState<EquipeRef | null>(null);
-  const [showAddModal, setShowAddModal] = useState(false);
   const [pseudoInput, setPseudoInput] = useState('');
 
   // Charger édition + équipes au montage
@@ -304,17 +853,18 @@ export default function InscriptionPage() {
     };
   }, []);
 
-  // Charger le profil quand l'utilisateur est authentifié
+  // Charger le profil + token quand l'utilisateur est authentifié
   useEffect(() => {
     if (!user) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setProfil(null);
+      setToken(null);
       return;
     }
     let cancelled = false;
-    user.getIdToken().then((token) => {
+    user.getIdToken().then((t) => {
       if (cancelled) return;
-      fetchProfilInscription(token)
+      setToken(t);
+      fetchProfilInscription(t)
         .then((p) => {
           if (!cancelled) setProfil(p);
         })
@@ -410,7 +960,6 @@ export default function InscriptionPage() {
             className="w-full bg-blue-600 text-white rounded-lg py-2 font-medium disabled:opacity-50 hover:bg-blue-700"
             onClick={() => {
               // TODO: appel API pour sauvegarder le pseudo
-              // Pour l'instant on met à jour l'état local
               setProfil((prev) =>
                 prev
                   ? { ...prev, pseudo: pseudoInput.trim() }
@@ -426,211 +975,31 @@ export default function InscriptionPage() {
     );
   }
 
-  // ── Cas : Authentifié avec pseudo — 3 étapes ──────────────────────────────
+  // ── Cas : Organisateur ────────────────────────────────────────────────────
+  if (profil?.role === 'ORGANISATEUR' && token) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        <Header edition={edition} user={user} onSignOut={handleSignOut} />
+        <h2 className="font-bold text-gray-800 text-lg mb-4">Gestion des candidatures</h2>
+        <VueOrganisateur edition={edition} token={token} />
+        <Footer edition={edition} />
+      </div>
+    );
+  }
+
+  // ── Cas : Responsable d'équipe ────────────────────────────────────────────
   return (
     <div className="max-w-lg mx-auto px-4 py-8">
       <Header edition={edition} user={user} onSignOut={handleSignOut} />
-
-      {edition?.msgBienvenue && (
-        <p className="text-gray-700 mb-6 whitespace-pre-line">{edition.msgBienvenue}</p>
-      )}
-
-      <p className="text-center font-semibold text-gray-800 mb-6">
-        Pour inscrire ton équipe, suis ces 3 étapes !
-      </p>
-
-      {/* ── Étape 1 ── */}
-      <section className="mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold shrink-0">
-            1
-          </span>
-          <h2 className="font-semibold text-gray-800">Sélectionne ton équipe favorite</h2>
-        </div>
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
-          {edition?.msgSelectionEquipe && (
-            <p className="text-sm text-gray-600 whitespace-pre-line">{edition.msgSelectionEquipe}</p>
-          )}
-          <p className="text-xs text-gray-400 italic">
-            Note : une fois l'inscription lancée tu ne pourras plus changer d'équipe.
-          </p>
-          <EquipeDropdown
-            equipes={equipes}
-            selected={selectedEquipe}
-            onSelect={setSelectedEquipe}
-          />
-          <button
-            type="button"
-            onClick={() => setShowAddModal(true)}
-            className="text-sm text-blue-600 hover:underline"
-          >
-            Ton équipe n'est pas présente ? Ajoute la !
-          </button>
-        </div>
-      </section>
-
-      {/* ── Étape 2 ── */}
-      <section className="mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold shrink-0">
-            2
-          </span>
-          <h2 className="font-semibold text-gray-800">Lance son inscription</h2>
-        </div>
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-          <Etape2
-            edition={edition}
-            equipeSelectionnee={selectedEquipe}
-            user={user}
-          />
-        </div>
-      </section>
-
-      {/* ── Étape 3 ── */}
-      <section className="mb-6">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="bg-blue-600 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold shrink-0">
-            3
-          </span>
-          <h2 className="font-semibold text-gray-800">Valide sa participation</h2>
-        </div>
-        <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-          <Etape3 edition={edition} />
-        </div>
-      </section>
-
-      <Footer edition={edition} />
-
-      {showAddModal && user && (
-        <AddEquipeModal
-          token={''}  // token chargé de manière async dans le modal si besoin
-          onClose={() => setShowAddModal(false)}
-          onCreated={(equipe) => {
-            setEquipes((prev) => [...prev, equipe]);
-            setSelectedEquipe(equipe);
-          }}
+      {token && (
+        <VueResponsable
+          edition={edition}
+          equipes={equipes}
+          token={token}
+          onEquipeCreated={(equipe) => setEquipes((prev) => [...prev, equipe])}
         />
       )}
+      <Footer edition={edition} />
     </div>
-  );
-}
-
-// ─── Sous-composants étapes ────────────────────────────────────────────────
-
-interface Etape2Props {
-  edition: Edition | null;
-  equipeSelectionnee: EquipeRef | null;
-  user: import('firebase/auth').User;
-}
-
-function Etape2({ edition, equipeSelectionnee }: Etape2Props) {
-  const [statut] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleLancerDemande() {
-    if (!equipeSelectionnee) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      // TODO: appel API POST /inscription (à brancher quand le backend est prêt)
-      await new Promise((r) => setTimeout(r, 500));
-      // simulate
-    } catch {
-      setError('Erreur lors de la soumission. Réessaie.');
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  if (!statut) {
-    // Pas encore d'inscription
-    return (
-      <div className="space-y-3">
-        {edition?.msgLancerDemande && (
-          <p className="text-sm text-gray-600 whitespace-pre-line">{edition.msgLancerDemande}</p>
-        )}
-        {error && <ErrorBanner message={error} />}
-        {equipeSelectionnee ? (
-          <button
-            onClick={() => void handleLancerDemande()}
-            disabled={submitting}
-            className="w-full bg-blue-600 text-white rounded-lg py-2 font-medium hover:bg-blue-700 disabled:opacity-50"
-          >
-            {submitting ? 'Envoi...' : 'Lancer la demande'}
-          </button>
-        ) : (
-          <p className="text-sm text-gray-400 italic">
-            Sélectionne d'abord ton équipe à l'étape 1.
-          </p>
-        )}
-      </div>
-    );
-  }
-
-  if (statut === 'CANDIDATE') {
-    return (
-      <div className="bg-gray-100 rounded p-3 text-sm text-gray-700">
-        {edition?.msgDemandeSoumise ?? 'Ta demande a bien été soumise. En attente de validation.'}
-      </div>
-    );
-  }
-
-  if (statut === 'LISTE_ATTENTE') {
-    return (
-      <div className="bg-orange-50 border border-orange-200 rounded p-3 text-sm text-orange-800">
-        {edition?.msgListeAttente ?? "Tu es sur liste d'attente."}
-      </div>
-    );
-  }
-
-  if (statut === 'RESERVEE' || statut === 'PAIEMENT_ATTENDU') {
-    return (
-      <div className="space-y-2 text-sm">
-        <p className="text-gray-700">{edition?.msgPaiementAttendu ?? 'Paiement attendu.'}</p>
-        {edition?.msgChequeInfo1 && (
-          <p className="text-gray-600">{edition.msgChequeInfo1}</p>
-        )}
-        {edition?.msgRibUrl && (
-          <a
-            href={edition.msgRibUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:underline"
-          >
-            Voir le RIB
-          </a>
-        )}
-      </div>
-    );
-  }
-
-  return null;
-}
-
-interface Etape3Props {
-  edition: Edition | null;
-}
-
-function Etape3({ edition }: Etape3Props) {
-  const [statut] = useState<string | null>(null);
-
-  if (statut === 'VALIDEE') {
-    return (
-      <div className="space-y-3">
-        <div className="bg-green-50 border border-green-200 rounded p-3 text-sm text-green-800">
-          {edition?.msgInscriptionConfirmee ?? 'Inscription confirmée !'}
-        </div>
-        <button className="w-full bg-green-600 text-white rounded-lg py-2 font-medium hover:bg-green-700">
-          Renseigner mes joueurs
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <p className="text-sm text-gray-400 italic">
-      Cette étape sera disponible une fois l'inscription validée.
-    </p>
   );
 }
