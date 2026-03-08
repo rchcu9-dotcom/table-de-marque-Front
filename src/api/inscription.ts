@@ -6,9 +6,16 @@ function inscriptionUrl(path: string): string {
   return `${getApiBaseUrl()}/inscription${path}`;
 }
 
-export async function fetchEditionCourante(): Promise<Edition> {
-  const res = await fetchWithRetry(inscriptionUrl('/edition/courante'));
-  return res.json() as Promise<Edition>;
+export async function fetchEditionCourante(): Promise<Edition | null> {
+  try {
+    const res = await fetchWithRetry(inscriptionUrl('/edition/courante'));
+    return res.json() as Promise<Edition>;
+  } catch (e: unknown) {
+    if (e && typeof e === 'object' && 'status' in e && (e as { status: number }).status === 404) {
+      return null;
+    }
+    throw e;
+  }
 }
 
 export async function fetchEquipesReferentiel(): Promise<EquipeRef[]> {
@@ -34,10 +41,8 @@ export async function createEquipeDemande(
 export async function fetchProfilInscription(firebaseToken: string): Promise<ProfilInscription> {
   const res = await fetchWithRetry(inscriptionUrl('/auth/me'), {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${firebaseToken}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ firebaseToken }),
   });
   return res.json() as Promise<ProfilInscription>;
 }
