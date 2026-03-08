@@ -9,6 +9,12 @@ env:
   STORAGE_ACCOUNT: ${{ secrets.AZ_STORAGE_ACCOUNT_STAGING }} # ex: sttablemarque
   STORAGE_KEY: ${{ secrets.AZ_STORAGE_KEY_STAGING }}         # clé du compte storage (permet de générer un SAS frais)
   VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL_STAGING }} # URL back staging
+  VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+  VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+  VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+  VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+  VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+  VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
 
 jobs:
   build-test-deploy:
@@ -52,6 +58,12 @@ jobs:
         run: |
           rm -f .env .env.local .env.production
           echo "VITE_API_BASE_URL=$VITE_API_BASE_URL" > .env
+          echo "VITE_FIREBASE_API_KEY=$VITE_FIREBASE_API_KEY" >> .env
+          echo "VITE_FIREBASE_AUTH_DOMAIN=$VITE_FIREBASE_AUTH_DOMAIN" >> .env
+          echo "VITE_FIREBASE_PROJECT_ID=$VITE_FIREBASE_PROJECT_ID" >> .env
+          echo "VITE_FIREBASE_STORAGE_BUCKET=$VITE_FIREBASE_STORAGE_BUCKET" >> .env
+          echo "VITE_FIREBASE_MESSAGING_SENDER_ID=$VITE_FIREBASE_MESSAGING_SENDER_ID" >> .env
+          echo "VITE_FIREBASE_APP_ID=$VITE_FIREBASE_APP_ID" >> .env
 
       - name: Build (staging)
         run: pnpm run build
