@@ -2,7 +2,7 @@ import React from "react";
 import { useMatchesFiltered } from "../hooks/useMatches";
 import type { Match } from "../api/match";
 import HexBadge from "../components/ds/HexBadge";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import planningIcon from "../assets/icons/nav/planning.png";
 import { useSelectedTeam } from "../providers/SelectedTeamProvider";
 import icon5v5 from "../assets/icons/nav/fivev5.png";
@@ -118,6 +118,12 @@ export default function PlanningPage() {
               <img src={planningIcon} alt="Planning" className="h-full w-full object-cover scale-150" loading="lazy" />
             </div>
             <h1 className="text-xl font-semibold text-white">Planning</h1>
+            <Link
+              to="/planning/live"
+              className="ml-auto text-xs text-emerald-300 border border-emerald-500/30 bg-emerald-500/10 rounded-full px-3 py-1 hover:bg-emerald-500/20"
+            >
+              Vue Tournoi
+            </Link>
           </div>
           {selectedTeam && (
             <div className="flex items-center gap-2 text-xs text-emerald-200 mb-2 pr-1">

@@ -17,6 +17,7 @@ import ThreeVThreePage from "../pages/ThreeVThreePage";
 import ChallengeDetailPage from "../pages/ChallengeDetailPage";
 import ChallengeEquipePage from "../pages/ChallengeEquipePage";
 import PlanningPage from "../pages/PlanningPage";
+import TournamentTimelinePage from "../pages/TournamentTimelinePage";
 import ChallengeAtelierPage from "../pages/ChallengeAtelierPage";
 import LivePage from "../pages/LivePage";
 import InscriptionPage from "../pages/InscriptionPage";
@@ -187,6 +188,14 @@ export default function AppRouter() {
         element={
           <LayoutRoot>
             <InscriptionPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/planning/live"
+        element={
+          <LayoutRoot>
+            <TournamentTimelinePage />
           </LayoutRoot>
         }
       />
