@@ -8,6 +8,8 @@ export type Team = {
   pouleCode?: string | null;
   pouleName?: string | null;
   rang?: number;
+  repasSamedi?: string | null;
+  repasDimanche?: string | null;
 };
 
 const API_BASE_URL = getApiBaseUrl();

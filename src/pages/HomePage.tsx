@@ -772,6 +772,15 @@ export default function HomePage() {
   );
   const state = React.useMemo(() => pickTournamentState(matches5v5), [matches5v5]);
   const tournamentDay = React.useMemo(() => deriveTournamentDayFromMatches(matches), [matches]);
+  const teamMealOfDay = React.useMemo(() => {
+    if (!selectedTeam) return meals?.mealOfDay ?? null;
+    const teamData = (teams ?? []).find(
+      (t) => t.id === selectedTeam.id || t.name === selectedTeam.name,
+    );
+    const repasTime = tournamentDay === 2 ? teamData?.repasDimanche : teamData?.repasSamedi;
+    if (repasTime) return { dateTime: repasTime, message: null };
+    return meals?.mealOfDay ?? null;
+  }, [selectedTeam, teams, tournamentDay, meals]);
   const smallGlaceMode = React.useMemo(() => smallGlaceModeForDay(tournamentDay), [tournamentDay]);
   const smallGlaceType = React.useMemo(
     () => (smallGlaceMode === "3v3" ? "3v3" : "challenge"),
@@ -1167,7 +1176,7 @@ const afterFocusSmallGlace = React.useMemo(
             onSelect={(id) => navigate(resolveMatchRoute(id))}
             smallGlaceLabel={smallGlaceLabelValue}
             smallGlaceType={smallGlaceType}
-            mealOfDay={meals?.mealOfDay ?? null}
+            mealOfDay={teamMealOfDay}
           />
         </section>
       )}

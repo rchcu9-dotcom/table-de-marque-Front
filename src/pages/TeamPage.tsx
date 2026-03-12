@@ -301,11 +301,31 @@ export default function TeamPage() {
   const teamsList = Array.isArray(allTeams) ? allTeams : [];
   const logoFor = (name: string) =>
     teamsList.find((t) => normalizeTeamName(t.name) === normalizeTeamName(name))?.logoUrl;
-  const mealDays = meals?.days ?? [
-    { key: "J1", label: "J1", dateTime: null, message: "Repas indisponible" },
-    { key: "J2", label: "J2", dateTime: null, message: "Repas indisponible" },
-    { key: "J3", label: "J3", dateTime: null, message: "Repas indisponible" },
-  ];
+  const currentTeam = teamsList.find(
+    (t) => normalizeTeamName(t.name) === normalizeTeamName(teamName) ||
+           normalizeTeamName(t.id) === normalizeTeamName(teamName),
+  );
+  const mealDays = currentTeam?.repasSamedi != null || currentTeam?.repasDimanche != null
+    ? [
+        {
+          key: "J1" as const,
+          label: "J1",
+          dateTime: currentTeam.repasSamedi ?? null,
+          message: currentTeam.repasSamedi ? null : "Repas indisponible",
+        },
+        {
+          key: "J2" as const,
+          label: "J2",
+          dateTime: currentTeam.repasDimanche ?? null,
+          message: currentTeam.repasDimanche ? null : "Repas indisponible",
+        },
+        { key: "J3" as const, label: "J3", dateTime: null, message: "Repas indisponible" },
+      ]
+    : meals?.days ?? [
+        { key: "J1" as const, label: "J1", dateTime: null, message: "Repas indisponible" },
+        { key: "J2" as const, label: "J2", dateTime: null, message: "Repas indisponible" },
+        { key: "J3" as const, label: "J3", dateTime: null, message: "Repas indisponible" },
+      ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100">
