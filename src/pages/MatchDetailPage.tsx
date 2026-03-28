@@ -15,6 +15,9 @@ import icon5v5 from "../assets/icons/nav/fivev5.png";
 import icon3v3 from "../assets/icons/nav/threev3.png";
 import iconChallenge from "../assets/icons/nav/challenge.png";
 import Breadcrumbs from "../components/navigation/Breadcrumbs";
+import { usePartenaires } from "../hooks/usePartenaires";
+import type { Partenaire } from "../api/partenaire";
+import { buildNamingTitle, getNamingPartnerForCode } from "../utils/namingPartners";
 
 const compIcon: Record<string, string> = {
   "5v5": icon5v5,
@@ -72,11 +75,46 @@ function formatSquareSuffix(label?: string | null) {
   return (label ?? "").replace(/^carr[ée]\s+/i, "").trim();
 }
 
+function PouleLabel({
+  label,
+  partner,
+  className,
+}: {
+  label: string;
+  partner: Partenaire | null;
+  className?: string;
+}) {
+  const inner = (
+    <span className={`inline-flex items-center gap-1.5 ${className ?? ""}`}>
+      {partner?.logoUrl && (
+        <img
+          src={partner.logoUrl}
+          alt={partner.nom}
+          className="h-4 w-auto object-contain opacity-80 flex-shrink-0"
+          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+        />
+      )}
+      <span>{label}</span>
+    </span>
+  );
+  if (partner?.urlSite) {
+    return (
+      <a href={partner.urlSite} target="_blank" rel="noopener noreferrer"
+         className="hover:text-slate-200 underline underline-offset-2 transition-colors">
+        {inner}
+      </a>
+    );
+  }
+  return inner;
+}
+
 export default function MatchDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data, isLoading, isError } = useMatch(id);
   const { data: allMatches } = useMatches();
+  const { data: partenairesData } = usePartenaires();
+  const namingPartners = (partenairesData ?? []).filter((p) => p.type === "naming");
   const competitionType = (data?.competitionType ?? "5v5").toLowerCase();
   const isJ3FiveV5 = competitionType === "5v5" && data?.jour === "J3";
   const classementKey = React.useMemo(
@@ -251,7 +289,13 @@ export default function MatchDetailPage() {
           <div className="text-base">{new Date(data.date).toLocaleString()}</div>
           {contextLabel && (
             <div className="text-xs text-slate-400">
-              {isJ3FiveV5 ? contextLabel : `Poule ${contextLabel}`}
+              {isJ3FiveV5 ? contextLabel : (() => {
+                const label = data?.pouleCode
+                  ? buildNamingTitle(data.pouleCode, contextLabel ?? "", namingPartners)
+                  : contextLabel ?? "";
+                const partner = data?.pouleCode ? getNamingPartnerForCode(data.pouleCode, namingPartners) : null;
+                return <PouleLabel label={label} partner={partner} />;
+              })()}
             </div>
           )}
 
@@ -324,7 +368,15 @@ export default function MatchDetailPage() {
           <div className="text-sm text-slate-300">
             {isJ3FiveV5
               ? currentJ3Square?.label ?? ""
-              : classement?.pouleName ? `Poule ${classement.pouleName}` : ""}
+              : classement?.pouleName
+                ? (() => {
+                    const label = data?.pouleCode
+                      ? buildNamingTitle(data.pouleCode, classement.pouleName, namingPartners)
+                      : classement.pouleName;
+                    const partner = data?.pouleCode ? getNamingPartnerForCode(data.pouleCode, namingPartners) : null;
+                    return <PouleLabel label={label} partner={partner} />;
+                  })()
+                : ""}
           </div>
 
           {isJ3FiveV5 && isJ3SquaresLoading && (
@@ -447,7 +499,13 @@ export default function MatchDetailPage() {
                 <span>
                   {isJ3FiveV5
                     ? `Matchs du carré ${formatSquareSuffix(currentJ3Square?.label)}`
-                    : `Matchs de la poule ${relatedMatches[0]?.pouleName || relatedMatches[0]?.pouleCode || ""}`}
+                    : (() => {
+                        const base = relatedMatches[0]?.pouleName || relatedMatches[0]?.pouleCode || "";
+                        const code = relatedMatches[0]?.pouleCode;
+                        const enriched = code ? buildNamingTitle(code, base, namingPartners) : base;
+                        const partner = code ? getNamingPartnerForCode(code, namingPartners) : null;
+                        return <PouleLabel label={`Matchs de la ${enriched}`} partner={partner} />;
+                      })()}
                 </span>
               </div>
               <div className="text-xs text-slate-500">Glissez horizontalement</div>

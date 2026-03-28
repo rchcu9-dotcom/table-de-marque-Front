@@ -15,6 +15,10 @@ import icon5v5 from "../assets/icons/nav/fivev5.png";
 import icon3v3 from "../assets/icons/nav/threev3.png";
 import iconChallenge from "../assets/icons/nav/challenge.png";
 import Breadcrumbs from "../components/navigation/Breadcrumbs";
+import { usePartenaires } from "../hooks/usePartenaires";
+import SponsorFooter from "../components/sponsors/SponsorFooter";
+import NamingBadge from "../components/sponsors/NamingBadge";
+import { getNamingPartnerForCode } from "../utils/namingPartners";
 import { formatTournamentDayKey, tournamentDateKey } from "../utils/tournamentDate";
 
 type RankedPlayer = {
@@ -130,6 +134,8 @@ export default function TeamPage() {
   const { data: matches, isLoading, isError } = useMatches();
   const { data: allTeams } = useTeams();
   const { data: meals } = useMeals();
+  const { data: partenairesData } = usePartenaires();
+  const namingPartners = (partenairesData ?? []).filter((p) => p.type === "naming");
 
   const filtered = React.useMemo(() => {
     if (!matches) return [];
@@ -339,6 +345,16 @@ export default function TeamPage() {
               { label: teamName },
             ]}
           />
+          {currentTeam?.photoUrl && (
+            <div className="relative mb-4 overflow-hidden rounded-xl">
+              <img
+                src={currentTeam.photoUrl}
+                alt={`Photo ${teamName}`}
+                className="h-48 w-full object-cover"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+              />
+            </div>
+          )}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center gap-4">
               <HexBadge name={teamName} size={68} imageUrl={heroLogo} />
@@ -430,6 +446,9 @@ export default function TeamPage() {
           {showJ1 && (
             <Card className="order-3 bg-white/5 border-slate-800 backdrop-blur space-y-3" data-testid="team-classement-j1">
               <div className="text-sm font-semibold text-slate-100">Jour 1 - {jour1Global ? formatDay(jour1Global) : "-"}</div>
+              {pouleCodeJ1 && getNamingPartnerForCode(pouleCodeJ1, namingPartners) && (
+                <NamingBadge partner={getNamingPartnerForCode(pouleCodeJ1, namingPartners)!} />
+              )}
               <DayClassement
                 title="Classement 5v5"
                 icon={icon5v5}
@@ -479,6 +498,9 @@ export default function TeamPage() {
           {showJ2 && (
             <Card className="order-2 bg-white/5 border-slate-800 backdrop-blur space-y-3" data-testid="team-classement-j2">
               <div className="text-sm font-semibold text-slate-100">Jour 2 - {jour2Global ? formatDay(jour2Global) : "-"}</div>
+              {pouleCodeJ2 && getNamingPartnerForCode(pouleCodeJ2, namingPartners) && (
+                <NamingBadge partner={getNamingPartnerForCode(pouleCodeJ2, namingPartners)!} />
+              )}
               <DayClassement
                 title="Classement 5v5"
                 icon={icon5v5}
@@ -509,6 +531,7 @@ export default function TeamPage() {
           <h3 className="text-lg font-semibold text-slate-50">Effectif</h3>
           <PlayersGrid players={playerList} loading={players.isLoading} />
         </section>
+        <SponsorFooter partenaires={partenairesData ?? []} />
       </div>
     </div>
   );

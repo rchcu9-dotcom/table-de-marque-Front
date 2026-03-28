@@ -104,6 +104,17 @@ export async function accepterCandidature(
   return res.json() as Promise<{ id: number; statut: string }>;
 }
 
+export async function promouvoCandidature(
+  id: number,
+  token: string,
+): Promise<{ id: number; statut: string }> {
+  const res = await fetchWithRetry(inscriptionUrl(`/candidatures/${id}/promouvoir`), {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json() as Promise<{ id: number; statut: string }>;
+}
+
 export async function mettreListeAttente(
   id: number,
   token: string,

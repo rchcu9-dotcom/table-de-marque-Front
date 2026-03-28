@@ -9,6 +9,8 @@ import icon5v5 from "../assets/icons/nav/fivev5.png";
 import icon3v3 from "../assets/icons/nav/threev3.png";
 import iconChallenge from "../assets/icons/nav/challenge.png";
 import { formatTournamentDayKey, tournamentDateKey } from "../utils/tournamentDate";
+import { usePartenaires } from "../hooks/usePartenaires";
+import { buildNamingTitle, getNamingPartnerForCode } from "../utils/namingPartners";
 
 function normalize(value?: string | null) {
   return (value ?? "").trim().toLowerCase();
@@ -22,6 +24,8 @@ const compIcon: Record<string, string> = {
 
 export default function PlanningPage() {
   const { selectedTeam } = useSelectedTeam();
+  const { data: partenairesData } = usePartenaires();
+  const namingPartners = (partenairesData ?? []).filter((p) => p.type === "naming");
   const { data: matches } = useMatchesFiltered({ teamId: selectedTeam?.id });
   const navigate = useNavigate();
   const listRef = React.useRef<HTMLDivElement | null>(null);
@@ -288,7 +292,11 @@ export default function PlanningPage() {
                     )}
                   </div>
                   <div className="flex items-center justify-between text-xs text-slate-400 mb-1 pr-8">
-                    <span>{m.pouleName ?? m.pouleCode ?? "Poule"}</span>
+                    <span>
+                      {m.pouleCode
+                        ? buildNamingTitle(m.pouleCode, m.pouleName ?? m.pouleCode, namingPartners)
+                        : (m.pouleName ?? "Poule")}
+                    </span>
                     <span>
                       {new Date(m.date).toLocaleDateString("fr-FR", {
                         weekday: "short",
