@@ -10,7 +10,7 @@ import icon3v3 from "../assets/icons/nav/threev3.png";
 import iconChallenge from "../assets/icons/nav/challenge.png";
 import { formatTournamentDayKey, tournamentDateKey } from "../utils/tournamentDate";
 import { usePartenaires } from "../hooks/usePartenaires";
-import { buildNamingTitle, getNamingPartnerForCode } from "../utils/namingPartners";
+import { buildNamingTitle } from "../utils/namingPartners";
 
 function normalize(value?: string | null) {
   return (value ?? "").trim().toLowerCase();

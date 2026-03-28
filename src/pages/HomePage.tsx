@@ -15,7 +15,7 @@ import icon3v3 from "../assets/icons/nav/threev3.png";
 import iconChallenge from "../assets/icons/nav/challenge.png";
 import { getLiveCommentary } from "./utils/homeCommentary";
 import { pickTournamentState, tournamentStateLabel } from "./utils/tournamentState";
-import { deriveTournamentDay as deriveTournamentDayFromMatches, type TournamentDay } from "../utils/tournamentDate";
+import { deriveTournamentDay as deriveTournamentDayFromMatches } from "../utils/tournamentDate";
 import { usePartenaires } from "../hooks/usePartenaires";
 import SponsorFooter from "../components/sponsors/SponsorFooter";
 
@@ -127,11 +127,6 @@ function autoIndexForList(list: Match[], focusId: string | null) {
   return 0;
 }
 
-function smallGlaceModeForDay(day: TournamentDay): SmallGlaceMode {
-  if (day === 1) return "challenge-j1";
-  if (day === 2) return "3v3";
-  return "challenge-vitesse-j3";
-}
 
 function smallGlaceLabel(mode: SmallGlaceMode) {
   if (mode === "3v3") return "3v3";

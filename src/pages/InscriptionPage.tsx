@@ -859,7 +859,6 @@ export default function InscriptionPage() {
     if (!user) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setProfil(null);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setToken(null);
       return;
     }
