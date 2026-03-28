@@ -833,6 +833,12 @@ export default function HomePage() {
     () => tripletForCompetition(smallGlaceSourceMatches, smallGlaceType),
     [smallGlaceSourceMatches, smallGlaceType],
   );
+  const smallGlaceState = React.useMemo(() => {
+    if (tripletSmallGlace.live) return "pendant";
+    if (tripletSmallGlace.next) return "pendant";
+    if (tripletSmallGlace.last) return "apres";
+    return "avant";
+  }, [tripletSmallGlace.live, tripletSmallGlace.next, tripletSmallGlace.last]);
   const ordered5v5 = React.useMemo(() => liveCenteredOrder(triplet5v5, filterByCompetition(matches, "5v5")), [triplet5v5, matches]);
   const orderedSmallGlace = React.useMemo(
     () => mapMatchesToMomentumItems(liveCenteredOrder(tripletSmallGlace, smallGlaceSourceMatches), smallGlaceMomentumItems),
@@ -1137,24 +1143,12 @@ const afterFocusSmallGlace = React.useMemo(
               ) : (
                 // ── J1 / J3 : comportement normal ────────────────────────────
                 <>
-                  {state === "avant" && (
-                    <>
-                      <CompactLine title="5v5" icon={icon5v5} items={beforeUpcoming5v5.map((m) => ({ match: m }))} testId="home-now-5v5" cardTestIdPrefix="home-momentum-card" focusId={beforeFocus5v5} focusTestId="home-momentum-focus" autoFocusIndex={0} gridJustify onSelect={makeSelectHandler(beforeUpcoming5v5)} />
-                      <CompactLine title={smallGlaceLabelValue} icon={smallGlaceIcon(smallGlaceMode)} items={beforeUpcomingSmallGlace} testId="home-challenge-compact" cardTestIdPrefix="home-momentum-card" focusId={beforeFocusSmallGlace} focusTestId="home-momentum-focus" gridJustify onSelect={makeSelectHandler(beforeUpcomingSmallGlace.map((item) => item.match))} />
-                    </>
-                  )}
-                  {state === "pendant" && (
-                    <>
-                      <CompactLine title="5v5" icon={icon5v5} items={ordered5v5.map((m) => ({ match: m }))} testId="home-now-5v5" cardTestIdPrefix="home-momentum-card" focusId={focusId5v5} focusTestId="home-momentum-focus" autoFocusIndex={autoIndex5v5} gridJustify onSelect={makeSelectHandler(ordered5v5)} />
-                      <CompactLine title={smallGlaceLabelValue} icon={smallGlaceIcon(smallGlaceMode)} items={orderedSmallGlace} testId="home-now-smallglace" cardTestIdPrefix="home-momentum-card" focusId={focusIdSmallGlace} focusTestId="home-momentum-focus" autoFocusIndex={autoIndexSmallGlace} gridJustify onSelect={makeSelectHandler(orderedSmallGlaceMatches)} />
-                    </>
-                  )}
-                  {state === "apres" && (
-                    <>
-                      <CompactLine title="5v5" icon={icon5v5} items={afterRecent5v5.map((m) => ({ match: m }))} testId="home-now-5v5" cardTestIdPrefix="home-momentum-card" autoFocusIndex={afterRecent5v5.length > 0 ? afterRecent5v5.length - 1 : -1} autoFocusAlign="end" focusId={focusIdApres5v5} focusTestId="home-momentum-focus" focusTone="blue" gridJustify onSelect={makeSelectHandler(afterRecent5v5)} />
-                      <CompactLine title={smallGlaceLabelValue} icon={smallGlaceIcon(smallGlaceMode)} items={afterSmallGlaceWinners} testId="home-challenge-compact" cardTestIdPrefix="home-momentum-card" focusId={afterFocusSmallGlace} focusTestId="home-momentum-focus" gridJustify onSelect={makeSelectHandler(afterSmallGlaceWinners.map((item) => item.match))} />
-                    </>
-                  )}
+                  {state === "avant" && <CompactLine title="5v5" icon={icon5v5} items={beforeUpcoming5v5.map((m) => ({ match: m }))} testId="home-now-5v5" cardTestIdPrefix="home-momentum-card" focusId={beforeFocus5v5} focusTestId="home-momentum-focus" autoFocusIndex={0} gridJustify onSelect={makeSelectHandler(beforeUpcoming5v5)} />}
+                  {state === "pendant" && <CompactLine title="5v5" icon={icon5v5} items={ordered5v5.map((m) => ({ match: m }))} testId="home-now-5v5" cardTestIdPrefix="home-momentum-card" focusId={focusId5v5} focusTestId="home-momentum-focus" autoFocusIndex={autoIndex5v5} gridJustify onSelect={makeSelectHandler(ordered5v5)} />}
+                  {state === "apres" && <CompactLine title="5v5" icon={icon5v5} items={afterRecent5v5.map((m) => ({ match: m }))} testId="home-now-5v5" cardTestIdPrefix="home-momentum-card" autoFocusIndex={afterRecent5v5.length > 0 ? afterRecent5v5.length - 1 : -1} autoFocusAlign="end" focusId={focusIdApres5v5} focusTestId="home-momentum-focus" focusTone="blue" gridJustify onSelect={makeSelectHandler(afterRecent5v5)} />}
+                  {smallGlaceState === "avant" && <CompactLine title={smallGlaceLabelValue} icon={smallGlaceIcon(smallGlaceMode)} items={beforeUpcomingSmallGlace} testId="home-challenge-compact" cardTestIdPrefix="home-momentum-card" focusId={beforeFocusSmallGlace} focusTestId="home-momentum-focus" gridJustify onSelect={makeSelectHandler(beforeUpcomingSmallGlace.map((item) => item.match))} />}
+                  {smallGlaceState === "pendant" && <CompactLine title={smallGlaceLabelValue} icon={smallGlaceIcon(smallGlaceMode)} items={orderedSmallGlace} testId="home-now-smallglace" cardTestIdPrefix="home-momentum-card" focusId={focusIdSmallGlace} focusTestId="home-momentum-focus" autoFocusIndex={autoIndexSmallGlace} gridJustify onSelect={makeSelectHandler(orderedSmallGlaceMatches)} />}
+                  {smallGlaceState === "apres" && <CompactLine title={smallGlaceLabelValue} icon={smallGlaceIcon(smallGlaceMode)} items={afterSmallGlaceWinners} testId="home-challenge-compact" cardTestIdPrefix="home-momentum-card" focusId={afterFocusSmallGlace} focusTestId="home-momentum-focus" gridJustify onSelect={makeSelectHandler(afterSmallGlaceWinners.map((item) => item.match))} />}
                 </>
               )}
             </div>
