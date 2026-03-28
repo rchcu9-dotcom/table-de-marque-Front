@@ -139,6 +139,10 @@ const mockJ3Squares = {
   ],
 };
 
+vi.mock("../../hooks/usePartenaires", () => ({
+  usePartenaires: () => ({ data: [], isLoading: false }),
+}));
+
 vi.mock("../../hooks/useClassement", () => ({
   useClassementForMatch: () => ({
     data: mockClassement,
@@ -223,7 +227,7 @@ describe("MatchDetailPage", () => {
     // Carte principale : poule et pulsation
     const pouleTexts = screen.getAllByText(/Poule A/i);
     const mainPouleLabel = pouleTexts.find((node) =>
-      (node as HTMLElement).className.includes("text-xs"),
+      !!(node as HTMLElement).closest(".live-pulse-card"),
     ) as HTMLElement | undefined;
     expect(mainPouleLabel).toBeTruthy();
     const mainCard = mainPouleLabel?.closest(".live-pulse-card");
@@ -233,7 +237,7 @@ describe("MatchDetailPage", () => {
     expect(screen.getByText(/^Classement$/)).toBeInTheDocument();
 
     // Slider titre avec nom de poule
-    expect(screen.getByText(/Matchs de la poule Poule A/i)).toBeInTheDocument();
+    expect(screen.getByText(/Matchs de la Poule A/i)).toBeInTheDocument();
 
     // Résumés compacts : liseret selon statut sélectionné (ongoing -> amber) + pulsation
     const summarySelected = screen

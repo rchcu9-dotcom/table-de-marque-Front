@@ -71,6 +71,10 @@ vi.mock("react-router-dom", async (orig) => {
   };
 });
 
+vi.mock("../../hooks/usePartenaires", () => ({
+  usePartenaires: () => ({ data: [], isLoading: false }),
+}));
+
 function createWrapper() {
   const queryClient = new QueryClient();
   return ({ children }: { children: React.ReactNode }) => (
@@ -865,7 +869,9 @@ describe("HomePage dynamique", () => {
 
     await renderHome("2026-01-18T10:30:00Z");
 
-    const smallGlace = await screen.findByTestId("home-now-smallglace");
+    const btn3v3 = await screen.findByRole("button", { name: "Voir 3v3" });
+    fireEvent.click(btn3v3);
+    const smallGlace = await screen.findByTestId("home-now-3v3");
     expect(within(smallGlace).getByText("3v3 Team")).toBeInTheDocument();
     expect(within(smallGlace).queryByText("Momentum Team")).not.toBeInTheDocument();
   });
@@ -1031,9 +1037,9 @@ describe("HomePage dynamique", () => {
 
     await renderHome("2026-03-01T12:15:00+01:00");
 
-    const smallGlace = await screen.findByTestId("home-now-smallglace");
-    expect(within(smallGlace).getByText("3v3 Team")).toBeInTheDocument();
-    expect(within(smallGlace).queryByText("Quart de finale")).not.toBeInTheDocument();
+    // Sur J2 quand tous les 3v3 sont terminés, le mode bascule sur challenge-vitesse-j3.
+    // Les phases ont homeVisible:false → aucune phase J3 n'est affichée.
+    expect(screen.queryByText("Quart de finale")).not.toBeInTheDocument();
   });
 
   it("J3 affiche le status backend sans reinterpreter localement scheduledAt", async () => {

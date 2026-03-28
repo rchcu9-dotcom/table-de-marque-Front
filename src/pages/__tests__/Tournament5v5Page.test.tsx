@@ -391,6 +391,10 @@ vi.mock("../../providers/SelectedTeamProvider", () => ({
   useSelectedTeam: () => ({ selectedTeam }),
 }));
 
+vi.mock("../../hooks/usePartenaires", () => ({
+  usePartenaires: () => ({ data: [], isLoading: false }),
+}));
+
 describe("Tournament5v5Page", () => {
   beforeEach(() => {
     resetFixtures();

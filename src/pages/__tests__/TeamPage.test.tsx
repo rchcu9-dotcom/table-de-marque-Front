@@ -71,6 +71,10 @@ const mockMatches: Match[] = [
   },
 ];
 
+vi.mock("../../hooks/usePartenaires", () => ({
+  usePartenaires: () => ({ data: [], isLoading: false }),
+}));
+
 vi.mock("../../hooks/useMatches", () => ({
   useMatches: () => ({
     data: mockMatches,
@@ -351,7 +355,7 @@ describe("TeamPage", () => {
     expect(within(j3Card).getAllByText(/En attente du r.sultat/i).length).toBeGreaterThan(0);
   });
 
-  it("affiche les placeholders J3 non cliquables quand équipe inconnue", () => {
+  it("affiche les placeholders J3 non cliquables quand ï¿½quipe inconnue", () => {
     mockJ3FinalSquares = {
       ...mockJ3FinalSquares,
       carres: mockJ3FinalSquares.carres.map((c) =>
@@ -359,10 +363,10 @@ describe("TeamPage", () => {
           ? {
               ...c,
               ranking: [
-                { rankInSquare: 1, place: 9, team: null, placeholder: "Inconnu (en attente du résultat)" },
-                { rankInSquare: 2, place: 10, team: null, placeholder: "Inconnu (en attente du résultat)" },
-                { rankInSquare: 3, place: 11, team: null, placeholder: "Inconnu (en attente du résultat)" },
-                { rankInSquare: 4, place: 12, team: null, placeholder: "Inconnu (en attente du résultat)" },
+                { rankInSquare: 1, place: 9, team: null, placeholder: "Inconnu (en attente du rï¿½sultat)" },
+                { rankInSquare: 2, place: 10, team: null, placeholder: "Inconnu (en attente du rï¿½sultat)" },
+                { rankInSquare: 3, place: 11, team: null, placeholder: "Inconnu (en attente du rï¿½sultat)" },
+                { rankInSquare: 4, place: 12, team: null, placeholder: "Inconnu (en attente du rï¿½sultat)" },
               ],
             }
           : c,

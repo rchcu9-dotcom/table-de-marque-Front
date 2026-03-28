@@ -63,6 +63,10 @@ vi.mock("../../hooks/useClassement", () => ({
   }),
 }));
 
+vi.mock("../../hooks/usePartenaires", () => ({
+  usePartenaires: () => ({ data: [], isLoading: false }),
+}));
+
 vi.mock("@tanstack/react-query", async (orig) => {
   const mod = await orig();
   return {
