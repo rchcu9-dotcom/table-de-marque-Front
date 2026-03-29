@@ -21,13 +21,28 @@ export function sortedTournamentDateKeys(matches: Match[]) {
   )].sort();
 }
 
+function hasStarted(dayMatches: Match[]) {
+  return dayMatches.some((m) => m.status === "ongoing" || m.status === "finished");
+}
+
+function allFinished(dayMatches: Match[]) {
+  return dayMatches.length > 0 && dayMatches.every((m) => m.status === "finished");
+}
+
 export function deriveTournamentDay(matches: Match[], now: Date = new Date()): TournamentDay {
-  const [, j2, j3] = sortedTournamentDateKeys(matches);
+  const nonDeleted = matches.filter((m) => m.status !== "deleted");
+  const [j1Key, j2Key, j3Key] = sortedTournamentDateKeys(matches);
   const todayKey = tournamentDateKey(now);
 
-  if (!j2 || todayKey < j2) return 1;
-  if (!j3 || todayKey < j3) return 2;
-  return 3;
+  if (j3Key) {
+    const j3Matches = nonDeleted.filter((m) => tournamentDateKey(m.date) === j3Key);
+    if (hasStarted(j3Matches) || todayKey >= j3Key) return 3;
+  }
+  if (j2Key) {
+    const j1Matches = nonDeleted.filter((m) => tournamentDateKey(m.date) === j1Key);
+    if (allFinished(j1Matches) || todayKey >= j2Key) return 2;
+  }
+  return 1;
 }
 
 export function formatTournamentDayKey(

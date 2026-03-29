@@ -10,6 +10,7 @@ import icon3v3 from "../assets/icons/nav/threev3.png";
 import iconChallenge from "../assets/icons/nav/challenge.png";
 import { formatTournamentDayKey, tournamentDateKey } from "../utils/tournamentDate";
 import { usePartenaires } from "../hooks/usePartenaires";
+import type { Partenaire } from "../api/partenaire";
 import { buildNamingTitle } from "../utils/namingPartners";
 
 function normalize(value?: string | null) {
@@ -71,6 +72,19 @@ export default function PlanningPage() {
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [matches, competitionFilter, dayFilter, selectedTeam, search]);
+
+  const sponsors = React.useMemo(
+    () => (partenairesData ?? []).filter((p) => p.logoUrl || p.nom),
+    [partenairesData],
+  );
+  const threeV3SponsorIndex = React.useMemo(() => {
+    const map = new Map<string, number>();
+    let count = 0;
+    for (const m of filtered) {
+      if (m.competitionType === "3v3") map.set(m.id, count++);
+    }
+    return map;
+  }, [filtered]);
 
   const buildCardClasses = (status: Match["status"]) => {
     if (status === "ongoing") {
@@ -292,11 +306,15 @@ export default function PlanningPage() {
                     )}
                   </div>
                   <div className="flex items-center justify-between text-xs text-slate-400 mb-1 pr-8">
-                    <span>
-                      {m.pouleCode
-                        ? buildNamingTitle(m.pouleCode, m.pouleName ?? m.pouleCode, namingPartners)
-                        : (m.pouleName ?? "Poule")}
-                    </span>
+                    {m.competitionType === "3v3" && sponsors.length > 0 ? (
+                      <SponsorTag sponsor={sponsors[threeV3SponsorIndex.get(m.id)! % sponsors.length]} />
+                    ) : (
+                      <span>
+                        {m.pouleCode
+                          ? buildNamingTitle(m.pouleCode, m.pouleName ?? m.pouleCode, namingPartners)
+                          : (m.pouleName ?? "Poule")}
+                      </span>
+                    )}
                     <span>
                       {new Date(m.date).toLocaleDateString("fr-FR", {
                         weekday: "short",
@@ -325,7 +343,7 @@ export default function PlanningPage() {
                               </div>
                             </div>
                             <div className="w-28 flex-shrink-0 flex flex-col items-center text-sm text-slate-200 text-center">
-                              {m.scoreA !== null && m.scoreB !== null ? (
+                              {m.scoreA !== null && m.scoreB !== null && m.competitionType !== "3v3" ? (
                                 <div className="font-semibold flex items-center gap-1">
                                   <span className={winner === m.teamA ? "text-emerald-300" : ""}>{m.scoreA}</span>
                                   <span className="text-slate-500">-</span>
@@ -379,4 +397,30 @@ export default function PlanningPage() {
       </div>
     </div>
   );
+}
+
+function SponsorTag({ sponsor }: { sponsor: Partenaire | null | undefined }) {
+  if (!sponsor) return null;
+  const content = (
+    <>
+      {sponsor.logoUrl && (
+        <img src={sponsor.logoUrl} alt={sponsor.nom} className="h-4 w-4 object-contain rounded-sm" />
+      )}
+      <span>{sponsor.nom}</span>
+    </>
+  );
+  if (sponsor.urlSite) {
+    return (
+      <a
+        href={sponsor.urlSite}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-1 hover:opacity-80"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {content}
+      </a>
+    );
+  }
+  return <span className="flex items-center gap-1">{content}</span>;
 }

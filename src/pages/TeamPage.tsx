@@ -62,8 +62,8 @@ function getCompetitionIcon(competitionType?: string | null) {
 
 function CompetitionBadge({ src, alt }: { src: string; alt: string }) {
   return (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-700/80 bg-slate-950/85">
-      <img src={src} alt={alt} className="h-4 w-4 object-contain opacity-85" />
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-700/80 bg-slate-950/85 overflow-hidden">
+      <img src={src} alt={alt} className="h-full w-full object-cover opacity-85" />
     </div>
   );
 }
@@ -112,6 +112,12 @@ function dayKeyFromDate(date: string) {
 
 function hasStartedDay(matches: Match[]) {
   return matches.some((m) => m.status === "ongoing" || m.status === "finished");
+}
+
+function compactPoolLabel(pouleName: string): string {
+  if (/Tournoi Or/i.test(pouleName)) return "Or";
+  if (/Tournoi Argent/i.test(pouleName)) return "Argent";
+  return pouleName; // "Poule A", "Carré Or A", "Carré Argent C" — déjà lisibles
 }
 
 function isFinishedDay(matches: Match[]) {
@@ -203,6 +209,7 @@ export default function TeamPage() {
   const showJ3 = !!jour3Global && (j2FinishedGlobal || j3StartedGlobal);
   const j1MatchSample = filtered5v5.find((m) => dayKeyFromDate(m.date) === jour1Global);
   const j2MatchSample = filtered5v5.find((m) => dayKeyFromDate(m.date) === jour2Global);
+  const j3MatchSample = filtered5v5.find((m) => dayKeyFromDate(m.date) === jour3Global);
   const pouleCodeJ1 = j1MatchSample?.pouleCode ?? j1MatchSample?.pouleName;
   const pouleCodeJ2 = j2MatchSample?.pouleCode ?? j2MatchSample?.pouleName;
 
@@ -445,7 +452,12 @@ export default function TeamPage() {
 
           {showJ1 && (
             <Card className="order-3 bg-white/5 border-slate-800 backdrop-blur space-y-3" data-testid="team-classement-j1">
-              <div className="text-sm font-semibold text-slate-100">Jour 1 - {jour1Global ? formatDay(jour1Global) : "-"}</div>
+              <div className="text-sm font-semibold text-slate-100">
+                Jour 1 - {jour1Global ? formatDay(jour1Global) : "-"}
+                {j1MatchSample?.pouleName && (
+                  <span className="ml-2 text-xs font-normal text-slate-400">{compactPoolLabel(j1MatchSample.pouleName)}</span>
+                )}
+              </div>
               {pouleCodeJ1 && getNamingPartnerForCode(pouleCodeJ1, namingPartners) && (
                 <NamingBadge partner={getNamingPartnerForCode(pouleCodeJ1, namingPartners)!} />
               )}
@@ -497,7 +509,12 @@ export default function TeamPage() {
 
           {showJ2 && (
             <Card className="order-2 bg-white/5 border-slate-800 backdrop-blur space-y-3" data-testid="team-classement-j2">
-              <div className="text-sm font-semibold text-slate-100">Jour 2 - {jour2Global ? formatDay(jour2Global) : "-"}</div>
+              <div className="text-sm font-semibold text-slate-100">
+                Jour 2 - {jour2Global ? formatDay(jour2Global) : "-"}
+                {j2MatchSample?.pouleName && (
+                  <span className="ml-2 text-xs font-normal text-slate-400">{compactPoolLabel(j2MatchSample.pouleName)}</span>
+                )}
+              </div>
               {pouleCodeJ2 && getNamingPartnerForCode(pouleCodeJ2, namingPartners) && (
                 <NamingBadge partner={getNamingPartnerForCode(pouleCodeJ2, namingPartners)!} />
               )}
@@ -514,7 +531,12 @@ export default function TeamPage() {
 
           {showJ3 && (
             <Card className="order-1 bg-white/5 border-slate-800 backdrop-blur space-y-3" data-testid="team-classement-j3">
-              <div className="text-sm font-semibold text-slate-100">Jour 3 - {jour3Global ? formatDay(jour3Global) : "-"}</div>
+              <div className="text-sm font-semibold text-slate-100">
+                Jour 3 - {jour3Global ? formatDay(jour3Global) : "-"}
+                {j3MatchSample?.pouleName && (
+                  <span className="ml-2 text-xs font-normal text-slate-400">{compactPoolLabel(j3MatchSample.pouleName)}</span>
+                )}
+              </div>
               <DayClassement
                 title="Classement Final 5v5"
                 icon={icon5v5}

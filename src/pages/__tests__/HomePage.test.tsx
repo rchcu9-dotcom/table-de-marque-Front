@@ -869,9 +869,7 @@ describe("HomePage dynamique", () => {
 
     await renderHome("2026-01-18T10:30:00Z");
 
-    const btn3v3 = await screen.findByRole("button", { name: "Voir 3v3" });
-    fireEvent.click(btn3v3);
-    const smallGlace = await screen.findByTestId("home-now-3v3");
+    const smallGlace = await screen.findByTestId("home-now-smallglace");
     expect(within(smallGlace).getByText("3v3 Team")).toBeInTheDocument();
     expect(within(smallGlace).queryByText("Momentum Team")).not.toBeInTheDocument();
   });
