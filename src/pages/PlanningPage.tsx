@@ -137,10 +137,10 @@ export default function PlanningPage() {
             </div>
             <h1 className="text-xl font-semibold text-white">Planning</h1>
             <Link
-              to="/planning/live"
+              to="/planning/calendaire"
               className="ml-auto text-xs text-emerald-300 border border-emerald-500/30 bg-emerald-500/10 rounded-full px-3 py-1 hover:bg-emerald-500/20"
             >
-              Vue Tournoi
+              Vue calendaire
             </Link>
           </div>
           {selectedTeam && (
