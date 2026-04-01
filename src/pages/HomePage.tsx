@@ -616,6 +616,7 @@ function InlineMatchCard({
   const isChallenge = (match.competitionType ?? "").toLowerCase() === "challenge";
   const isScored =
     !isChallenge &&
+    match.competitionType !== "3v3" &&
     (match.status === "finished" || match.status === "ongoing") &&
     match.scoreA !== null &&
     match.scoreB !== null;

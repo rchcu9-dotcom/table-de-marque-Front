@@ -14,6 +14,7 @@ export type ClassementEquipe = {
   bp: number;
   bc: number;
   diff: number;
+  repasSamedi?: string | null;
 };
 
 export type PouleClassement = {

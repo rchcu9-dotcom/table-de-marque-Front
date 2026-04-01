@@ -1,8 +1,23 @@
 import React from "react";
+import { useQueries } from "@tanstack/react-query";
 import { useMatchesFiltered } from "../hooks/useMatches";
 import { useTeams } from "../hooks/useTeams";
 import { deriveTournamentDay, sortedTournamentDateKeys, tournamentDateKey } from "../utils/tournamentDate";
 import planningIcon from "../assets/icons/nav/planning.png";
+import { fetchClassementByPoule } from "../api/classement";
+
+// ── Pools J2 (GROUPE_NOM DB = '1','2','3','4' → UI = Alpha/Beta/Gamma/Delta) ──
+const J2_POOLS = ["Alpha", "Beta", "Gamma", "Delta"] as const;
+
+// ── Pools J3 Phase 2 (GROUPE_NOM DB = 'G'=Losers, 'J'=Winners) ───────────────
+const J3_PHASE2_POOLS = ["G", "J"] as const;
+
+// Parse bracket alias (pA3B4 / vC1D2) → [teamA, teamB] or null
+function phase1TeamsFromAlias(alias: string): [string, string] | null {
+  const m = alias.match(/^[pv]([A-Z]\d)([A-Z]\d)$/);
+  if (!m) return null;
+  return [m[1], m[2]];
+}
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 const TEAM_COL_W = 120;
@@ -93,6 +108,48 @@ export default function PlanningCalendairePage() {
   const headerRef = React.useRef<HTMLDivElement>(null);
   const [topOffset, setTopOffset] = React.useState(64);
 
+  // Fetch J2 pool classements (Alpha/Beta/Gamma/Delta) for meal times
+  const j2ClassementResults = useQueries({
+    queries: J2_POOLS.map((pool) => ({
+      queryKey: ["classement", pool],
+      queryFn: () => fetchClassementByPoule(pool),
+      staleTime: 60_000,
+      refetchOnWindowFocus: false,
+    })),
+  });
+
+  // Fetch J3 Phase 2 classements (G=Losers, J=Winners) for meal times
+  const j3Phase2ClassementResults = useQueries({
+    queries: J3_PHASE2_POOLS.map((pool) => ({
+      queryKey: ["classement", pool],
+      queryFn: () => fetchClassementByPoule(pool),
+      staleTime: 60_000,
+      refetchOnWindowFocus: false,
+    })),
+  });
+
+  // Map team name (alias or resolved) → J2 meal time ISO string
+  const repasJ2ByTeam = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const result of j2ClassementResults) {
+      for (const eq of result.data?.equipes ?? []) {
+        if (eq.repasSamedi) map.set(eq.name.trim().toLowerCase(), eq.repasSamedi);
+      }
+    }
+    return map;
+  }, [j2ClassementResults]);
+
+  // Map alias → J3 meal time ISO string (only Phase 2 entities that have a repas)
+  const repasJ3ByTeam = React.useMemo(() => {
+    const map = new Map<string, string>();
+    for (const result of j3Phase2ClassementResults) {
+      for (const eq of result.data?.equipes ?? []) {
+        if (eq.repasSamedi) map.set(eq.name.trim().toLowerCase(), eq.repasSamedi);
+      }
+    }
+    return map;
+  }, [j3Phase2ClassementResults]);
+
   // Derive current tournament day (J1, J2 or J3)
   const currentDay = React.useMemo((): GanttDay => {
     const day = deriveTournamentDay(allMatches ?? [], new Date());
@@ -133,12 +190,22 @@ export default function PlanningCalendairePage() {
     );
 
     // For J1: use teams from API (have repas/challenge data), sorted by pouleCode
-    // For J2/J3: derive team names from matches (supports aliases A1/B2 before resolution)
+    // For J2: derive team names from matches (supports aliases A1/B2 before resolution)
+    // For J3: only entities that have a repas (Phase 2 losers/winners from G/J classement)
     const teamNames: string[] =
       activeDay === "J1" && teams
         ? [...teams]
             .sort((a, b) => (a.pouleCode ?? a.name).localeCompare(b.pouleCode ?? b.name, "fr-FR"))
             .map((t) => t.name)
+        : activeDay === "J3"
+        ? [...repasJ3ByTeam.keys()].map((k) => {
+            // restore original casing from classement data
+            for (const result of j3Phase2ClassementResults) {
+              const found = result.data?.equipes.find((e) => e.name.trim().toLowerCase() === k);
+              if (found) return found.name.trim();
+            }
+            return k;
+          }).sort((a, b) => a.localeCompare(b, "fr-FR"))
         : [...new Set(dayMatches.flatMap((m) => [m.teamA, m.teamB]))].sort((a, b) =>
             a.localeCompare(b, "fr-FR"),
           );
@@ -202,8 +269,9 @@ export default function PlanningCalendairePage() {
               tip: `Match 3v3 · ${debut}–${fin} · vs ${m.teamA === name ? m.teamB : m.teamA}` });
           });
 
-        // ── Repas (from classement repasSamedi when resolved) ──────────────
-        const repasDebut = dtToHHMM(team?.repasSamedi);
+        // ── Repas J2 (depuis ta_classement REPAS_SAMEDI pool J2) ──────────
+        const repasJ2Iso = repasJ2ByTeam.get(name.trim().toLowerCase());
+        const repasDebut = dtToHHMM(repasJ2Iso ?? null);
         if (repasDebut) {
           const repasFin = addMin(repasDebut, 40);
           bars.push({ debut: repasDebut, fin: repasFin, color: C_REPAS, label: "R",
@@ -212,20 +280,36 @@ export default function PlanningCalendairePage() {
       }
 
       if (activeDay === "J3") {
-        // ── Phase 1 matches ────────────────────────────────────────────────
-        dayMatches
-          .filter((m) => m.competitionType === "5v5" && m.phase === "Phase 1" && (m.teamA === name || m.teamB === name))
-          .forEach((m) => {
-            const debut = dtToHHMM(m.date);
-            if (!debut) return;
-            const fin = addMin(debut, 27);
-            bars.push({ debut, fin, color: C_J3_P1, label: "P1",
-              tip: `Phase 1 · ${debut}–${fin} · vs ${m.teamA === name ? m.teamB : m.teamA}` });
-          });
+        // Phase 1 = teams matching ^[A-D][1-4]$, Phase 2 = bracket aliases ^[vp][A-D][1-4][A-D][1-4]$
+        const p1Re = /^[A-D][1-4]$/;
+        const p2Re = /^[vp][A-D][1-4][A-D][1-4]$/;
+        const j3P1Matches = dayMatches.filter(
+          (m) => m.competitionType === "5v5" && p1Re.test(m.teamA) && p1Re.test(m.teamB),
+        );
+        const j3P2Matches = dayMatches.filter(
+          (m) => m.competitionType === "5v5" && p2Re.test(m.teamA) && p2Re.test(m.teamB),
+        );
 
-        // ── Phase 2 matches ────────────────────────────────────────────────
-        dayMatches
-          .filter((m) => m.competitionType === "5v5" && m.phase === "Phase 2" && (m.teamA === name || m.teamB === name))
+        // ── Phase 1 match — dérivé depuis l'alias (pA3B4 → cherche A3 vs B4) ──
+        const p1Teams = phase1TeamsFromAlias(name);
+        if (p1Teams) {
+          const [t1, t2] = p1Teams;
+          const p1Match = j3P1Matches.find(
+            (m) => (m.teamA === t1 && m.teamB === t2) || (m.teamA === t2 && m.teamB === t1),
+          );
+          if (p1Match) {
+            const debut = dtToHHMM(p1Match.date);
+            if (debut) {
+              const fin = addMin(debut, 27);
+              bars.push({ debut, fin, color: C_J3_P1, label: "P1",
+                tip: `Phase 1 · ${debut}–${fin} · ${t1} vs ${t2}` });
+            }
+          }
+        }
+
+        // ── Phase 2 match ──────────────────────────────────────────────────
+        j3P2Matches
+          .filter((m) => m.teamA === name || m.teamB === name)
           .forEach((m) => {
             const debut = dtToHHMM(m.date);
             if (!debut) return;
@@ -234,8 +318,9 @@ export default function PlanningCalendairePage() {
               tip: `Phase 2 · ${debut}–${fin} · vs ${m.teamA === name ? m.teamB : m.teamA}` });
           });
 
-        // ── Repas (from classement repasSamedi when resolved) ──────────────
-        const repasDebut = dtToHHMM(team?.repasSamedi);
+        // ── Repas J3 ───────────────────────────────────────────────────────
+        const repasJ3Iso = repasJ3ByTeam.get(name.trim().toLowerCase());
+        const repasDebut = dtToHHMM(repasJ3Iso ?? null);
         if (repasDebut) {
           const repasFin = addMin(repasDebut, 40);
           bars.push({ debut: repasDebut, fin: repasFin, color: C_REPAS, label: "R",
@@ -245,7 +330,7 @@ export default function PlanningCalendairePage() {
 
       return { name, bars };
     });
-  }, [allMatches, teams, activeDay, dayDateKey]);
+  }, [allMatches, teams, activeDay, dayDateKey, repasJ2ByTeam, repasJ3ByTeam, j3Phase2ClassementResults]);
 
   // SVG dimensions
   const SVG_H = HEADER_H + rows.length * ROW_H + 10;
