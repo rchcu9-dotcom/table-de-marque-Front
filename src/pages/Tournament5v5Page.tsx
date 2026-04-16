@@ -13,6 +13,11 @@ import HorizontalMatchSlider from "../components/collections/HorizontalMatchSlid
 import fiveV5Icon from "../assets/icons/nav/fivev5.png";
 import { useSelectedTeam } from "../providers/SelectedTeamProvider";
 import { pickTournamentState, tournamentStateLabel } from "./utils/tournamentState";
+import { usePartenaires } from "../hooks/usePartenaires";
+import type { Partenaire } from "../api/partenaire";
+import SponsorFooter from "../components/sponsors/SponsorFooter";
+import NamingBadge from "../components/sponsors/NamingBadge";
+import { buildNamingTitle, getNamingPartnerForCode } from "../utils/namingPartners";
 
 const byDateAsc = (a: Match, b: Match) => new Date(a.date).getTime() - new Date(b.date).getTime();
 
@@ -62,11 +67,13 @@ const QUALIF = [
   { code: "Beta", title: "Dim - Tournoi Or - Beta", phase: "Qualification" },
   { code: "Gamma", title: "Dim - Tournoi Argent - Gamma", phase: "Qualification" },
   { code: "Delta", title: "Dim - Tournoi Argent - Delta", phase: "Qualification" },
-];
+];
 
 export default function Tournament5v5Page() {
   const navigate = useNavigate();
   const { selectedTeam } = useSelectedTeam();
+  const { data: partenairesData } = usePartenaires();
+  const namingPartners = (partenairesData ?? []).filter((p) => p.type === "naming");
   const selectedTeamId = selectedTeam?.id ?? null;
   const [nowMs, setNowMs] = React.useState<number | null>(null);
   const { data: momentum5v5 } = useMomentumMatches({
@@ -426,7 +433,8 @@ export default function Tournament5v5Page() {
                   key={p.code}
                   code={p.code}
                   phase={p.phase}
-                  title={p.title}
+                  title={buildNamingTitle(p.code, p.title, namingPartners)}
+                  namingPartner={getNamingPartnerForCode(p.code, namingPartners)}
                   refMap={listRefs}
                   matchRefMap={matchRefs}
                   highlightTeams={highlightPoule === p.code ? highlightTeams : undefined}
@@ -452,7 +460,8 @@ export default function Tournament5v5Page() {
                   key={p.code}
                   code={p.code}
                   phase={p.phase}
-                  title={p.title}
+                  title={buildNamingTitle(p.code, p.title, namingPartners)}
+                  namingPartner={getNamingPartnerForCode(p.code, namingPartners)}
                   refMap={listRefs}
                   matchRefMap={matchRefs}
                   highlightTeams={highlightPoule === p.code ? highlightTeams : undefined}
@@ -465,6 +474,7 @@ export default function Tournament5v5Page() {
           </section>
         </div>
       </div>
+      <SponsorFooter partenaires={partenairesData ?? []} />
     </div>
   );
 }
@@ -473,6 +483,7 @@ type ClassementCardProps = {
   code: string;
   phase?: string;
   title?: string;
+  namingPartner?: Partenaire | null;
   refMap?: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
   matchRefMap?: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
   highlightTeams?: Set<string>;
@@ -486,6 +497,7 @@ function ClassementCard({
   code,
   phase,
   title,
+  namingPartner,
   refMap,
   matchRefMap,
   highlightTeams,
@@ -525,7 +537,10 @@ function ClassementCard({
       }}
     >
       <div className="flex items-center justify-between mb-2">
-        <h3 className="font-semibold">{title ?? data.pouleName ?? `Poule ${code}`}</h3>
+        <div>
+          <h3 className="font-semibold">{title ?? data.pouleName ?? `Poule ${code}`}</h3>
+          {namingPartner && <NamingBadge partner={namingPartner} />}
+        </div>
         {data.phase && <span className="text-xs text-slate-300">{data.phase}</span>}
       </div>
       <div className="overflow-x-auto">

@@ -2,13 +2,16 @@ import React from "react";
 import { useMatchesFiltered } from "../hooks/useMatches";
 import type { Match } from "../api/match";
 import HexBadge from "../components/ds/HexBadge";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import planningIcon from "../assets/icons/nav/planning.png";
 import { useSelectedTeam } from "../providers/SelectedTeamProvider";
 import icon5v5 from "../assets/icons/nav/fivev5.png";
 import icon3v3 from "../assets/icons/nav/threev3.png";
 import iconChallenge from "../assets/icons/nav/challenge.png";
 import { formatTournamentDayKey, tournamentDateKey } from "../utils/tournamentDate";
+import { usePartenaires } from "../hooks/usePartenaires";
+import type { Partenaire } from "../api/partenaire";
+import { buildNamingTitle } from "../utils/namingPartners";
 
 function normalize(value?: string | null) {
   return (value ?? "").trim().toLowerCase();
@@ -22,6 +25,8 @@ const compIcon: Record<string, string> = {
 
 export default function PlanningPage() {
   const { selectedTeam } = useSelectedTeam();
+  const { data: partenairesData } = usePartenaires();
+  const namingPartners = (partenairesData ?? []).filter((p) => p.type === "naming");
   const { data: matches } = useMatchesFiltered({ teamId: selectedTeam?.id });
   const navigate = useNavigate();
   const listRef = React.useRef<HTMLDivElement | null>(null);
@@ -67,6 +72,19 @@ export default function PlanningPage() {
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [matches, competitionFilter, dayFilter, selectedTeam, search]);
+
+  const sponsors = React.useMemo(
+    () => (partenairesData ?? []).filter((p) => p.logoUrl || p.nom),
+    [partenairesData],
+  );
+  const threeV3SponsorIndex = React.useMemo(() => {
+    const map = new Map<string, number>();
+    let count = 0;
+    for (const m of filtered) {
+      if (m.competitionType === "3v3") map.set(m.id, count++);
+    }
+    return map;
+  }, [filtered]);
 
   const buildCardClasses = (status: Match["status"]) => {
     if (status === "ongoing") {
@@ -118,6 +136,12 @@ export default function PlanningPage() {
               <img src={planningIcon} alt="Planning" className="h-full w-full object-cover scale-150" loading="lazy" />
             </div>
             <h1 className="text-xl font-semibold text-white">Planning</h1>
+            <Link
+              to="/planning/calendaire"
+              className="ml-auto text-xs text-emerald-300 border border-emerald-500/30 bg-emerald-500/10 rounded-full px-3 py-1 hover:bg-emerald-500/20"
+            >
+              Vue calendaire
+            </Link>
           </div>
           {selectedTeam && (
             <div className="flex items-center gap-2 text-xs text-emerald-200 mb-2 pr-1">
@@ -282,7 +306,15 @@ export default function PlanningPage() {
                     )}
                   </div>
                   <div className="flex items-center justify-between text-xs text-slate-400 mb-1 pr-8">
-                    <span>{m.pouleName ?? m.pouleCode ?? "Poule"}</span>
+                    {m.competitionType === "3v3" && sponsors.length > 0 ? (
+                      <SponsorTag sponsor={sponsors[threeV3SponsorIndex.get(m.id)! % sponsors.length]} />
+                    ) : (
+                      <span>
+                        {m.pouleCode
+                          ? buildNamingTitle(m.pouleCode, m.pouleName ?? m.pouleCode, namingPartners)
+                          : (m.pouleName ?? "Poule")}
+                      </span>
+                    )}
                     <span>
                       {new Date(m.date).toLocaleDateString("fr-FR", {
                         weekday: "short",
@@ -311,7 +343,7 @@ export default function PlanningPage() {
                               </div>
                             </div>
                             <div className="w-28 flex-shrink-0 flex flex-col items-center text-sm text-slate-200 text-center">
-                              {m.scoreA !== null && m.scoreB !== null ? (
+                              {m.scoreA !== null && m.scoreB !== null && m.competitionType !== "3v3" ? (
                                 <div className="font-semibold flex items-center gap-1">
                                   <span className={winner === m.teamA ? "text-emerald-300" : ""}>{m.scoreA}</span>
                                   <span className="text-slate-500">-</span>
@@ -365,4 +397,30 @@ export default function PlanningPage() {
       </div>
     </div>
   );
+}
+
+function SponsorTag({ sponsor }: { sponsor: Partenaire | null | undefined }) {
+  if (!sponsor) return null;
+  const content = (
+    <>
+      {sponsor.logoUrl && (
+        <img src={sponsor.logoUrl} alt={sponsor.nom} className="h-4 w-4 object-contain rounded-sm" />
+      )}
+      <span>{sponsor.nom}</span>
+    </>
+  );
+  if (sponsor.urlSite) {
+    return (
+      <a
+        href={sponsor.urlSite}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-1 hover:opacity-80"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {content}
+      </a>
+    );
+  }
+  return <span className="flex items-center gap-1">{content}</span>;
 }

@@ -15,6 +15,10 @@ import icon5v5 from "../assets/icons/nav/fivev5.png";
 import icon3v3 from "../assets/icons/nav/threev3.png";
 import iconChallenge from "../assets/icons/nav/challenge.png";
 import Breadcrumbs from "../components/navigation/Breadcrumbs";
+import { usePartenaires } from "../hooks/usePartenaires";
+import SponsorFooter from "../components/sponsors/SponsorFooter";
+import NamingBadge from "../components/sponsors/NamingBadge";
+import { getNamingPartnerForCode } from "../utils/namingPartners";
 import { formatTournamentDayKey, tournamentDateKey } from "../utils/tournamentDate";
 
 type RankedPlayer = {
@@ -58,8 +62,8 @@ function getCompetitionIcon(competitionType?: string | null) {
 
 function CompetitionBadge({ src, alt }: { src: string; alt: string }) {
   return (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-700/80 bg-slate-950/85">
-      <img src={src} alt={alt} className="h-4 w-4 object-contain opacity-85" />
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-700/80 bg-slate-950/85 overflow-hidden">
+      <img src={src} alt={alt} className="h-full w-full object-cover opacity-85" />
     </div>
   );
 }
@@ -110,6 +114,12 @@ function hasStartedDay(matches: Match[]) {
   return matches.some((m) => m.status === "ongoing" || m.status === "finished");
 }
 
+function compactPoolLabel(pouleName: string): string {
+  if (/Tournoi Or/i.test(pouleName)) return "Or";
+  if (/Tournoi Argent/i.test(pouleName)) return "Argent";
+  return pouleName; // "Poule A", "Carré Or A", "Carré Argent C" — déjà lisibles
+}
+
 function isFinishedDay(matches: Match[]) {
   return matches.length > 0 && matches.every((m) => m.status === "finished");
 }
@@ -130,6 +140,8 @@ export default function TeamPage() {
   const { data: matches, isLoading, isError } = useMatches();
   const { data: allTeams } = useTeams();
   const { data: meals } = useMeals();
+  const { data: partenairesData } = usePartenaires();
+  const namingPartners = (partenairesData ?? []).filter((p) => p.type === "naming");
 
   const filtered = React.useMemo(() => {
     if (!matches) return [];
@@ -197,6 +209,7 @@ export default function TeamPage() {
   const showJ3 = !!jour3Global && (j2FinishedGlobal || j3StartedGlobal);
   const j1MatchSample = filtered5v5.find((m) => dayKeyFromDate(m.date) === jour1Global);
   const j2MatchSample = filtered5v5.find((m) => dayKeyFromDate(m.date) === jour2Global);
+  const j3MatchSample = filtered5v5.find((m) => dayKeyFromDate(m.date) === jour3Global);
   const pouleCodeJ1 = j1MatchSample?.pouleCode ?? j1MatchSample?.pouleName;
   const pouleCodeJ2 = j2MatchSample?.pouleCode ?? j2MatchSample?.pouleName;
 
@@ -301,11 +314,31 @@ export default function TeamPage() {
   const teamsList = Array.isArray(allTeams) ? allTeams : [];
   const logoFor = (name: string) =>
     teamsList.find((t) => normalizeTeamName(t.name) === normalizeTeamName(name))?.logoUrl;
-  const mealDays = meals?.days ?? [
-    { key: "J1", label: "J1", dateTime: null, message: "Repas indisponible" },
-    { key: "J2", label: "J2", dateTime: null, message: "Repas indisponible" },
-    { key: "J3", label: "J3", dateTime: null, message: "Repas indisponible" },
-  ];
+  const currentTeam = teamsList.find(
+    (t) => normalizeTeamName(t.name) === normalizeTeamName(teamName) ||
+           normalizeTeamName(t.id) === normalizeTeamName(teamName),
+  );
+  const mealDays = currentTeam?.repasSamedi != null || currentTeam?.repasDimanche != null
+    ? [
+        {
+          key: "J1" as const,
+          label: "J1",
+          dateTime: currentTeam.repasSamedi ?? null,
+          message: currentTeam.repasSamedi ? null : "Repas indisponible",
+        },
+        {
+          key: "J2" as const,
+          label: "J2",
+          dateTime: currentTeam.repasDimanche ?? null,
+          message: currentTeam.repasDimanche ? null : "Repas indisponible",
+        },
+        { key: "J3" as const, label: "J3", dateTime: null, message: "Repas indisponible" },
+      ]
+    : meals?.days ?? [
+        { key: "J1" as const, label: "J1", dateTime: null, message: "Repas indisponible" },
+        { key: "J2" as const, label: "J2", dateTime: null, message: "Repas indisponible" },
+        { key: "J3" as const, label: "J3", dateTime: null, message: "Repas indisponible" },
+      ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100">
@@ -319,6 +352,16 @@ export default function TeamPage() {
               { label: teamName },
             ]}
           />
+          {currentTeam?.photoUrl && (
+            <div className="relative mb-4 overflow-hidden rounded-xl">
+              <img
+                src={currentTeam.photoUrl}
+                alt={`Photo ${teamName}`}
+                className="h-48 w-full object-cover"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+              />
+            </div>
+          )}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center gap-4">
               <HexBadge name={teamName} size={68} imageUrl={heroLogo} />
@@ -409,7 +452,15 @@ export default function TeamPage() {
 
           {showJ1 && (
             <Card className="order-3 bg-white/5 border-slate-800 backdrop-blur space-y-3" data-testid="team-classement-j1">
-              <div className="text-sm font-semibold text-slate-100">Jour 1 - {jour1Global ? formatDay(jour1Global) : "-"}</div>
+              <div className="text-sm font-semibold text-slate-100">
+                Jour 1 - {jour1Global ? formatDay(jour1Global) : "-"}
+                {j1MatchSample?.pouleName && (
+                  <span className="ml-2 text-xs font-normal text-slate-400">{compactPoolLabel(j1MatchSample.pouleName)}</span>
+                )}
+              </div>
+              {pouleCodeJ1 && getNamingPartnerForCode(pouleCodeJ1, namingPartners) && (
+                <NamingBadge partner={getNamingPartnerForCode(pouleCodeJ1, namingPartners)!} />
+              )}
               <DayClassement
                 title="Classement 5v5"
                 icon={icon5v5}
@@ -458,7 +509,15 @@ export default function TeamPage() {
 
           {showJ2 && (
             <Card className="order-2 bg-white/5 border-slate-800 backdrop-blur space-y-3" data-testid="team-classement-j2">
-              <div className="text-sm font-semibold text-slate-100">Jour 2 - {jour2Global ? formatDay(jour2Global) : "-"}</div>
+              <div className="text-sm font-semibold text-slate-100">
+                Jour 2 - {jour2Global ? formatDay(jour2Global) : "-"}
+                {j2MatchSample?.pouleName && (
+                  <span className="ml-2 text-xs font-normal text-slate-400">{compactPoolLabel(j2MatchSample.pouleName)}</span>
+                )}
+              </div>
+              {pouleCodeJ2 && getNamingPartnerForCode(pouleCodeJ2, namingPartners) && (
+                <NamingBadge partner={getNamingPartnerForCode(pouleCodeJ2, namingPartners)!} />
+              )}
               <DayClassement
                 title="Classement 5v5"
                 icon={icon5v5}
@@ -472,7 +531,12 @@ export default function TeamPage() {
 
           {showJ3 && (
             <Card className="order-1 bg-white/5 border-slate-800 backdrop-blur space-y-3" data-testid="team-classement-j3">
-              <div className="text-sm font-semibold text-slate-100">Jour 3 - {jour3Global ? formatDay(jour3Global) : "-"}</div>
+              <div className="text-sm font-semibold text-slate-100">
+                Jour 3 - {jour3Global ? formatDay(jour3Global) : "-"}
+                {j3MatchSample?.pouleName && (
+                  <span className="ml-2 text-xs font-normal text-slate-400">{compactPoolLabel(j3MatchSample.pouleName)}</span>
+                )}
+              </div>
               <DayClassement
                 title="Classement Final 5v5"
                 icon={icon5v5}
@@ -489,6 +553,7 @@ export default function TeamPage() {
           <h3 className="text-lg font-semibold text-slate-50">Effectif</h3>
           <PlayersGrid players={playerList} loading={players.isLoading} />
         </section>
+        <SponsorFooter partenaires={partenairesData ?? []} />
       </div>
     </div>
   );

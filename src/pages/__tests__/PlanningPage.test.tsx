@@ -44,6 +44,10 @@ vi.mock("../../providers/SelectedTeamProvider", () => ({
   useSelectedTeam: () => ({ selectedTeam: null }),
 }));
 
+vi.mock("../../hooks/usePartenaires", () => ({
+  usePartenaires: () => ({ data: [], isLoading: false }),
+}));
+
 describe("PlanningPage", () => {
   it("affiche le header Planning et la liste des matchs", () => {
     render(

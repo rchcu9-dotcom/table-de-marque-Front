@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Logo hexagonal Orleans Loiret Les Renards</title>
+  <desc id="desc">Badge hexagonal noir, rouge et orange avec une tete de renard stylisee.</desc>
+  <defs>
+    <linearGradient id="topGlow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffcf24"/>
+      <stop offset="100%" stop-color="#f28a00"/>
+    </linearGradient>
+    <linearGradient id="foxFill" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ff9e1a"/>
+      <stop offset="100%" stop-color="#d95a00"/>
+    </linearGradient>
+    <clipPath id="hexClip">
+      <polygon points="256,24 420,118 420,306 256,488 92,306 92,118"/>
+    </clipPath>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <polygon points="256,24 420,118 420,306 256,488 92,306 92,118" fill="#ffffff" filter="url(#shadow)"/>
+  <polygon points="256,38 406,124 406,300 256,468 106,300 106,124" fill="#0b0b0d"/>
+
+  <g clip-path="url(#hexClip)">
+    <rect x="106" y="124" width="300" height="162" fill="#0b0b0d"/>
+    <polygon points="106,286 406,286 406,356 256,468 106,356" fill="#c81414"/>
+    <polygon points="106,264 406,212 406,286 106,286" fill="#e11b1b"/>
+    <polygon points="106,124 406,124 406,178 106,214" fill="url(#topGlow)" opacity="0.16"/>
+  </g>
+
+  <g fill="url(#topGlow)" font-family="Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif" text-anchor="middle">
+    <text x="256" y="124" font-size="78" letter-spacing="2">ORLEANS</text>
+    <text x="256" y="170" font-size="36" letter-spacing="3">LOIRET</text>
+    <text x="256" y="420" font-size="44" letter-spacing="2">LES RENARDS</text>
+  </g>
+
+  <g transform="translate(110 150)">
+    <path d="M63 176 112 56 160 124 193 49 257 21 229 86 297 55 250 113 241 168 205 198 135 208Z" fill="url(#foxFill)" stroke="#080808" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M169 118 204 90 252 99 278 125 269 156 234 170 189 168 160 147Z" fill="#f1e6dc" stroke="#080808" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M217 110 237 94 266 99 281 116 278 132 252 141 228 139 213 127Z" fill="#8a1010" stroke="#080808" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M223 117 239 106 258 109 264 120 252 128 233 127Z" fill="#ffffff"/>
+    <path d="M181 147 203 130 232 130 247 148 241 168 211 179 186 173Z" fill="#efe8de" stroke="#080808" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M184 148 241 148" stroke="#080808" stroke-width="4"/>
+    <path d="M188 153 202 164M201 150 214 162M214 149 227 160M226 149 237 157" stroke="#080808" stroke-width="3"/>
+    <path d="M151 193 122 224 169 224 189 201" fill="#b51212" stroke="#080808" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M133 103 107 126 84 121 104 91" fill="#ff8f16" stroke="#080808" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M90 128 58 150 44 141 68 116" fill="#d95a00" stroke="#080808" stroke-width="6" stroke-linejoin="round"/>
+    <circle cx="282" cy="145" r="8" fill="#080808"/>
+  </g>
+
+  <g transform="translate(228 436)">
+    <ellipse cx="28" cy="16" rx="34" ry="12" fill="#111111" stroke="#f2c21a" stroke-width="4"/>
+    <path d="M7 6h42M5 16h46M10 25h36" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+  </g>
+</svg>

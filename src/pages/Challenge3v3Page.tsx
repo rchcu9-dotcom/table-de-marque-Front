@@ -65,9 +65,7 @@ function MatchStack({ matches }: { matches: Match[] }) {
           <div className="text-right text-sm">
             <StatusBadge status={m.status} />
             <div className="text-slate-300 text-xs">
-              {m.scoreA !== null && m.scoreB !== null
-                ? `${m.scoreA} - ${m.scoreB}`
-                : new Date(m.date).toLocaleString()}
+              {new Date(m.date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
             </div>
           </div>
         </div>

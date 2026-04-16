@@ -5,6 +5,8 @@ import type { Match } from "../api/match";
 import HexBadge from "../components/ds/HexBadge";
 import { useSelectedTeam } from "../providers/SelectedTeamProvider";
 import { useMatchesFiltered } from "../hooks/useMatches";
+import { usePartenaires } from "../hooks/usePartenaires";
+import type { Partenaire } from "../api/partenaire";
 
 function normalize(value?: string | null) {
   return (value ?? "").trim().toLowerCase();
@@ -17,6 +19,11 @@ export default function ThreeVThreePage() {
     surface: "PG",
     teamId: selectedTeam?.id || undefined,
   });
+  const { data: partenairesData } = usePartenaires();
+  const sponsors = React.useMemo(
+    () => (partenairesData ?? []).filter((p) => p.logoUrl || p.nom),
+    [partenairesData],
+  );
   const navigate = useNavigate();
   const itemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const filterRef = React.useRef<HTMLDivElement | null>(null);
@@ -145,8 +152,9 @@ export default function ThreeVThreePage() {
             <p className="text-slate-300 text-sm">Aucun match à afficher.</p>
           ) : (
             <div className="space-y-3">
-              {filtered.map((m) => {
+              {filtered.map((m, matchIndex) => {
                 const winner = computeWinner(m);
+                const sponsor = sponsors.length > 0 ? sponsors[matchIndex % sponsors.length] : null;
                 return (
                   <div
                     key={m.id}
@@ -183,7 +191,7 @@ export default function ThreeVThreePage() {
                       />
                     </div>
                     <div className="flex items-center justify-between text-xs text-slate-400">
-                      <span>{m.pouleName || m.pouleCode || "Poule"}</span>
+                      <SponsorTag sponsor={sponsor} />
                       <span>
                         {new Date(m.date).toLocaleDateString("fr-FR", {
                           weekday: "short",
@@ -200,20 +208,12 @@ export default function ThreeVThreePage() {
                         </div>
                       </div>
                       <div className="w-28 flex-shrink-0 flex flex-col items-center text-sm text-slate-200 text-center">
-                        {m.scoreA !== null && m.scoreB !== null ? (
-                          <div className="font-semibold flex items-center gap-1">
-                            <span className={winner === m.teamA ? "text-emerald-300" : ""}>{m.scoreA}</span>
-                            <span className="text-slate-500">-</span>
-                            <span className={winner === m.teamB ? "text-emerald-300" : ""}>{m.scoreB}</span>
-                          </div>
-                        ) : (
-                          <div className="text-xs text-slate-300">
-                            {new Date(m.date).toLocaleTimeString("fr-FR", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </div>
-                        )}
+                        <div className="text-xs text-slate-300">
+                          {new Date(m.date).toLocaleTimeString("fr-FR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
                       </div>
                       <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
                         <div className="text-right text-sm font-semibold">
@@ -236,4 +236,30 @@ export default function ThreeVThreePage() {
       </div>
     </div>
   );
+}
+
+function SponsorTag({ sponsor }: { sponsor: Partenaire | null }) {
+  if (!sponsor) return null;
+  const content = (
+    <>
+      {sponsor.logoUrl && (
+        <img src={sponsor.logoUrl} alt={sponsor.nom} className="h-4 w-4 object-contain rounded-sm" />
+      )}
+      <span>{sponsor.nom}</span>
+    </>
+  );
+  if (sponsor.urlSite) {
+    return (
+      <a
+        href={sponsor.urlSite}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-1 hover:opacity-80"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {content}
+      </a>
+    );
+  }
+  return <span className="flex items-center gap-1">{content}</span>;
 }

@@ -5,9 +5,13 @@ export type Team = {
   id: string;
   name: string;
   logoUrl?: string | null;
+  photoUrl?: string | null;
   pouleCode?: string | null;
   pouleName?: string | null;
   rang?: number;
+  repasSamedi?: string | null;
+  repasDimanche?: string | null;
+  challengeSamedi?: string | null;
 };
 
 const API_BASE_URL = getApiBaseUrl();

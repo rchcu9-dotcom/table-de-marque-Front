@@ -15,7 +15,9 @@ import icon3v3 from "../assets/icons/nav/threev3.png";
 import iconChallenge from "../assets/icons/nav/challenge.png";
 import { getLiveCommentary } from "./utils/homeCommentary";
 import { pickTournamentState, tournamentStateLabel } from "./utils/tournamentState";
-import { deriveTournamentDay as deriveTournamentDayFromMatches, type TournamentDay } from "../utils/tournamentDate";
+import { deriveTournamentDay as deriveTournamentDayFromMatches } from "../utils/tournamentDate";
+import { usePartenaires } from "../hooks/usePartenaires";
+import SponsorFooter from "../components/sponsors/SponsorFooter";
 
 type Triplet = { last: Match | null; live: Match | null; next: Match | null };
 type SmallGlaceMode = "3v3" | "challenge-j1" | "challenge-vitesse-j3";
@@ -125,11 +127,6 @@ function autoIndexForList(list: Match[], focusId: string | null) {
   return 0;
 }
 
-function smallGlaceModeForDay(day: TournamentDay): SmallGlaceMode {
-  if (day === 1) return "challenge-j1";
-  if (day === 2) return "3v3";
-  return "challenge-vitesse-j3";
-}
 
 function smallGlaceLabel(mode: SmallGlaceMode) {
   if (mode === "3v3") return "3v3";
@@ -492,6 +489,7 @@ function CompactMatchCard({
   const isChallenge = (match.competitionType ?? "").toLowerCase() === "challenge";
   const isScored =
     !isChallenge &&
+    match.competitionType !== "3v3" &&
     (match.status === "finished" || match.status === "ongoing") &&
     match.scoreA !== null &&
     match.scoreB !== null;
@@ -618,6 +616,7 @@ function InlineMatchCard({
   const isChallenge = (match.competitionType ?? "").toLowerCase() === "challenge";
   const isScored =
     !isChallenge &&
+    match.competitionType !== "3v3" &&
     (match.status === "finished" || match.status === "ongoing") &&
     match.scoreA !== null &&
     match.scoreB !== null;
@@ -708,6 +707,9 @@ function InlineMatchCard({
 export default function HomePage() {
   const navigate = useNavigate();
   const { data: teams } = useTeams();
+  const { data: partenairesData } = usePartenaires();
+  const namingPartners = (partenairesData ?? []).filter((p) => p.type === "naming");
+  const generalPartners = (partenairesData ?? []).filter((p) => p.type === "general");
   const { selectedTeam } = useSelectedTeam();
   const { matches, isDegraded } = useLiveMatches();
   const { data: challengeJ1Momentum } = useChallengeJ1Momentum();
@@ -772,7 +774,24 @@ export default function HomePage() {
   );
   const state = React.useMemo(() => pickTournamentState(matches5v5), [matches5v5]);
   const tournamentDay = React.useMemo(() => deriveTournamentDayFromMatches(matches), [matches]);
-  const smallGlaceMode = React.useMemo(() => smallGlaceModeForDay(tournamentDay), [tournamentDay]);
+  const teamMealOfDay = React.useMemo(() => {
+    if (!selectedTeam) return meals?.mealOfDay ?? null;
+    const teamData = (teams ?? []).find(
+      (t) => t.id === selectedTeam.id || t.name === selectedTeam.name,
+    );
+    const repasTime = tournamentDay === 2 ? teamData?.repasDimanche : teamData?.repasSamedi;
+    if (repasTime) return { dateTime: repasTime, message: null };
+    return meals?.mealOfDay ?? null;
+  }, [selectedTeam, teams, tournamentDay, meals]);
+  const all3v3Finished = React.useMemo(() => {
+    const threeVThree = matches.filter((m) => m.competitionType === "3v3");
+    return threeVThree.length > 0 && threeVThree.every((m) => m.status === "finished");
+  }, [matches]);
+  const smallGlaceMode = React.useMemo<SmallGlaceMode>(() => {
+    if (tournamentDay === 1) return "challenge-j1";
+    if (tournamentDay === 2 && !all3v3Finished) return "3v3";
+    return "challenge-vitesse-j3";
+  }, [tournamentDay, all3v3Finished]);
   const smallGlaceType = React.useMemo(
     () => (smallGlaceMode === "3v3" ? "3v3" : "challenge"),
     [smallGlaceMode],
@@ -804,6 +823,12 @@ export default function HomePage() {
     () => tripletForCompetition(smallGlaceSourceMatches, smallGlaceType),
     [smallGlaceSourceMatches, smallGlaceType],
   );
+  const smallGlaceState = React.useMemo(() => {
+    if (tripletSmallGlace.live) return "pendant";
+    if (tripletSmallGlace.next) return "pendant";
+    if (tripletSmallGlace.last) return "apres";
+    return "avant";
+  }, [tripletSmallGlace.live, tripletSmallGlace.next, tripletSmallGlace.last]);
   const ordered5v5 = React.useMemo(() => liveCenteredOrder(triplet5v5, filterByCompetition(matches, "5v5")), [triplet5v5, matches]);
   const orderedSmallGlace = React.useMemo(
     () => mapMatchesToMomentumItems(liveCenteredOrder(tripletSmallGlace, smallGlaceSourceMatches), smallGlaceMomentumItems),
@@ -1052,90 +1077,14 @@ const afterFocusSmallGlace = React.useMemo(
         <div className="max-w-6xl mx-auto h-full overflow-y-auto space-y-6 pb-24 md:pb-6">
           <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 space-y-4" data-testid="home-now">
             <div data-testid="home-momentum" className="space-y-4">
-              {state === "avant" && (
-                <>
-                  <CompactLine
-                    title="5v5"
-                    icon={icon5v5}
-                    items={beforeUpcoming5v5.map((m) => ({ match: m }))}
-                    testId="home-now-5v5"
-                    cardTestIdPrefix="home-momentum-card"
-                    focusId={beforeFocus5v5}
-                    focusTestId="home-momentum-focus"
-                    autoFocusIndex={0}
-                    gridJustify
-                    onSelect={makeSelectHandler(beforeUpcoming5v5)}
-                  />
-                  <CompactLine
-                    title={smallGlaceLabelValue}
-                    icon={smallGlaceIcon(smallGlaceMode)}
-                    items={beforeUpcomingSmallGlace}
-                    testId="home-challenge-compact"
-                    cardTestIdPrefix="home-momentum-card"
-                    focusId={beforeFocusSmallGlace}
-                    focusTestId="home-momentum-focus"
-                    gridJustify
-                    onSelect={makeSelectHandler(beforeUpcomingSmallGlace.map((item) => item.match))}
-                  />
-                </>
-              )}
-              {state === "pendant" && (
-                <>
-                  <CompactLine
-                    title="5v5"
-                    icon={icon5v5}
-                    items={ordered5v5.map((m) => ({ match: m }))}
-                    testId="home-now-5v5"
-                    cardTestIdPrefix="home-momentum-card"
-                    focusId={focusId5v5}
-                    focusTestId="home-momentum-focus"
-                    autoFocusIndex={autoIndex5v5}
-                    gridJustify
-                    onSelect={makeSelectHandler(ordered5v5)}
-                  />
-                  <CompactLine
-                    title={smallGlaceLabelValue}
-                    icon={smallGlaceIcon(smallGlaceMode)}
-                    items={orderedSmallGlace}
-                    testId="home-now-smallglace"
-                    cardTestIdPrefix="home-momentum-card"
-                    focusId={focusIdSmallGlace}
-                    focusTestId="home-momentum-focus"
-                    autoFocusIndex={autoIndexSmallGlace}
-                    gridJustify
-                    onSelect={makeSelectHandler(orderedSmallGlaceMatches)}
-                  />
-                </>
-              )}
-              {state === "apres" && (
-                <>
-                  <CompactLine
-                    title="5v5"
-                    icon={icon5v5}
-                    items={afterRecent5v5.map((m) => ({ match: m }))}
-                    testId="home-now-5v5"
-                    cardTestIdPrefix="home-momentum-card"
-                    autoFocusIndex={afterRecent5v5.length > 0 ? afterRecent5v5.length - 1 : -1}
-                    autoFocusAlign="end"
-                    focusId={focusIdApres5v5}
-                    focusTestId="home-momentum-focus"
-                    focusTone="blue"
-                    gridJustify
-                    onSelect={makeSelectHandler(afterRecent5v5)}
-                  />
-                  <CompactLine
-                    title={smallGlaceLabelValue}
-                    icon={smallGlaceIcon(smallGlaceMode)}
-                    items={afterSmallGlaceWinners}
-                    testId="home-challenge-compact"
-                    cardTestIdPrefix="home-momentum-card"
-                    focusId={afterFocusSmallGlace}
-                    focusTestId="home-momentum-focus"
-                    gridJustify
-                    onSelect={makeSelectHandler(afterSmallGlaceWinners.map((item) => item.match))}
-                  />
-                </>
-              )}
+              <>
+                {state === "avant" && <CompactLine title="5v5" icon={icon5v5} items={beforeUpcoming5v5.map((m) => ({ match: m }))} testId="home-now-5v5" cardTestIdPrefix="home-momentum-card" focusId={beforeFocus5v5} focusTestId="home-momentum-focus" autoFocusIndex={0} gridJustify onSelect={makeSelectHandler(beforeUpcoming5v5)} />}
+                {state === "pendant" && <CompactLine title="5v5" icon={icon5v5} items={ordered5v5.map((m) => ({ match: m }))} testId="home-now-5v5" cardTestIdPrefix="home-momentum-card" focusId={focusId5v5} focusTestId="home-momentum-focus" autoFocusIndex={autoIndex5v5} gridJustify onSelect={makeSelectHandler(ordered5v5)} />}
+                {state === "apres" && <CompactLine title="5v5" icon={icon5v5} items={afterRecent5v5.map((m) => ({ match: m }))} testId="home-now-5v5" cardTestIdPrefix="home-momentum-card" autoFocusIndex={afterRecent5v5.length > 0 ? afterRecent5v5.length - 1 : -1} autoFocusAlign="end" focusId={focusIdApres5v5} focusTestId="home-momentum-focus" focusTone="blue" gridJustify onSelect={makeSelectHandler(afterRecent5v5)} />}
+                {smallGlaceState === "avant" && <CompactLine title={smallGlaceLabelValue} icon={smallGlaceIcon(smallGlaceMode)} items={beforeUpcomingSmallGlace} testId="home-challenge-compact" cardTestIdPrefix="home-momentum-card" focusId={beforeFocusSmallGlace} focusTestId="home-momentum-focus" gridJustify onSelect={makeSelectHandler(beforeUpcomingSmallGlace.map((item) => item.match))} />}
+                {smallGlaceState === "pendant" && <CompactLine title={smallGlaceLabelValue} icon={smallGlaceIcon(smallGlaceMode)} items={orderedSmallGlace} testId="home-now-smallglace" cardTestIdPrefix="home-momentum-card" focusId={focusIdSmallGlace} focusTestId="home-momentum-focus" autoFocusIndex={autoIndexSmallGlace} gridJustify onSelect={makeSelectHandler(orderedSmallGlaceMatches)} />}
+                {smallGlaceState === "apres" && <CompactLine title={smallGlaceLabelValue} icon={smallGlaceIcon(smallGlaceMode)} items={afterSmallGlaceWinners} testId="home-challenge-compact" cardTestIdPrefix="home-momentum-card" focusId={afterFocusSmallGlace} focusTestId="home-momentum-focus" gridJustify onSelect={makeSelectHandler(afterSmallGlaceWinners.map((item) => item.match))} />}
+              </>
             </div>
           </section>
 
@@ -1167,7 +1116,7 @@ const afterFocusSmallGlace = React.useMemo(
             onSelect={(id) => navigate(resolveMatchRoute(id))}
             smallGlaceLabel={smallGlaceLabelValue}
             smallGlaceType={smallGlaceType}
-            mealOfDay={meals?.mealOfDay ?? null}
+            mealOfDay={teamMealOfDay}
           />
         </section>
       )}
@@ -1182,6 +1131,42 @@ const afterFocusSmallGlace = React.useMemo(
             onSelect={(team) => navigate(`/teams/${encodeURIComponent(team.id)}`)}
           />
         </section>
+
+        {(namingPartners.length > 0 || generalPartners.length > 0) && (
+          <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+            {namingPartners.length > 0 && (
+              <>
+                <h2 className="text-sm uppercase tracking-widest text-slate-400 text-center mb-5">
+                  Partenaires des poules
+                </h2>
+                <div className="grid grid-cols-2 gap-3 max-w-xs mx-auto mb-4">
+                  {namingPartners.map((p) => (
+                    <a
+                      key={p.id}
+                      href={p.urlSite ?? undefined}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-col items-center gap-2 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
+                    >
+                      {p.logoUrl && (
+                        <img
+                          src={p.logoUrl}
+                          alt={p.nom}
+                          className="h-12 w-auto object-contain"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                      )}
+                      <span className="text-xs text-slate-300 font-medium text-center leading-tight">{p.nom}</span>
+                    </a>
+                  ))}
+                </div>
+              </>
+            )}
+            <SponsorFooter partenaires={generalPartners} />
+          </section>
+        )}
       </div>
     </div>
     </div>

@@ -33,6 +33,10 @@ vi.mock("../../providers/SelectedTeamProvider", () => ({
   useSelectedTeam: () => ({ selectedTeam: null }),
 }));
 
+vi.mock("../../hooks/usePartenaires", () => ({
+  usePartenaires: () => ({ data: [], isLoading: false }),
+}));
+
 describe("ThreeVThreePage", () => {
   it("affiche le header 3v3 et les matchs filtrés", () => {
     render(
