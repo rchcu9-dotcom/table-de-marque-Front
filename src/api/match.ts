@@ -20,6 +20,7 @@ export type Match = {
   surface?: "GG" | "PG";
   phase?: string | null;
   jour?: string | null;
+  ecart?: number | null;
 };
 
 const API_BASE_URL = getApiBaseUrl();

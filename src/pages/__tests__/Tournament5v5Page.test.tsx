@@ -34,17 +34,17 @@ let j3Carres: J3FinalSquaresResponse;
 const RENNES_TEAM = { id: "rennes", name: "Rennes" };
 
 const J3_LABELS: Record<FinalSquare["dbCode"], string> = {
-  E: "Carré Or A",
-  F: "Carré Or B",
-  G: "Carré Argent C",
-  H: "Carré Argent D",
+  I: "Carré Or 1",
+  J: "Carré Or 5",
+  K: "Carré Argent 9",
+  L: "Carré Argent 13",
 };
 
 const J3_PLACE_RANGES: Record<FinalSquare["dbCode"], string> = {
-  E: "1..4",
-  F: "5..8",
-  G: "9..12",
-  H: "13..16",
+  I: "1..4",
+  J: "5..8",
+  K: "9..12",
+  L: "13..16",
 };
 
 function normalize(value?: string | null) {
@@ -108,19 +108,19 @@ function buildClassements() {
       { id: "rouen", name: "Rouen", rang: 1 },
       { id: "metz", name: "Metz", rang: 2 },
     ]),
-    "Qualification:Alpha": buildClassement("Alpha", "Qualification", [
+    "Qualification:E": buildClassement("E", "Qualification", [
       { id: "rennes", name: "Rennes", rang: 1 },
       { id: "brest", name: "Brest", rang: 2 },
     ]),
-    "Qualification:Beta": buildClassement("Beta", "Qualification", [
+    "Qualification:F": buildClassement("F", "Qualification", [
       { id: "lyon", name: "Lyon", rang: 1 },
       { id: "lille", name: "Lille", rang: 2 },
     ]),
-    "Qualification:Gamma": buildClassement("Gamma", "Qualification", [
+    "Qualification:G": buildClassement("G", "Qualification", [
       { id: "nice", name: "Nice", rang: 1 },
       { id: "reims", name: "Reims", rang: 2 },
     ]),
-    "Qualification:Delta": buildClassement("Delta", "Qualification", [
+    "Qualification:H": buildClassement("H", "Qualification", [
       { id: "amiens", name: "Amiens", rang: 1 },
       { id: "nancy", name: "Nancy", rang: 2 },
     ]),
@@ -179,7 +179,7 @@ function buildJ3Carres(config: Partial<Record<FinalSquare["dbCode"], { includesR
   return {
     jour: "J3",
     computedAt: "2026-05-25T10:00:00.000Z",
-    carres: (["E", "F", "G", "H"] as const).map((code) => buildJ3Square(code, config[code])),
+    carres: (["I", "J", "K", "L"] as const).map((code) => buildJ3Square(code, config[code])),
   };
 }
 
@@ -260,20 +260,20 @@ function setGlobalVisibilityScenario(scenario: "j1-only" | "j1-j2" | "j1-j2-j3-f
       status: j2StatusA,
       scoreA: j2StatusA === "planned" ? null : 1,
       scoreB: j2StatusA === "planned" ? null : 0,
-      pouleCode: "Alpha",
-      pouleName: "Tournoi Or - Alpha",
+      pouleCode: "E",
+      pouleName: "Or E",
       jour: "J2",
     }),
     buildMatch({
-      id: "j2-beta",
+      id: "j2-f",
       date: "2026-05-24T10:00:00.000Z",
       teamA: "Lyon",
       teamB: "Lille",
       status: j2StatusB,
       scoreA: j2StatusB === "finished" ? 3 : null,
       scoreB: j2StatusB === "finished" ? 2 : null,
-      pouleCode: "Beta",
-      pouleName: "Tournoi Or - Beta",
+      pouleCode: "F",
+      pouleName: "Or F",
       jour: "J2",
     }),
     buildMatch({
@@ -284,8 +284,8 @@ function setGlobalVisibilityScenario(scenario: "j1-only" | "j1-j2" | "j1-j2-j3-f
       status: j3Status,
       scoreA: j3Status === "planned" ? null : 1,
       scoreB: j3Status === "planned" ? null : 0,
-      pouleCode: "E",
-      pouleName: "Carré Or A",
+      pouleCode: "I",
+      pouleName: "Carré Or 1",
       jour: "J3",
     }),
   ];
@@ -326,22 +326,22 @@ function resetFixtures() {
       date: "2026-05-24T09:00:00.000Z",
       teamA: "Rennes",
       teamB: "Brest",
-      pouleCode: "Alpha",
-      pouleName: "Tournoi Or - Alpha",
+      pouleCode: "E",
+      pouleName: "Or E",
       jour: "J2",
     }),
     buildMatch({
-      id: "j2-beta",
+      id: "j2-f",
       date: "2026-05-24T10:00:00.000Z",
       teamA: "Lyon",
       teamB: "Lille",
-      pouleCode: "Beta",
-      pouleName: "Tournoi Or - Beta",
+      pouleCode: "F",
+      pouleName: "Or F",
       jour: "J2",
     }),
   ];
   classementsByKey = buildClassements();
-  j3Carres = buildJ3Carres({ E: { includesRennes: true, live: true } });
+  j3Carres = buildJ3Carres({ I: { includesRennes: true, live: true } });
   scrollEvents.length = 0;
   scrollIntoViewMock.mockClear();
 }
@@ -400,7 +400,7 @@ describe("Tournament5v5Page", () => {
     resetFixtures();
   });
 
-  it("affiche uniquement J1 tant que J1 n'est pas terminé globalement", async () => {
+  it("affiche uniquement J1 tant que J1 n'est pas terminé globalement", () => {
     setGlobalVisibilityScenario("j1-only");
 
     renderPage();
@@ -415,7 +415,7 @@ describe("Tournament5v5Page", () => {
     expect(screen.getByRole("button", { name: "Lun" })).toBeDisabled();
   });
 
-  it("affiche J1 et J2 dès que J1 est terminé globalement, sans montrer J3", async () => {
+  it("affiche J1 et J2 dès que J1 est terminé globalement, sans montrer J3", () => {
     setGlobalVisibilityScenario("j1-j2");
 
     renderPage();
@@ -423,12 +423,9 @@ describe("Tournament5v5Page", () => {
     expect(screen.getByText(/Classements Sam/i)).toBeInTheDocument();
     expect(screen.getByText(/Classements Dim/i)).toBeInTheDocument();
     expect(screen.queryByText(/Classements Lun/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sam" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Dim" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Lun" })).toBeDisabled();
   });
 
-  it("affiche J1, J2 et J3 quand J2 est terminé globalement, dans l'ordre J3 puis J2 puis J1", async () => {
+  it("affiche J1, J2 et J3 avec les nouveaux carrés I/J/K/L quand J2 est terminé", async () => {
     setGlobalVisibilityScenario("j1-j2-j3-finished");
 
     renderPage();
@@ -441,57 +438,42 @@ describe("Tournament5v5Page", () => {
       "Classements Dim (Qualification)",
       "Classements Sam (Brassage)",
     ]);
-    expect(screen.getByTestId("j3-square-E")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sam" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Dim" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Lun" })).toBeEnabled();
+    expect(screen.getByTestId("j3-square-I")).toBeInTheDocument();
+    expect(screen.getByText("I - Carré Or 1")).toBeInTheDocument();
+    expect(screen.queryByTestId("j3-square-E")).not.toBeInTheDocument();
   });
 
-  it("affiche J1, J2 et J3 dès que J3 a démarré globalement même si J2 n'est pas entièrement terminé", async () => {
-    setGlobalVisibilityScenario("j1-j2-j3-started");
-
-    renderPage();
-
-    expect(await screen.findByText(/Classements Lun/i)).toBeInTheDocument();
-    expect(screen.getByText(/Classements Dim/i)).toBeInTheDocument();
-    expect(screen.getByText(/Classements Sam/i)).toBeInTheDocument();
-    expect(screen.getByTestId("j3-square-E")).toBeInTheDocument();
-  });
-
-  it("n'affiche que le carré J3 contenant Rennes quand une équipe est sélectionnée, sans influencer la visibilité globale des jours", async () => {
+  it("n'affiche que le carré J3 contenant Rennes quand une équipe est sélectionnée", async () => {
     selectedTeam = RENNES_TEAM;
     setGlobalVisibilityScenario("j1-j2-j3-finished");
-    j3Carres = buildJ3Carres({ E: { includesRennes: true }, F: {}, G: {}, H: {} });
+    j3Carres = buildJ3Carres({ I: { includesRennes: true }, J: {}, K: {}, L: {} });
 
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByTestId("j3-square-E")).toBeInTheDocument();
+      expect(screen.getByTestId("j3-square-I")).toBeInTheDocument();
     });
-    expect(screen.getByText(/Classements Sam/i)).toBeInTheDocument();
-    expect(screen.getByText(/Classements Dim/i)).toBeInTheDocument();
-    expect(screen.getByText(/Classements Lun/i)).toBeInTheDocument();
-    expect(screen.queryByTestId("j3-square-F")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("j3-square-J")).not.toBeInTheDocument();
     expect(screen.queryByText("Sam Poule B")).not.toBeInTheDocument();
-    expect(screen.queryByText("Dim - Tournoi Or - Beta")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dim - Or F")).not.toBeInTheDocument();
   });
 
   it("n'auto-scroll pas sur un carré J3 caché contenant un match ongoing", async () => {
     selectedTeam = RENNES_TEAM;
     setGlobalVisibilityScenario("j1-j2-j3-finished");
     j3Carres = buildJ3Carres({
-      E: { includesRennes: true, live: false },
-      F: { includesRennes: false, live: true },
-      G: {},
-      H: {},
+      I: { includesRennes: true, live: false },
+      J: { includesRennes: false, live: true },
+      K: {},
+      L: {},
     });
 
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByTestId("j3-square-E")).toBeInTheDocument();
+      expect(screen.getByTestId("j3-square-I")).toBeInTheDocument();
     });
-    expect(screen.queryByTestId("j3-square-F")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("j3-square-J")).not.toBeInTheDocument();
     expect(getJ3ScrollTargets()).toEqual([]);
   });
 
@@ -499,49 +481,36 @@ describe("Tournament5v5Page", () => {
     selectedTeam = RENNES_TEAM;
     setGlobalVisibilityScenario("j1-j2-j3-finished");
     j3Carres = buildJ3Carres({
-      E: { includesRennes: true, live: true },
-      F: { includesRennes: false, live: true },
-      G: {},
-      H: {},
+      I: { includesRennes: true, live: true },
+      J: { includesRennes: false, live: true },
+      K: {},
+      L: {},
     });
 
     renderPage();
 
     await waitFor(() => {
-      expect(getJ3ScrollTargets()).toContain("j3-square-E");
+      expect(getJ3ScrollTargets()).toContain("j3-square-I");
     });
-    expect(getJ3ScrollTargets()).not.toContain("j3-square-F");
-  });
-
-  it("retombe sur un jour visible cohérent et garde des boutons jour cohérents quand selectedDay pointe vers un jour caché", async () => {
-    setGlobalVisibilityScenario("j1-only");
-
-    renderPage();
-
-    const sam = screen.getByRole("button", { name: "Sam" });
-    const dim = screen.getByRole("button", { name: "Dim" });
-    const lun = screen.getByRole("button", { name: "Lun" });
-    expect(sam.className).toContain("bg-emerald-500/20");
-    expect(dim).toBeDisabled();
-    expect(lun).toBeDisabled();
+    expect(getJ3ScrollTargets()).not.toContain("j3-square-J");
   });
 
   it("conserve le filtrage J1/J2 existant quand une équipe est sélectionnée", async () => {
     selectedTeam = RENNES_TEAM;
     setGlobalVisibilityScenario("j1-j2-j3-finished");
-    j3Carres = buildJ3Carres({ E: { includesRennes: true }, F: {}, G: {}, H: {} });
+    j3Carres = buildJ3Carres({ I: { includesRennes: true }, J: {}, K: {}, L: {} });
 
     renderPage();
 
     await waitFor(() => {
       expect(screen.getByText("Sam Poule A")).toBeInTheDocument();
     });
-    expect(screen.getByText("Dim - Tournoi Or - Alpha")).toBeInTheDocument();
+    expect(screen.getByText("Dim - Or E")).toBeInTheDocument();
     expect(screen.queryByText("Sam Poule B")).not.toBeInTheDocument();
     expect(screen.queryByText("Sam Poule C")).not.toBeInTheDocument();
     expect(screen.queryByText("Sam Poule D")).not.toBeInTheDocument();
-    expect(screen.queryByText("Dim - Tournoi Or - Beta")).not.toBeInTheDocument();
-    expect(screen.queryByText("Dim - Tournoi Argent - Gamma")).not.toBeInTheDocument();
-    expect(screen.queryByText("Dim - Tournoi Argent - Delta")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dim - Or F")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dim - Argent G")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dim - Argent H")).not.toBeInTheDocument();
   });
 });

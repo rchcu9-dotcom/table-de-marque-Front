@@ -210,6 +210,118 @@ describe("HomePage dynamique", () => {
     expect(await screen.findByTestId("home-live-badge")).toHaveTextContent(/live/i);
   });
 
+  it("affiche le badge ECART vert pour le match 5v5 en cours et le place avant Live", async () => {
+    mockMatches = [
+      {
+        id: "m-live",
+        date: "2026-01-17T14:00:00Z",
+        teamA: "C",
+        teamB: "D",
+        status: "ongoing",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+        ecart: 12,
+      },
+      {
+        id: "m-challenge",
+        date: "2026-01-17T14:05:00Z",
+        teamA: "Sprint",
+        teamB: "Challenge",
+        status: "ongoing",
+        scoreA: null,
+        scoreB: null,
+        competitionType: "challenge",
+        ecart: -9,
+      },
+    ];
+
+    await renderHome("2026-01-17T14:30:00Z");
+
+    const ecartBadge = await screen.findByTestId("home-hero-ecart-badge");
+    const liveBadge = await screen.findByTestId("home-live-badge");
+
+    expect(ecartBadge).toHaveTextContent(`12" d'avance`);
+    expect(ecartBadge).toHaveClass("border-emerald-200/70");
+    expect(ecartBadge.compareDocumentPosition(liveBadge) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("affiche le badge ECART rouge depuis le dernier match 5v5 termine s'il n'y a pas de live", async () => {
+    mockMatches = [
+      {
+        id: "m-finished-old",
+        date: "2026-01-17T10:00:00Z",
+        teamA: "A",
+        teamB: "B",
+        status: "finished",
+        scoreA: 3,
+        scoreB: 2,
+        competitionType: "5v5",
+        ecart: 4,
+      },
+      {
+        id: "m-finished-last",
+        date: "2026-01-17T12:00:00Z",
+        teamA: "Rennes",
+        teamB: "Paris",
+        status: "finished",
+        scoreA: 2,
+        scoreB: 1,
+        competitionType: "5v5",
+        ecart: -7,
+      },
+      {
+        id: "m-next",
+        date: "2026-01-17T16:00:00Z",
+        teamA: "Lyon",
+        teamB: "Angers",
+        status: "planned",
+        scoreA: null,
+        scoreB: null,
+        competitionType: "5v5",
+      },
+    ];
+
+    await renderHome("2026-01-17T14:30:00Z");
+
+    const ecartBadge = await screen.findByTestId("home-hero-ecart-badge");
+
+    expect(ecartBadge).toHaveTextContent('7" de retard');
+    expect(ecartBadge).toHaveClass("border-rose-200/70");
+    expect(screen.queryByTestId("home-live-badge")).not.toBeInTheDocument();
+  });
+
+  it("masque le badge ECART si la valeur est 0 ou absente", async () => {
+    mockMatches = [
+      {
+        id: "m-live",
+        date: "2026-01-17T14:00:00Z",
+        teamA: "C",
+        teamB: "D",
+        status: "ongoing",
+        scoreA: 1,
+        scoreB: 0,
+        competitionType: "5v5",
+        ecart: 0,
+      },
+      {
+        id: "m-finished",
+        date: "2026-01-17T12:00:00Z",
+        teamA: "Rennes",
+        teamB: "Paris",
+        status: "finished",
+        scoreA: 2,
+        scoreB: 1,
+        competitionType: "5v5",
+        ecart: null,
+      },
+    ];
+
+    await renderHome("2026-01-17T14:30:00Z");
+
+    expect(screen.queryByTestId("home-hero-ecart-badge")).not.toBeInTheDocument();
+  });
+
   it("rend le badge Live interactif et navigue vers /live au clic", async () => {
     mockMatches = [
       {
@@ -1109,4 +1221,3 @@ describe("HomePage dynamique", () => {
     expect(await screen.findByTestId("home-momentum-center-challenge-vitesse-phase-qf")).toHaveTextContent("En cours");
   });
 });
-

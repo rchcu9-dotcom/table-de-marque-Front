@@ -115,13 +115,20 @@ function hasStartedDay(matches: Match[]) {
 }
 
 function compactPoolLabel(pouleName: string): string {
-  if (/Tournoi Or/i.test(pouleName)) return "Or";
-  if (/Tournoi Argent/i.test(pouleName)) return "Argent";
+  if (/Or\s+[EF]/i.test(pouleName)) return "Or";
+  if (/Argent\s+[GH]/i.test(pouleName)) return "Argent";
   return pouleName; // "Poule A", "Carré Or A", "Carré Argent C" — déjà lisibles
 }
 
 function isFinishedDay(matches: Match[]) {
   return matches.length > 0 && matches.every((m) => m.status === "finished");
+}
+
+function formatJ3SquareLabel(square?: { dbCode?: string | null; label?: string | null } | null) {
+  if (!square?.dbCode && !square?.label) return "";
+  if (!square?.dbCode) return square?.label ?? "";
+  if (!square?.label) return square.dbCode;
+  return `${square.dbCode} - ${square.label}`;
 }
 
 function pickTeamLogo(matches: Match[], focusTeam: string, fallback?: string | null) {
@@ -213,9 +220,9 @@ export default function TeamPage() {
   const pouleCodeJ1 = j1MatchSample?.pouleCode ?? j1MatchSample?.pouleName;
   const pouleCodeJ2 = j2MatchSample?.pouleCode ?? j2MatchSample?.pouleName;
 
-  const j3Classement: TeamClassementRow[] = (() => {
+  const j3TargetSquare = React.useMemo(() => {
     const squares = j3FinalSquares.data?.carres ?? [];
-    if (squares.length === 0) return [];
+    if (squares.length === 0) return null;
 
     const byTeam = squares.find((square) =>
       square.ranking.some((row) => normalizeTeamName(row.team?.name) === normalizeTeamName(teamName)),
@@ -224,14 +231,17 @@ export default function TeamPage() {
       filtered5v5.find((m) => dayKeyFromDate(m.date) === jour3Global)?.pouleCode ??
       filtered5v5.find((m) => dayKeyFromDate(m.date) === jour3Global)?.pouleName;
     const byCode = fallbackCode ? squares.find((square) => square.dbCode === fallbackCode) : undefined;
-    const targetSquare = byTeam ?? byCode ?? squares.find((square) => square.ranking.length > 0) ?? squares[0];
-
-    return [...targetSquare.ranking]
+    return byTeam ?? byCode ?? squares.find((square) => square.ranking.length > 0) ?? squares[0] ?? null;
+  }, [filtered5v5, j3FinalSquares.data?.carres, jour3Global, teamName]);
+  
+  const j3Classement: TeamClassementRow[] = React.useMemo(() => {
+    if (!j3TargetSquare) return [];
+    return [...j3TargetSquare.ranking]
       .sort((a, b) => a.place - b.place)
       .map((row) => {
         const hasTeam = !!row.team?.name;
         return {
-          id: row.team?.id ?? `j3-${targetSquare.dbCode}-${row.place}`,
+          id: row.team?.id ?? `j3-${j3TargetSquare.dbCode}-${row.place}`,
           name: row.team?.name ?? "En attente du résultat",
           logoUrl: row.team?.logoUrl ?? null,
           rang: row.place,
@@ -247,7 +257,7 @@ export default function TeamPage() {
           placeholderLabel: hasTeam ? undefined : "En attente du résultat",
         };
       });
-  })();
+  }, [j3TargetSquare]);
 
   const classementJ1 = useQuery({
     queryKey: ["classement", "team", teamName, "J1", pouleCodeJ1],
@@ -533,8 +543,10 @@ export default function TeamPage() {
             <Card className="order-1 bg-white/5 border-slate-800 backdrop-blur space-y-3" data-testid="team-classement-j3">
               <div className="text-sm font-semibold text-slate-100">
                 Jour 3 - {jour3Global ? formatDay(jour3Global) : "-"}
-                {j3MatchSample?.pouleName && (
-                  <span className="ml-2 text-xs font-normal text-slate-400">{compactPoolLabel(j3MatchSample.pouleName)}</span>
+                {j3TargetSquare && (
+                  <span className="ml-2 text-xs font-normal text-slate-400">
+                    {formatJ3SquareLabel(j3TargetSquare)}
+                  </span>
                 )}
               </div>
               <DayClassement

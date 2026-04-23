@@ -90,6 +90,35 @@ function formatHeroMatchLine(match: Match | null) {
   return `${teamA} vs ${teamB}`;
 }
 
+function heroEcartMatch(matches: Match[]) {
+  const matches5v5 = filterByCompetition(matches, "5v5").sort(byDateAsc);
+  const ongoing = matches5v5.filter((match) => match.status === "ongoing");
+  if (ongoing.length > 0) return ongoing[ongoing.length - 1];
+  const finished = matches5v5.filter((match) => match.status === "finished");
+  if (finished.length > 0) return finished[finished.length - 1];
+  return null;
+}
+
+function buildHeroEcartBadge(match: Match | null) {
+  const ecart = match?.ecart;
+  if (ecart == null || ecart === 0) return null;
+
+  const absoluteEcart = Math.abs(ecart);
+  if (ecart > 0) {
+    return {
+      text: `${absoluteEcart}" d'avance`,
+      className:
+        "inline-flex shrink-0 items-center rounded-md border border-emerald-200/70 bg-emerald-500/15 px-2.5 py-1 text-[11px] font-semibold text-emerald-100 shadow-[0_0_14px_rgba(16,185,129,0.2)]",
+    };
+  }
+
+  return {
+    text: `${absoluteEcart}" de retard`,
+    className:
+      "inline-flex shrink-0 items-center rounded-md border border-rose-200/70 bg-rose-500/15 px-2.5 py-1 text-[11px] font-semibold text-rose-100 shadow-[0_0_14px_rgba(244,63,94,0.18)]",
+  };
+}
+
 function clampWindow(list: Match[], targetId: string | null, desired = 3) {
   if (list.length === 0) return [];
   if (list.length <= desired) return list;
@@ -888,6 +917,11 @@ const heroCommentary = React.useMemo(() => {
   return getLiveCommentary(commentaryMatch);
 }, [commentaryMatch, matches5v5, state]);
 
+const heroEcartBadge = React.useMemo(
+  () => buildHeroEcartBadge(heroEcartMatch(matches5v5)),
+  [matches5v5],
+);
+
 const hero = React.useMemo(() => {
   let subtitle = "Match non disponible";
 
@@ -1005,17 +1039,27 @@ const afterFocusSmallGlace = React.useMemo(
               <h1 className="text-xl font-bold text-white" data-testid="home-hero-title">
                 {hero.title}
               </h1>
-              {state === "pendant" && hasLive5v5 ? (
-                <button
-                  type="button"
-                  onClick={() => navigate("/live")}
-                  aria-label="Aller a la page Live"
-                  data-testid="home-live-badge"
-                  className="inline-flex shrink-0 items-center rounded-md border border-amber-200/80 bg-gradient-to-r from-red-600 to-amber-500 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-white shadow-[0_0_16px_rgba(245,158,11,0.45)] transition hover:-translate-y-0.5 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-                >
-                  Live
-                </button>
-              ) : null}
+              <div className="flex shrink-0 items-center gap-2">
+                {heroEcartBadge ? (
+                  <span
+                    data-testid="home-hero-ecart-badge"
+                    className={heroEcartBadge.className}
+                  >
+                    {heroEcartBadge.text}
+                  </span>
+                ) : null}
+                {state === "pendant" && hasLive5v5 ? (
+                  <button
+                    type="button"
+                    onClick={() => navigate("/live")}
+                    aria-label="Aller a la page Live"
+                    data-testid="home-live-badge"
+                    className="inline-flex shrink-0 items-center rounded-md border border-amber-200/80 bg-gradient-to-r from-red-600 to-amber-500 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-white shadow-[0_0_16px_rgba(245,158,11,0.45)] transition hover:-translate-y-0.5 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+                  >
+                    Live
+                  </button>
+                ) : null}
+              </div>
             </div>
             <p className="text-sm text-slate-200">{hero.subtitle}</p>
             {selectedTeam && (

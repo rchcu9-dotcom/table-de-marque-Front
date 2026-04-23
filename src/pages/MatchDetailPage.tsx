@@ -71,8 +71,9 @@ function squareContainsTeams(square: FinalSquare, teamA: string, teamB: string) 
   return squareTeamKeys.has(normalizeTeamKey(teamA)) && squareTeamKeys.has(normalizeTeamKey(teamB));
 }
 
-function formatSquareSuffix(label?: string | null) {
-  return (label ?? "").replace(/^carr[ée]\s+/i, "").trim();
+function formatSquareLabel(square?: FinalSquare | null) {
+  if (!square) return "";
+  return `${square.dbCode} - ${square.label}`;
 }
 
 function PouleLabel({
@@ -210,7 +211,9 @@ export default function MatchDetailPage() {
     };
   const competitionIcon = compIcon[competitionType] ?? icon5v5;
   const hasClassement = competitionType === "5v5";
-  const contextLabel = isJ3FiveV5 ? currentJ3Square?.label : (data.pouleName || data.pouleCode);
+  const contextLabel = isJ3FiveV5
+    ? formatSquareLabel(currentJ3Square)
+    : (data.pouleName || data.pouleCode);
   const breadcrumbs = [
     { label: "Accueil", path: "/" },
     { label: "Planning", path: "/planning" },
@@ -367,7 +370,7 @@ export default function MatchDetailPage() {
           </div>
           <div className="text-sm text-slate-300">
             {isJ3FiveV5
-              ? currentJ3Square?.label ?? ""
+              ? formatSquareLabel(currentJ3Square)
               : classement?.pouleName
                 ? (() => {
                     const label = data?.pouleCode
@@ -498,7 +501,7 @@ export default function MatchDetailPage() {
                 <img src={competitionIcon} alt={data.competitionType ?? "5v5"} className="h-6 w-6 rounded-md bg-slate-800 object-cover" />
                 <span>
                   {isJ3FiveV5
-                    ? `Matchs du carré ${formatSquareSuffix(currentJ3Square?.label)}`
+                    ? `Matchs du carré ${formatSquareLabel(currentJ3Square)}`
                     : (() => {
                         const base = relatedMatches[0]?.pouleName || relatedMatches[0]?.pouleCode || "";
                         const code = relatedMatches[0]?.pouleCode;

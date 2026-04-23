@@ -263,7 +263,7 @@ function TeamSelectorDropdown({ teams, onSelect, selectedId, top, right }: TeamS
                 <img src={team.logoUrl} alt={team.name} className="h-full w-full object-cover" loading="lazy" />
               ) : (
                 <span className="flex h-full w-full items-center justify-center text-xs text-white font-semibold">
-                  {team.name.slice(0, 2).toUpperCase()}
+                  {/^[A-H][1-4]$/.test(team.name) ? "?" : team.name.slice(0, 2).toUpperCase()}
                 </span>
               )}
             </button>
