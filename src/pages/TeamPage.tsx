@@ -216,7 +216,6 @@ export default function TeamPage() {
   const showJ3 = !!jour3Global && (j2FinishedGlobal || j3StartedGlobal);
   const j1MatchSample = filtered5v5.find((m) => dayKeyFromDate(m.date) === jour1Global);
   const j2MatchSample = filtered5v5.find((m) => dayKeyFromDate(m.date) === jour2Global);
-  const j3MatchSample = filtered5v5.find((m) => dayKeyFromDate(m.date) === jour3Global);
   const pouleCodeJ1 = j1MatchSample?.pouleCode ?? j1MatchSample?.pouleName;
   const pouleCodeJ2 = j2MatchSample?.pouleCode ?? j2MatchSample?.pouleName;
 
