@@ -63,11 +63,15 @@ const BRASSAGE = [
 ];
 
 const QUALIF = [
-  { code: "Alpha", title: "Dim - Tournoi Or - Alpha", phase: "Qualification" },
-  { code: "Beta", title: "Dim - Tournoi Or - Beta", phase: "Qualification" },
-  { code: "Gamma", title: "Dim - Tournoi Argent - Gamma", phase: "Qualification" },
-  { code: "Delta", title: "Dim - Tournoi Argent - Delta", phase: "Qualification" },
+  { code: "E", title: "Dim - Or E", phase: "Qualification" },
+  { code: "F", title: "Dim - Or F", phase: "Qualification" },
+  { code: "G", title: "Dim - Argent G", phase: "Qualification" },
+  { code: "H", title: "Dim - Argent H", phase: "Qualification" },
 ];
+
+function formatJ3SquareTitle(square: FinalSquare) {
+  return `${square.dbCode} - ${square.label}`;
+}
 
 export default function Tournament5v5Page() {
   const navigate = useNavigate();
@@ -164,8 +168,8 @@ export default function Tournament5v5Page() {
   const j2FinishedGlobally = React.useMemo(() => isFinishedDay(j2MatchesGlobal), [j2MatchesGlobal]);
   const j3StartedGlobally = React.useMemo(() => hasStartedDay(j3MatchesGlobal), [j3MatchesGlobal]);
   const showJ1 = true;
-  const showJ2 = j1FinishedGlobally;
-  const showJ3 = j2FinishedGlobally || j3StartedGlobally;
+  const showJ2 = j1FinishedGlobally || j2MatchesGlobal.length > 0;
+  const showJ3 = j2FinishedGlobally || j3StartedGlobally || j3MatchesGlobal.length > 0;
   const visibleDays = React.useMemo(
     () => ({ J1: showJ1, J2: showJ2, J3: showJ3 }),
     [showJ1, showJ2, showJ3],
@@ -628,7 +632,7 @@ function J3FinalSquareCard({
       }}
     >
       <div className="mb-2">
-        <h3 className="font-semibold text-slate-100">{square.label}</h3>
+        <h3 className="font-semibold text-slate-100">{formatJ3SquareTitle(square)}</h3>
         <p className="text-xs text-slate-300">Places jouées: {placeLabel}</p>
       </div>
 
@@ -819,6 +823,5 @@ function SmallMatchCard({
     </div>
   );
 }
-
 
 

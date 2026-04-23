@@ -6,6 +6,8 @@ export type ClassementEquipe = {
   name: string;
   logoUrl?: string | null;
   rang: number;
+  ordre?: number | null;
+  ordreFinal?: number | null;
   joues: number;
   victoires: number;
   nuls: number;
@@ -15,6 +17,8 @@ export type ClassementEquipe = {
   bc: number;
   diff: number;
   repasSamedi?: string | null;
+  repasDimanche?: string | null;
+  repasLundi?: string | null;
 };
 
 export type PouleClassement = {
@@ -49,7 +53,7 @@ export type FinalSquareRankingRow = {
 };
 
 export type FinalSquare = {
-  dbCode: "E" | "F" | "G" | "H";
+  dbCode: "I" | "J" | "K" | "L";
   label: string;
   placeRange: string;
   semiFinals: FinalSquareMatch[];
