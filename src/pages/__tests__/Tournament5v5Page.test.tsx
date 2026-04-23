@@ -400,7 +400,7 @@ describe("Tournament5v5Page", () => {
     resetFixtures();
   });
 
-  it("affiche uniquement J1 tant que J1 n'est pas terminé globalement", () => {
+  it("affiche J1/J2/J3 quand les matchs existent en base, même si J1 n'est pas terminé", () => {
     setGlobalVisibilityScenario("j1-only");
 
     renderPage();
@@ -408,21 +408,21 @@ describe("Tournament5v5Page", () => {
     expect(screen.getByText(/Tournoi 5v5/i)).toBeInTheDocument();
     expect(screen.getByTestId("tournament-momentum")).toBeInTheDocument();
     expect(screen.getByText(/Classements Sam/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Classements Dim/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Classements Lun/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Classements Dim/i)).toBeInTheDocument();
+    expect(screen.getByText(/Classements Lun/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sam" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Dim" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Lun" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Dim" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Lun" })).toBeEnabled();
   });
 
-  it("affiche J1 et J2 dès que J1 est terminé globalement, sans montrer J3", () => {
+  it("affiche J1, J2 et J3 dès que J1 est terminé globalement", () => {
     setGlobalVisibilityScenario("j1-j2");
 
     renderPage();
 
     expect(screen.getByText(/Classements Sam/i)).toBeInTheDocument();
     expect(screen.getByText(/Classements Dim/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Classements Lun/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Classements Lun/i)).toBeInTheDocument();
   });
 
   it("affiche J1, J2 et J3 avec les nouveaux carrés I/J/K/L quand J2 est terminé", async () => {
