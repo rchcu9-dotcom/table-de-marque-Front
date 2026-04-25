@@ -14,6 +14,17 @@ vi.stubGlobal("process", { env: { VITE_API_BASE_URL: "http://localhost:3000" } }
 let TeamPage: typeof import("../TeamPage").default;
 const mockNavigate = vi.fn();
 let mockMeals: MealsResponse | null = null;
+let mockTeams = [
+  {
+    id: "rennes",
+    name: "Rennes",
+    logoUrl: "logo-rennes",
+    teaser: "🐦‍⬛ Les Cormorans de Rennes\n\"Teaser Rennes\"",
+    repasSamedi: "2026-01-17T12:30:00",
+    repasDimanche: null,
+    repasLundi: "2026-01-19T12:10:00",
+  },
+];
 
 const mockMatches: Match[] = [
   {
@@ -86,6 +97,14 @@ vi.mock("../../hooks/useMatches", () => ({
 vi.mock("../../hooks/useMeals", () => ({
   useMeals: () => ({
     data: mockMeals,
+  }),
+}));
+
+vi.mock("../../hooks/useTeams", () => ({
+  useTeams: () => ({
+    data: mockTeams,
+    isLoading: false,
+    isError: false,
   }),
 }));
 
@@ -213,6 +232,17 @@ describe("TeamPage", () => {
 
   beforeEach(() => {
     mockNavigate.mockReset();
+    mockTeams = [
+      {
+        id: "rennes",
+        name: "Rennes",
+        logoUrl: "logo-rennes",
+        teaser: "🐦‍⬛ Les Cormorans de Rennes\n\"Teaser Rennes\"",
+        repasSamedi: "2026-01-17T12:30:00",
+        repasDimanche: null,
+        repasLundi: "2026-01-19T12:10:00",
+      },
+    ];
     mockJ3FinalSquares = {
       jour: "J3",
       computedAt: "2026-01-01T00:00:00.000Z",
@@ -390,7 +420,7 @@ describe("TeamPage", () => {
     expect(screen.getByTestId("team-classement-j1")).toBeInTheDocument();
   });
 
-  it("affiche les repas J1/J2 et le fallback J3", () => {
+  it("affiche les repas autorises en fusionnant les donnees equipe et meals.days", () => {
     render(
       <MemoryRouter initialEntries={["/teams/Rennes"]}>
         <Routes>
@@ -399,14 +429,26 @@ describe("TeamPage", () => {
       </MemoryRouter>,
     );
 
-    const repasTitle = screen.getByText("Repas");
-    const repasCard = repasTitle.closest("div") as HTMLElement;
+    const repasCard = screen.getByTestId("team-meals");
     expect(within(repasCard).getByText("Samedi")).toBeInTheDocument();
     expect(within(repasCard).getByText("Dimanche")).toBeInTheDocument();
-    expect(within(repasCard).getByText("J3")).toBeInTheDocument();
+    expect(within(repasCard).getByText("Lundi")).toBeInTheDocument();
     expect(within(repasCard).getByText(/12:30/)).toBeInTheDocument();
     expect(within(repasCard).getByText(/12:45/)).toBeInTheDocument();
-    expect(within(repasCard).getByText(/Repas indisponible/i)).toBeInTheDocument();
+    expect(within(repasCard).getByText(/12:10/)).toBeInTheDocument();
+  });
+
+  it("affiche le teaser de l'équipe dans le bloc correspondant", () => {
+    render(
+      <MemoryRouter initialEntries={["/teams/Rennes"]}>
+        <Routes>
+          <Route path="/teams/:id" element={<TeamPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText(/Les Cormorans de Rennes/i)).toBeInTheDocument();
+    expect(screen.getByText(/Teaser Rennes/i)).toBeInTheDocument();
   });
 
   it("rend les cartes Challenge compactes dans Derniers matchs", () => {

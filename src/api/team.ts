@@ -6,11 +6,13 @@ export type Team = {
   name: string;
   logoUrl?: string | null;
   photoUrl?: string | null;
+  teaser?: string | null;
   pouleCode?: string | null;
   pouleName?: string | null;
   rang?: number;
   repasSamedi?: string | null;
   repasDimanche?: string | null;
+  repasLundi?: string | null;
   challengeSamedi?: string | null;
 };
 

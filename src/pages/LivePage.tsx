@@ -10,7 +10,7 @@ import type { LiveStatus, LiveStreamEnvelope } from "../api/live";
 const DEFAULT_FALLBACK_EMBED_URL = "https://www.youtube.com/embed/at3v7WepbDg";
 const FALLBACK_POLLING_MS = 30_000;
 const STREAM_RECONNECT_MS = 5_000;
-const FACEBOOK_PAGE_URL = "https://www.facebook.com/profile.php?id=61583856143770";
+const FACEBOOK_PAGE_URL = "https://www.facebook.com/profile.php?id=61567163188148";
 const FACEBOOK_SDK_SRC = "https://connect.facebook.net/fr_FR/sdk.js#xfbml=1&version=v25.0&appId=227474631852040";
 const FACEBOOK_SDK_ID = "facebook-jssdk";
 const FACEBOOK_PLUGIN_HEIGHT = 700;

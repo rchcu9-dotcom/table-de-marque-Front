@@ -172,12 +172,12 @@ describe("PlanningCalendairePage", () => {
       expect(screen.getByText("Rennes")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "J2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Dimanche" }));
     await waitFor(() => {
       expect(screen.getByText("Brest")).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "J3" }));
+    fireEvent.click(screen.getByRole("button", { name: "Lundi" }));
     await waitFor(() => {
       expect(screen.getByText("Perd. G3-H4")).toBeInTheDocument();
       expect(screen.getByText("Vain. G3-H4")).toBeInTheDocument();
