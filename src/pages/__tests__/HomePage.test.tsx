@@ -1,4 +1,4 @@
-import "@testing-library/jest-dom/vitest";
+﻿import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, within, waitFor, act, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -112,6 +112,15 @@ function getHeroSubtitle() {
   );
 }
 
+function getSelectedTeamButton(label: "Samedi" | "Dimanche" | "Lundi") {
+  return screen.getByRole("button", {
+    name: (_name, element) => {
+      const text = element?.textContent?.replace(/\s+/g, " ").trim() ?? "";
+      return text === `${label} · Rennes`;
+    },
+  });
+}
+
 beforeEach(() => {
   mockNavigate.mockReset();
   mockMeals = { mealOfDay: null };
@@ -131,7 +140,7 @@ afterEach(() => {
 });
 
 describe("HomePage dynamique", () => {
-  it("affiche la section 'En ce moment' pendant le tournoi avec live centré et cartes cliquables", async () => {
+  it("affiche la section 'En ce moment' pendant le tournoi avec live centrÃ© et cartes cliquables", async () => {
     mockMatches = [
       {
         id: "m-last",
@@ -485,7 +494,7 @@ describe("HomePage dynamique", () => {
     expect(screen.getByTestId("home-momentum-center-m-finished")).toHaveTextContent("1-0");
   });
 
-  it("sans match ongoing, le rendu central momentum reste cohÃ©rent", async () => {
+  it("sans match ongoing, le rendu central momentum reste cohÃƒÂ©rent", async () => {
     mockMatches = [
       {
         id: "m-last",
@@ -517,7 +526,7 @@ describe("HomePage dynamique", () => {
     expect(screen.queryByTestId("home-momentum-card-m-live")).not.toBeInTheDocument();
   });
 
-  it("affiche Aujourd'hui pour l'équipe suivie avec prochain et dernier 5v5 + ligne Challenge/3v3", async () => {
+  it("affiche Samedi pour l'Ã©quipe suivie avant et pendant le samedi du tournoi", async () => {
     mockSelectedTeam = {
       selectedTeam: { id: "rennes", name: "Rennes", logoUrl: "logo-rennes" },
       setSelectedTeam: vi.fn(),
@@ -562,12 +571,103 @@ describe("HomePage dynamique", () => {
     expect(within(today).getByTestId("home-today-next")).toHaveTextContent(/Rennes/i);
     expect(within(today).getByTestId("home-today-last")).toHaveTextContent(/Lyon/i);
     expect(within(today).getByTestId("home-today-alt")).toHaveTextContent(/Rennes/i);
-    expect(screen.getByText(/Aujourd'hui · Rennes/i)).toBeInTheDocument();
+    expect(getSelectedTeamButton("Samedi")).toBeInTheDocument();
     expect(screen.getAllByText(/Équipe suivie : Rennes/i).length).toBeGreaterThan(0);
     expect(screen.getByRole("heading", { name: /Équipes/i })).toBeInTheDocument();
   });
 
-  it("affiche la bannière mode dégradé quand le flux SSE signale une erreur", async () => {
+  it("affiche Dimanche pour l'Ã©quipe suivie le dimanche du tournoi", async () => {
+    mockSelectedTeam = {
+      selectedTeam: { id: "rennes", name: "Rennes", logoUrl: "logo-rennes" },
+      setSelectedTeam: vi.fn(),
+      toggleMuted: vi.fn(),
+    };
+    mockMatches = [
+      {
+        id: "j1",
+        date: "2026-01-17T11:00:00Z",
+        teamA: "Rennes",
+        teamB: "Lyon",
+        status: "finished",
+        scoreA: 3,
+        scoreB: 2,
+        competitionType: "5v5",
+      },
+      {
+        id: "j2",
+        date: "2026-01-18T16:00:00Z",
+        teamA: "Rennes",
+        teamB: "Paris",
+        status: "planned",
+        scoreA: null,
+        scoreB: null,
+        competitionType: "5v5",
+      },
+      {
+        id: "j3",
+        date: "2026-01-19T13:00:00Z",
+        teamA: "Rennes",
+        teamB: "Rouen",
+        status: "planned",
+        scoreA: null,
+        scoreB: null,
+        competitionType: "5v5",
+      },
+    ];
+
+    await renderHome("2026-01-18T10:30:00Z");
+
+    await waitFor(() => {
+      expect(getSelectedTeamButton("Dimanche")).toBeInTheDocument();
+    });
+  });
+
+  it("affiche Lundi pour l'Ã©quipe suivie le lundi du tournoi et apres", async () => {
+    mockSelectedTeam = {
+      selectedTeam: { id: "rennes", name: "Rennes", logoUrl: "logo-rennes" },
+      setSelectedTeam: vi.fn(),
+      toggleMuted: vi.fn(),
+    };
+    mockMatches = [
+      {
+        id: "j1",
+        date: "2026-01-17T11:00:00Z",
+        teamA: "Rennes",
+        teamB: "Lyon",
+        status: "finished",
+        scoreA: 3,
+        scoreB: 2,
+        competitionType: "5v5",
+      },
+      {
+        id: "j2",
+        date: "2026-01-18T16:00:00Z",
+        teamA: "Rennes",
+        teamB: "Paris",
+        status: "finished",
+        scoreA: 4,
+        scoreB: 1,
+        competitionType: "5v5",
+      },
+      {
+        id: "j3",
+        date: "2026-01-19T13:00:00Z",
+        teamA: "Rennes",
+        teamB: "Rouen",
+        status: "planned",
+        scoreA: null,
+        scoreB: null,
+        competitionType: "5v5",
+      },
+    ];
+
+    await renderHome("2026-01-20T10:30:00Z");
+
+    await waitFor(() => {
+      expect(getSelectedTeamButton("Lundi")).toBeInTheDocument();
+    });
+  });
+  it("affiche la banniÃ¨re mode dÃ©gradÃ© quand le flux SSE signale une erreur", async () => {
     mockMatches = [];
     await renderHome("2026-01-17T14:30:00Z");
 
@@ -708,7 +808,7 @@ describe("HomePage dynamique", () => {
     expect(getHeroSubtitle()).toHaveTextContent("Prochain match : Lyon vs Angers");
   });
 
-  it("avec une équipe suivie, garde le sous-titre match et affiche la ligne 'Équipe suivie'", async () => {
+  it("avec une Ã©quipe suivie, garde le sous-titre match et affiche la ligne 'Ã‰quipe suivie'", async () => {
     mockSelectedTeam = {
       selectedTeam: { id: "rennes", name: "Rennes", logoUrl: "logo-rennes" },
       setSelectedTeam: vi.fn(),
@@ -737,7 +837,7 @@ describe("HomePage dynamique", () => {
     expect(within(heroSection).getByText(/Équipe suivie : Rennes/i)).toBeInTheDocument();
   });
 
-  it("utilise les placeholders du hero si les équipes du match sont absentes", async () => {
+  it("utilise les placeholders du hero si les Ã©quipes du match sont absentes", async () => {
     mockMatches = [
       {
         id: "m-live",
@@ -757,7 +857,7 @@ describe("HomePage dynamique", () => {
     expect(getHeroSubtitle()).toHaveTextContent("En cours : Equipe A vs Equipe B");
   });
 
-  it("préserve l'état hero avant avec le premier match planifié", async () => {
+  it("prÃ©serve l'Ã©tat hero avant avec le premier match planifiÃ©", async () => {
     mockMatches = [
       {
         id: "m-first",
@@ -787,7 +887,7 @@ describe("HomePage dynamique", () => {
     expect(getHeroSubtitle()).toHaveTextContent("Rennes vs Paris");
   });
 
-  it("préserve l'état hero après avec le dernier match terminé", async () => {
+  it("prÃ©serve l'Ã©tat hero aprÃ¨s avec le dernier match terminÃ©", async () => {
     mockMatches = [
       {
         id: "m-finished-1",
@@ -1147,8 +1247,8 @@ describe("HomePage dynamique", () => {
 
     await renderHome("2026-03-01T12:15:00+01:00");
 
-    // Sur J2 quand tous les 3v3 sont terminés, le mode bascule sur challenge-vitesse-j3.
-    // Les phases ont homeVisible:false → aucune phase J3 n'est affichée.
+    // Sur J2 quand tous les 3v3 sont terminÃ©s, le mode bascule sur challenge-vitesse-j3.
+    // Les phases ont homeVisible:false â†’ aucune phase J3 n'est affichÃ©e.
     expect(screen.queryByText("Quart de finale")).not.toBeInTheDocument();
   });
 
@@ -1221,3 +1321,4 @@ describe("HomePage dynamique", () => {
     expect(await screen.findByTestId("home-momentum-center-challenge-vitesse-phase-qf")).toHaveTextContent("En cours");
   });
 });
+

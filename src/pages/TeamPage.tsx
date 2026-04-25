@@ -81,6 +81,40 @@ function formatMealDayLabel(meal: { dateTime?: string | null; label?: string | n
   return meal.label ?? "Repas indisponible";
 }
 
+function buildMealDays(
+  team?: {
+    repasSamedi?: string | null;
+    repasDimanche?: string | null;
+    repasLundi?: string | null;
+  } | null,
+  fallbackDays?: Array<{ key: "J1" | "J2" | "J3"; label: string; dateTime: string | null; message?: string | null }>,
+  visibility?: Partial<Record<"J1" | "J2" | "J3", boolean>>,
+) {
+  const fallbackByKey = new Map((fallbackDays ?? []).map((meal) => [meal.key, meal]));
+  const defaultLabels = {
+    J1: "Samedi",
+    J2: "Dimanche",
+    J3: "Lundi",
+  } as const;
+  const teamDates = {
+    J1: team?.repasSamedi ?? null,
+    J2: team?.repasDimanche ?? null,
+    J3: team?.repasLundi ?? null,
+  } as const;
+
+  return (["J1", "J2", "J3"] as const).map((key) => {
+    const fallback = fallbackByKey.get(key);
+    const isVisible = visibility?.[key] ?? true;
+    const dateTime = isVisible ? teamDates[key] ?? fallback?.dateTime ?? null : null;
+    return {
+      key,
+      label: fallback?.label ?? defaultLabels[key],
+      dateTime,
+      message: dateTime ? null : isVisible ? fallback?.message ?? "Repas indisponible" : "Repas indisponible",
+    };
+  });
+}
+
 function computeForm(matches: Match[], team: string) {
   const finished = matches.filter((m) => m.status === "finished" && m.scoreA !== null && m.scoreB !== null);
   const ordered = [...finished].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -327,27 +361,11 @@ export default function TeamPage() {
     (t) => normalizeTeamName(t.name) === normalizeTeamName(teamName) ||
            normalizeTeamName(t.id) === normalizeTeamName(teamName),
   );
-  const mealDays = currentTeam?.repasSamedi != null || currentTeam?.repasDimanche != null
-    ? [
-        {
-          key: "J1" as const,
-          label: "J1",
-          dateTime: currentTeam.repasSamedi ?? null,
-          message: currentTeam.repasSamedi ? null : "Repas indisponible",
-        },
-        {
-          key: "J2" as const,
-          label: "J2",
-          dateTime: currentTeam.repasDimanche ?? null,
-          message: currentTeam.repasDimanche ? null : "Repas indisponible",
-        },
-        { key: "J3" as const, label: "J3", dateTime: null, message: "Repas indisponible" },
-      ]
-    : meals?.days ?? [
-        { key: "J1" as const, label: "J1", dateTime: null, message: "Repas indisponible" },
-        { key: "J2" as const, label: "J2", dateTime: null, message: "Repas indisponible" },
-        { key: "J3" as const, label: "J3", dateTime: null, message: "Repas indisponible" },
-      ];
+  const mealDays = buildMealDays(currentTeam, meals?.days, {
+    J1: showJ1,
+    J2: showJ2,
+    J3: showJ3,
+  });
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-slate-100">
@@ -433,7 +451,7 @@ export default function TeamPage() {
 
       <div className="px-6 md:px-10 pb-12 space-y-10 max-w-6xl mx-auto">
         <section className="grid gap-4 md:grid-cols-2">
-          <Card className="bg-white/5 border-slate-800 backdrop-blur">
+          <Card className="bg-white/5 border-slate-800 backdrop-blur" data-testid="team-meals">
             <h4 className="text-sm font-semibold text-slate-100 mb-2">Repas</h4>
             <ul className="space-y-2 text-sm text-slate-200">
               {mealDays.map((meal) => (
@@ -451,7 +469,9 @@ export default function TeamPage() {
             </div>
             <div>
               <h4 className="text-sm font-semibold text-slate-100">Teaser</h4>
-              <p className="text-sm text-slate-300">Equipe réputée pour sa vitesse et sa cohésion sur glace.</p>
+              <p className="whitespace-pre-line text-sm text-slate-300">
+                {currentTeam?.teaser?.trim() || "Teaser indisponible."}
+              </p>
             </div>
           </Card>
         </section>

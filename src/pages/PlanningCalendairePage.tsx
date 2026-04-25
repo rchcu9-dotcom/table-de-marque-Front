@@ -345,7 +345,7 @@ export default function PlanningCalendairePage() {
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 flex flex-col overflow-hidden"
+      className="fixed inset-x-0 bottom-20 flex flex-col overflow-hidden md:bottom-4"
       style={{ top: topOffset }}
     >
       <div
@@ -365,17 +365,23 @@ export default function PlanningCalendairePage() {
           <h1 className="text-lg font-semibold text-white">Planning Calendaire</h1>
 
           <div className="flex gap-2 ml-auto">
-            {(["J1", "J2", "J3"] as GanttDay[]).map((day) => (
+            {(
+              [
+                { key: "J1", label: "Samedi" },
+                { key: "J2", label: "Dimanche" },
+                { key: "J3", label: "Lundi" },
+              ] as Array<{ key: GanttDay; label: string }>
+            ).map(({ key, label }) => (
               <button
-                key={day}
-                onClick={() => setSelectedDay(day)}
+                key={key}
+                onClick={() => setSelectedDay(key)}
                 className={`text-sm px-3 py-1 rounded-full border transition-colors ${
-                  activeDay === day
+                  activeDay === key
                     ? "bg-emerald-500/20 border-emerald-400/60 text-emerald-300 font-semibold"
                     : "bg-transparent border-slate-600 text-slate-400 hover:text-slate-200 hover:border-slate-400"
                 }`}
               >
-                {day}
+                {label}
               </button>
             ))}
           </div>
@@ -398,7 +404,7 @@ export default function PlanningCalendairePage() {
 
       <div
         ref={scrollRef}
-        className="flex-1 overflow-auto"
+        className="flex-1 overflow-auto pb-24 md:pb-6"
         onMouseLeave={() => setTooltip(null)}
       >
         <div style={{ display: "flex", minWidth: TEAM_COL_W + CHART_W + 10 }}>

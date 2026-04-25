@@ -78,6 +78,7 @@ export default function Tournament5v5Page() {
   const { selectedTeam } = useSelectedTeam();
   const { data: partenairesData } = usePartenaires();
   const namingPartners = (partenairesData ?? []).filter((p) => p.type === "naming");
+  const generalPartners = (partenairesData ?? []).filter((p) => p.type === "general");
   const selectedTeamId = selectedTeam?.id ?? null;
   const [nowMs, setNowMs] = React.useState<number | null>(null);
   const { data: momentum5v5 } = useMomentumMatches({
@@ -476,9 +477,14 @@ export default function Tournament5v5Page() {
               ))}
             </div>
           </section>
+
+          {generalPartners.length > 0 && (
+            <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+              <SponsorFooter partenaires={generalPartners} />
+            </section>
+          )}
         </div>
       </div>
-      <SponsorFooter partenaires={partenairesData ?? []} />
     </div>
   );
 }
@@ -823,5 +829,3 @@ function SmallMatchCard({
     </div>
   );
 }
-
-

@@ -15,7 +15,7 @@ import icon3v3 from "../assets/icons/nav/threev3.png";
 import iconChallenge from "../assets/icons/nav/challenge.png";
 import { getLiveCommentary } from "./utils/homeCommentary";
 import { pickTournamentState, tournamentStateLabel } from "./utils/tournamentState";
-import { deriveTournamentDay as deriveTournamentDayFromMatches } from "../utils/tournamentDate";
+import { deriveTournamentDay as deriveTournamentDayFromMatches, sortedTournamentDateKeys, tournamentDateKey } from "../utils/tournamentDate";
 import { usePartenaires } from "../hooks/usePartenaires";
 import SponsorFooter from "../components/sponsors/SponsorFooter";
 
@@ -247,6 +247,16 @@ function segmentForTeam(matches: Match[], teamId: string, competitionFilter?: "5
   const planned = sorted.filter((m) => m.status === "planned");
   const nextPlanned = planned[0] ?? null;
   return { ongoing, lastFinished, nextPlanned };
+}
+
+function getSelectedTeamDayLabel(matches: Match[], now: Date = new Date()) {
+  const [j1Key, j2Key, j3Key] = sortedTournamentDateKeys(matches);
+  const todayKey = tournamentDateKey(now);
+
+  if (j1Key && todayKey <= j1Key) return "Samedi";
+  if (j2Key && todayKey <= j2Key) return "Dimanche";
+  if (j3Key) return "Lundi";
+  return "Samedi";
 }
 
 function CompactLine({
@@ -803,6 +813,10 @@ export default function HomePage() {
   );
   const state = React.useMemo(() => pickTournamentState(matches5v5), [matches5v5]);
   const tournamentDay = React.useMemo(() => deriveTournamentDayFromMatches(matches), [matches]);
+  const selectedTeamDayLabel = React.useMemo(
+    () => getSelectedTeamDayLabel(matches),
+    [matches],
+  );
   const teamMealOfDay = React.useMemo(() => {
     if (!selectedTeam) return meals?.mealOfDay ?? null;
     const teamData = (teams ?? []).find(
@@ -1142,7 +1156,7 @@ const afterFocusSmallGlace = React.useMemo(
                 className="text-lg font-semibold text-white hover:text-emerald-200"
                 onClick={() => navigate(`/teams/${encodeURIComponent(selectedTeam.id)}`)}
               >
-                {"Aujourd'hui \u00B7"} {selectedTeam.name}
+                {selectedTeamDayLabel} {"\u00B7"} {selectedTeam.name}
               </button>
             </div>
             <button
@@ -1183,26 +1197,26 @@ const afterFocusSmallGlace = React.useMemo(
                 <h2 className="text-sm uppercase tracking-widest text-slate-400 text-center mb-5">
                   Partenaires des poules
                 </h2>
-                <div className="grid grid-cols-2 gap-3 max-w-xs mx-auto mb-4">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
                   {namingPartners.map((p) => (
                     <a
                       key={p.id}
                       href={p.urlSite ?? undefined}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex flex-col items-center gap-2 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
+                      className="flex items-center justify-center gap-3 rounded-xl bg-white/5 px-4 py-3 text-left transition-colors hover:bg-white/10 sm:min-w-[220px] sm:max-w-[280px]"
                     >
                       {p.logoUrl && (
                         <img
                           src={p.logoUrl}
                           alt={p.nom}
-                          className="h-12 w-auto object-contain"
+                          className="h-12 w-auto max-w-[108px] object-contain"
                           onError={(e) => {
                             (e.currentTarget as HTMLImageElement).style.display = "none";
                           }}
                         />
                       )}
-                      <span className="text-xs text-slate-300 font-medium text-center leading-tight">{p.nom}</span>
+                      <span className="text-xs font-medium leading-tight text-slate-300 sm:text-left">{p.nom}</span>
                     </a>
                   ))}
                 </div>
