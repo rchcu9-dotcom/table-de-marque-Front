@@ -402,6 +402,14 @@ export default function TeamPage() {
             <div className="flex items-center gap-3 text-sm text-slate-300" />
           </div>
 
+          {currentTeam?.teaser?.trim() && (
+            <div className="mt-4 w-full rounded-xl border border-slate-700/60 bg-white/5 backdrop-blur px-5 py-4">
+              <p className="whitespace-pre-line text-sm text-slate-200 leading-relaxed">
+                {currentTeam.teaser.trim()}
+              </p>
+            </div>
+          )}
+
           <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <Card className="bg-white/5 border-slate-800 backdrop-blur">
               <p className="text-xs text-slate-400">Forme</p>
@@ -450,29 +458,17 @@ export default function TeamPage() {
       </div>
 
       <div className="px-6 md:px-10 pb-12 space-y-10 max-w-6xl mx-auto">
-        <section className="grid gap-4 md:grid-cols-2">
+        <section>
           <Card className="bg-white/5 border-slate-800 backdrop-blur" data-testid="team-meals">
             <h4 className="text-sm font-semibold text-slate-100 mb-2">Repas</h4>
             <ul className="space-y-2 text-sm text-slate-200">
               {mealDays.map((meal) => (
-              <li key={meal.key} className="flex items-center justify-between">
+                <li key={meal.key} className="flex items-center justify-between">
                   <span>{formatMealDayLabel(meal)}</span>
                   <span>{formatMealTime(meal.dateTime) ?? meal.message ?? "Repas indisponible"}</span>
                 </li>
               ))}
             </ul>
-          </Card>
-          <Card className="bg-white/5 border-slate-800 backdrop-blur space-y-3">
-            <div>
-              <h4 className="text-sm font-semibold text-slate-100">Vestiaire</h4>
-              <p className="text-sm text-slate-300">Vestiaire A (mock)</p>
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-slate-100">Teaser</h4>
-              <p className="whitespace-pre-line text-sm text-slate-300">
-                {currentTeam?.teaser?.trim() || "Teaser indisponible."}
-              </p>
-            </div>
           </Card>
         </section>
 
