@@ -988,7 +988,13 @@ const tickerItems = React.useMemo(() => {
   })();
 
   const nextText = (() => {
-    if (!focus) return "Prochain match: Aucun prochain match 5v5.";
+    if (!focus) {
+      const first = [...matches5v5].filter((m) => m.status === "planned").sort(byDateAsc)[0];
+      if (!first) return "Prochain match: Aucun prochain match 5v5.";
+      const a = first.teamA?.trim() || "Equipe A";
+      const b = first.teamB?.trim() || "Equipe B";
+      return `Prochain match: ${a} - ${b}.`;
+    }
     const focusTime = new Date(focus.date).getTime();
     const next = [...matches5v5]
       .filter((m) => m.status === "planned" && new Date(m.date).getTime() > focusTime)
