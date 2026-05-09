@@ -685,36 +685,35 @@ function J3RankingRow({ row }: { row: FinalSquareRankingRow }) {
       <td className="py-1 pr-2">{row.rankInSquare}</td>
       <td className="py-1 pr-2">{row.place}</td>
       <td className="py-1 pr-2">
-        {row.team ? (
-          <span className="flex items-center gap-2">
-            <Logo name={row.team.name} url={row.team.logoUrl} size={20} />
-            <span>{row.team.name}</span>
-          </span>
-        ) : (
-          <span className="text-slate-400">{label}</span>
-        )}
+        <span className="flex items-center gap-2">
+          <Logo name={label} url={row.team?.logoUrl} size={20} />
+          <span className={row.team ? "" : "text-slate-400"}>{label}</span>
+        </span>
       </td>
     </tr>
   );
 }
 
 function Logo({ name, url, size = 32 }: { name: string; url?: string | null; size?: number }) {
-  if (url) {
+  const [errored, setErrored] = useState(false);
+  const initials = (name ?? "?").slice(0, 2).toUpperCase();
+  if (url && !errored) {
     return (
       <img
         src={url}
         alt={name}
-        className="rounded-full object-cover bg-slate-800"
+        className="rounded-full object-cover bg-slate-800 shrink-0"
         style={{ width: size, height: size }}
+        onError={() => setErrored(true)}
       />
     );
   }
   return (
     <div
-      className="rounded-full bg-slate-800 text-slate-200 flex items-center justify-center"
+      className="rounded-full bg-slate-800 text-slate-200 flex items-center justify-center text-[10px] font-semibold shrink-0"
       style={{ width: size, height: size }}
     >
-      {name.slice(0, 2).toUpperCase()}
+      {initials}
     </div>
   );
 }
@@ -789,13 +788,7 @@ function SmallMatchCard({
 
       <div className="relative flex items-center gap-2">
         <div className="flex items-center gap-1 min-w-0 justify-start flex-1">
-          {match.teamALogo && (
-            <img
-              src={match.teamALogo}
-              alt={match.teamA}
-              className="h-5 w-5 rounded-full object-cover"
-            />
-          )}
+          <Logo name={match.teamA} url={match.teamALogo} size={20} />
           <span className={`text-[12px] leading-tight font-normal truncate block whitespace-nowrap ${winnerClass("A")}`}>
             {match.teamA}
           </span>
@@ -817,13 +810,7 @@ function SmallMatchCard({
           >
             {match.teamB}
           </span>
-          {match.teamBLogo && (
-            <img
-              src={match.teamBLogo}
-              alt={match.teamB}
-              className="h-5 w-5 rounded-full object-cover"
-            />
-          )}
+          <Logo name={match.teamB} url={match.teamBLogo} size={20} />
         </div>
       </div>
     </div>

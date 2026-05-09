@@ -425,21 +425,16 @@ export default function MatchDetailPage() {
                   label: "Equipe",
                   render: (_value, item) =>
                     item.isPlaceholder ? (
-                      <span className="text-slate-400">{item.teamName}</span>
+                      <span className="flex items-center gap-2 text-slate-400">
+                        <HexBadge name={item.teamName} size={24} />
+                        {item.teamName}
+                      </span>
                     ) : (
                       <button
                         onClick={() => navigate(`/teams/${item.teamId}`)}
                         className="flex items-center gap-3 hover:underline transition text-left"
                       >
-                        {item.teamLogoUrl ? (
-                          <img
-                            src={item.teamLogoUrl}
-                            alt={item.teamName}
-                            className="h-6 w-6 rounded-full object-cover bg-slate-800"
-                          />
-                        ) : (
-                          <div className="h-6 w-6 rounded-full bg-slate-800" />
-                        )}
+                        <HexBadge name={item.teamName} imageUrl={item.teamLogoUrl ?? undefined} size={24} />
                         <span>{item.teamName}</span>
                       </button>
                     ),
@@ -467,15 +462,7 @@ export default function MatchDetailPage() {
                         onClick={() => navigate(`/teams/${target}`)}
                         className="flex items-center gap-3 hover:underline transition text-left"
                       >
-                        {item.logoUrl ? (
-                          <img
-                            src={item.logoUrl}
-                            alt={item.name}
-                          className="h-6 w-6 rounded-full object-cover bg-slate-800"
-                        />
-                      ) : (
-                          <div className="h-6 w-6 rounded-full bg-slate-800" />
-                        )}
+                        <HexBadge name={item.name} imageUrl={(item.logoUrl as string | undefined) ?? undefined} size={24} />
                         <span>{nameShort}</span>
                       </button>
                     );
