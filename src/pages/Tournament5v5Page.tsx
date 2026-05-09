@@ -695,22 +695,25 @@ function J3RankingRow({ row }: { row: FinalSquareRankingRow }) {
 }
 
 function Logo({ name, url, size = 32 }: { name: string; url?: string | null; size?: number }) {
-  if (url) {
+  const [errored, setErrored] = useState(false);
+  const initials = (name ?? "?").slice(0, 2).toUpperCase();
+  if (url && !errored) {
     return (
       <img
         src={url}
         alt={name}
-        className="rounded-full object-cover bg-slate-800"
+        className="rounded-full object-cover bg-slate-800 shrink-0"
         style={{ width: size, height: size }}
+        onError={() => setErrored(true)}
       />
     );
   }
   return (
     <div
-      className="rounded-full bg-slate-800 text-slate-200 flex items-center justify-center"
+      className="rounded-full bg-slate-800 text-slate-200 flex items-center justify-center text-[10px] font-semibold shrink-0"
       style={{ width: size, height: size }}
     >
-      {name.slice(0, 2).toUpperCase()}
+      {initials}
     </div>
   );
 }
