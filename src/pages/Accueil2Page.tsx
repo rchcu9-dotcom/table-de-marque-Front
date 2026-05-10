@@ -461,14 +461,10 @@ function TodayBlock({
         <span>{smallGlaceLabel}</span>
       </div>
       {altCard}
-      <div className="grid gap-2 md:grid-cols-2">
+      <div className="grid gap-2">
         <div className="rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 flex items-center justify-between">
           <span className="text-xs uppercase text-slate-400">Repas du jour</span>
           <span className="font-semibold">{mealLabel}</span>
-        </div>
-        <div className="rounded-lg border border-slate-800 bg-slate-950/70 px-3 py-2 text-sm text-slate-100 flex items-center justify-between">
-          <span className="text-xs uppercase text-slate-400">Vestiaire</span>
-          <span className="font-semibold">Vestiaire A (mock)</span>
         </div>
       </div>
     </div>
