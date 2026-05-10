@@ -78,7 +78,15 @@ export function MatchStreamListener({ onOpen, onError }: MatchStreamListenerProp
           const matchById = new Map(matches.map((match) => [match.id, match]));
           queryClient.setQueriesData<Match[] | Match>(
             {
-              predicate: (query) => query.queryKey[0] === "matches",
+              predicate: (query) => {
+                if (query.queryKey[0] !== "matches") return false;
+                const k1 = query.queryKey[1];
+                // Ces clés viennent d'être remplacées en totalité ci-dessus
+                if (k1 === undefined || k1 === false || k1 === true) return false;
+                // Momentum est invalidé séparément
+                if (k1 === "momentum") return false;
+                return true;
+              },
             },
             (current) => {
               if (!current) return current;
