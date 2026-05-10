@@ -9,6 +9,7 @@ export function useMatches() {
     staleTime: 60_000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 }
 
