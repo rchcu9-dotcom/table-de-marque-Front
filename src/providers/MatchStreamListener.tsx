@@ -106,6 +106,12 @@ export function MatchStreamListener({ onOpen, onError }: MatchStreamListenerProp
 
           maybeRefreshJ3Squares();
 
+          queryClient.invalidateQueries({
+            predicate: (query) =>
+              query.queryKey[0] === "classement" && query.queryKey[1] !== "j3",
+            refetchType: "active",
+          });
+
         } catch (err) {
           console.error("Match stream parse error", err);
         }
