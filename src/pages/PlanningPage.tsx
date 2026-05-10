@@ -103,7 +103,10 @@ export default function PlanningPage() {
   React.useEffect(() => {
     if (!filtered.length) return;
     const ongoing = filtered.find((m) => m.competitionType === "5v5" && m.status === "ongoing");
-    const targetId = ongoing?.id ?? filtered.find((m) => m.status === "ongoing")?.id;
+    const targetId =
+      ongoing?.id ??
+      filtered.find((m) => m.status === "ongoing")?.id ??
+      filtered.find((m) => m.status === "planned")?.id;
     if (targetId && itemRefs.current[targetId]) {
       itemRefs.current[targetId]?.scrollIntoView({ block: "center", behavior: "smooth" });
     }
