@@ -570,7 +570,7 @@ function ClassementCard({
                 <tr key={eq.id} className={`text-slate-100 ${highlight ? "bg-amber-500/10 animate-pulse" : ""}`}>
                   <td className="py-1 pr-2">{eq.rang}</td>
                   <td className="py-1 pr-2">
-                    <Link to={`/teams/${eq.id}`} className="flex items-center gap-2 hover:underline">
+                    <Link to={`/teams/${encodeURIComponent(eq.id)}`} className="flex items-center gap-2 hover:underline">
                       <Logo name={displayName} url={eq.logoUrl} size={28} />
                       <span>{displayName}</span>
                     </Link>
