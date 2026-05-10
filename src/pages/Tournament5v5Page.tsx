@@ -560,6 +560,10 @@ function ClassementCard({
               <th className="py-1 pr-2">#</th>
               <th className="py-1 pr-2">Équipe</th>
               {!hidePoints && <th className="py-1 pr-2 text-right">Pts</th>}
+              <th className="py-1 pr-2 text-right">V</th>
+              <th className="py-1 pr-2 text-right">N</th>
+              <th className="py-1 pr-2 text-right">P</th>
+              <th className="py-1 pr-2 text-right">Diff.</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
@@ -576,6 +580,10 @@ function ClassementCard({
                     </Link>
                   </td>
                   {!hidePoints && <td className="py-1 pr-2 text-right font-semibold">{eq.points}</td>}
+                  <td className="py-1 pr-2 text-right">{eq.victoires}</td>
+                  <td className="py-1 pr-2 text-right">{eq.nuls}</td>
+                  <td className="py-1 pr-2 text-right">{eq.defaites}</td>
+                  <td className="py-1 pr-2 text-right">{eq.diff}</td>
                 </tr>
               );
             })}
