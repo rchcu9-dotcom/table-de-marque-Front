@@ -227,7 +227,7 @@ export default function MatchDetailPage() {
         <div className="flex items-center justify-center gap-6">
           <button
             className="transition hover:-translate-y-0.5"
-            onClick={() => navigate(`/teams/${data.teamA}`)}
+            onClick={() => navigate(`/teams/${encodeURIComponent(data.teamA)}`)}
           >
             <HexBadge name={data.teamA} imageUrl={data.teamALogo ?? undefined} size={64} />
         </button>
@@ -239,14 +239,14 @@ export default function MatchDetailPage() {
           <div className="text-2xl font-semibold">
             <button
               className={`hover:underline transition ${winner === "A" ? "text-emerald-300 font-semibold" : ""}`}
-              onClick={() => navigate(`/teams/${data.teamA}`)}
+              onClick={() => navigate(`/teams/${encodeURIComponent(data.teamA)}`)}
             >
               {data.teamA}
             </button>{" "}
             vs{" "}
             <button
               className={`hover:underline transition ${winner === "B" ? "text-emerald-300 font-semibold" : ""}`}
-              onClick={() => navigate(`/teams/${data.teamB}`)}
+              onClick={() => navigate(`/teams/${encodeURIComponent(data.teamB)}`)}
             >
               {data.teamB}
             </button>
@@ -254,7 +254,7 @@ export default function MatchDetailPage() {
         </div>
         <button
           className="transition hover:-translate-y-0.5"
-          onClick={() => navigate(`/teams/${data.teamB}`)}
+          onClick={() => navigate(`/teams/${encodeURIComponent(data.teamB)}`)}
           >
             <HexBadge name={data.teamB} imageUrl={data.teamBLogo ?? undefined} size={64} />
           </button>
@@ -431,7 +431,7 @@ export default function MatchDetailPage() {
                       </span>
                     ) : (
                       <button
-                        onClick={() => navigate(`/teams/${item.teamId}`)}
+                        onClick={() => navigate(`/teams/${encodeURIComponent(item.teamId)}`)}
                         className="flex items-center gap-3 hover:underline transition text-left"
                       >
                         <HexBadge name={item.teamName} imageUrl={item.teamLogoUrl ?? undefined} size={24} />
@@ -459,7 +459,7 @@ export default function MatchDetailPage() {
                       item.name;
                     return (
                       <button
-                        onClick={() => navigate(`/teams/${target}`)}
+                        onClick={() => navigate(`/teams/${encodeURIComponent(target)}`)}
                         className="flex items-center gap-3 hover:underline transition text-left"
                       >
                         <HexBadge name={item.name} imageUrl={(item.logoUrl as string | undefined) ?? undefined} size={24} />
