@@ -687,16 +687,17 @@ function J3FinalSquareCard({
 }
 
 function J3RankingRow({ row }: { row: FinalSquareRankingRow }) {
-  const label = row.team?.name ?? row.placeholder ?? "En attente du résultat";
   return (
     <tr className="text-slate-100">
       <td className="py-1 pr-2">{row.rankInSquare}</td>
       <td className="py-1 pr-2">{row.place}</td>
       <td className="py-1 pr-2">
-        <span className="flex items-center gap-2">
-          <Logo name={label} url={row.team?.logoUrl} size={20} />
-          <span className={row.team ? "" : "text-slate-400"}>{label}</span>
-        </span>
+        {row.team && (
+          <span className="flex items-center gap-2">
+            <Logo name={row.team.name} url={row.team.logoUrl} size={20} />
+            <span>{row.team.name}</span>
+          </span>
+        )}
       </td>
     </tr>
   );
