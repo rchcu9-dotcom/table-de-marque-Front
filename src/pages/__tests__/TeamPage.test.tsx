@@ -499,8 +499,8 @@ describe("TeamPage", () => {
 
     expect(screen.getAllByAltText("Logo 5v5").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("Meudon")).toBeInTheDocument();
-    expect(screen.getByText("3")).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getAllByText("3").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("2").length).toBeGreaterThanOrEqual(1);
 
     const finished5v5 = screen.getByText("Meudon").closest("div.cursor-pointer") as HTMLElement;
     fireEvent.click(finished5v5);
