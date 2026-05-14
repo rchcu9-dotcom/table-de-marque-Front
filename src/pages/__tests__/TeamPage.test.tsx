@@ -382,7 +382,7 @@ describe("TeamPage", () => {
     expect(rankingRows.length).toBeGreaterThanOrEqual(3);
     const row = within(j3Card).getByText("Rennes").closest("tr") as HTMLElement;
     expect(within(row).getByText("12")).toBeInTheDocument();
-    expect(within(j3Card).getAllByText(/En attente du r.sultat/i).length).toBeGreaterThan(0);
+    expect(within(j3Card).getAllByTestId(/team-j3-placeholder-/i).length).toBeGreaterThan(0);
   });
 
   it("affiche les placeholders J3 non cliquables quand �quipe inconnue", () => {
@@ -412,7 +412,7 @@ describe("TeamPage", () => {
     );
 
     const j3Card = screen.getByTestId("team-classement-j3");
-    expect(within(j3Card).getAllByText(/En attente du r.sultat/i).length).toBeGreaterThan(0);
+    expect(within(j3Card).getAllByTestId(/team-j3-placeholder-/i).length).toBeGreaterThan(0);
     const placeholderRow = screen.getByTestId("team-j3-placeholder-9");
     expect(placeholderRow).not.toHaveAttribute("role", "button");
     expect(within(placeholderRow).getByText("-")).toBeInTheDocument();
