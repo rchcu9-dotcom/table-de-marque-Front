@@ -275,7 +275,7 @@ export default function TeamPage() {
         const hasTeam = !!row.team?.name;
         return {
           id: row.team?.id ?? `j3-${j3TargetSquare.dbCode}-${row.place}`,
-          name: row.team?.name ?? "En attente du résultat",
+          name: row.team?.name ?? "",
           logoUrl: row.team?.logoUrl ?? null,
           rang: row.place,
           joues: 0,
@@ -287,7 +287,6 @@ export default function TeamPage() {
           bc: 0,
           diff: 0,
           isPlaceholder: !hasTeam,
-          placeholderLabel: hasTeam ? undefined : "En attente du résultat",
         };
       });
   }, [j3TargetSquare]);
@@ -836,7 +835,7 @@ function DayClassement({
                         <HexBadge name={entry.name} size={28} imageUrl={logoFor(entry.name) ?? undefined} />
                       )}
                       <span className={`${isFocus ? "text-slate-50 font-semibold" : "text-slate-200"} truncate block`}>
-                        {isPlaceholder ? entry.placeholderLabel ?? "En attente du résultat" : entry.name}
+                        {isPlaceholder ? "" : entry.name}
                       </span>
                     </div>
                   </td>
