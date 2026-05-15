@@ -15,13 +15,14 @@ export type ChallengeAttempt = {
   equipeLogoUrl?: string | null;
   atelierId: string;
   atelierLabel: string;
-  atelierType: "vitesse" | "tir" | "glisse_crosse";
+  atelierType: "vitesse" | "tir" | "glisse_crosse" | "gardien_arret";
   phase: string;
   attemptDate?: string | null;
   metrics:
     | { type: "vitesse"; tempsMs: number }
     | { type: "tir"; tirs: number[]; totalPoints: number }
-    | { type: "glisse_crosse"; tempsMs: number; penalites: number };
+    | { type: "glisse_crosse"; tempsMs: number; penalites: number }
+    | { type: "gardien_arret"; tempsMs: number; nbButs: number };
 };
 
 export type ChallengeEquipeResponse = {

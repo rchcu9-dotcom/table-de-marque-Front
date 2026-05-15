@@ -81,15 +81,19 @@ export default function ChallengeEquipePage() {
   }, [teams]);
 
   const groupByAtelier = React.useMemo(() => {
-    const empty = { vitesse: [] as Attempt[], tir: [] as Attempt[], glisse_crosse: [] as Attempt[] };
+    const empty = { vitesse: [] as Attempt[], tir: [] as Attempt[], glisse_crosse: [] as Attempt[], gardien_arret: [] as Attempt[] };
     if (!data) return { jour1: empty, jour3: empty };
     const reducer = (acc: typeof empty, attempt: Attempt) => {
-      acc[attempt.atelierType].push(attempt);
+      if (attempt.atelierType === "gardien_arret") {
+        acc.gardien_arret.push(attempt);
+      } else if (attempt.atelierType === "vitesse" || attempt.atelierType === "tir" || attempt.atelierType === "glisse_crosse") {
+        acc[attempt.atelierType].push(attempt);
+      }
       return acc;
     };
     return {
-      jour1: data.jour1.reduce(reducer, { vitesse: [], tir: [], glisse_crosse: [] }),
-      jour3: data.jour3.reduce(reducer, { vitesse: [], tir: [], glisse_crosse: [] }),
+      jour1: data.jour1.reduce(reducer, { vitesse: [], tir: [], glisse_crosse: [], gardien_arret: [] }),
+      jour3: data.jour3.reduce(reducer, { vitesse: [], tir: [], glisse_crosse: [], gardien_arret: [] }),
     };
   }, [data]);
 
@@ -129,6 +133,7 @@ export default function ChallengeEquipePage() {
     if (m.metrics.type === "vitesse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s`;
     if (m.metrics.type === "tir") return `Points: ${m.metrics.totalPoints} (${m.metrics.tirs.join(", ")})`;
     if (m.metrics.type === "glisse_crosse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s, penalites: ${m.metrics.penalites}`;
+    if (m.metrics.type === "gardien_arret") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s, arrêts: ${m.metrics.nbButs}`;
     return "";
   };
 
@@ -511,6 +516,16 @@ export default function ChallengeEquipePage() {
                       </div>
                     )}
                   </div>
+
+                  {(groupByAtelier.jour1.gardien_arret.length > 0 || groupByAtelier.jour1.vitesse.filter((a) => a.atelierId === "atelier-gardien-vitesse").length > 0) && (
+                    <section className="space-y-2">
+                      <h2 className="text-base font-semibold text-white">Gardiens</h2>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {renderTable("Vitesse Gardien", applyFilters(groupByAtelier.jour1.vitesse.filter((a) => a.atelierId === "atelier-gardien-vitesse")))}
+                        {renderTable("Arrêt Gardien", applyFilters(groupByAtelier.jour1.gardien_arret))}
+                      </div>
+                    </section>
+                  )}
                 </section>
               )}
             </>
