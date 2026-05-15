@@ -840,6 +840,14 @@ export default function HomePage() {
     () => challengeMomentumToMatches(challengeJ1Momentum ?? []),
     [challengeJ1Momentum],
   );
+  const teamLogoByName = React.useMemo(() => {
+    const map = new Map<string, string | null>();
+    (teams ?? []).forEach((t) => {
+      const key = (t.name ?? "").trim().toLowerCase();
+      if (key) map.set(key, t.logoUrl ?? null);
+    });
+    return map;
+  }, [teams]);
   const smallGlaceMomentumItems = React.useMemo(
     () => {
       if (smallGlaceMode === "challenge-j1") {
@@ -848,9 +856,14 @@ export default function HomePage() {
       if (smallGlaceMode === "challenge-vitesse-j3") {
         return challengeVitesseJ3ToMomentumItems(challengeVitesseJ3);
       }
-      return filterByCompetition(matches, "3v3").map((match) => ({ match }));
+      return filterByCompetition(matches, "3v3").map((match) => {
+        const logoA = match.teamALogo ?? teamLogoByName.get(match.teamA?.trim().toLowerCase() ?? "") ?? null;
+        const logoB = match.teamBLogo ?? teamLogoByName.get(match.teamB?.trim().toLowerCase() ?? "") ?? null;
+        if (logoA === match.teamALogo && logoB === match.teamBLogo) return { match };
+        return { match: { ...match, teamALogo: logoA, teamBLogo: logoB } };
+      });
     },
-    [challengeMomentumMatchesJ1, challengeVitesseJ3, matches, smallGlaceMode],
+    [challengeMomentumMatchesJ1, challengeVitesseJ3, matches, smallGlaceMode, teamLogoByName],
   );
   const smallGlaceSourceMatches = React.useMemo(
     () => smallGlaceMomentumItems.map((item) => item.match),
