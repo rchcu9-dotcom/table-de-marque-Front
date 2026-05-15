@@ -214,7 +214,7 @@ export default function TeamPage() {
   const { data: challengeData } = useChallengeByEquipe(equipeKey || undefined);
   const gardienJ1 = React.useMemo(() => {
     if (!challengeData) return { vitesse: [] as ChallengeAttempt[], arret: [] as ChallengeAttempt[] };
-    const j1 = challengeData.jour1;
+    const j1 = challengeData.jour1 ?? [];
     return {
       vitesse: j1.filter((a) => a.atelierId === "atelier-gardien-vitesse"),
       arret: j1.filter((a) => a.atelierType === "gardien_arret"),
