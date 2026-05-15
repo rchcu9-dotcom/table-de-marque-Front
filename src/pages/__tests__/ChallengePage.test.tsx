@@ -502,9 +502,9 @@ describe("ChallengePage", () => {
   it("conserve les blocs J1 d'évaluation Vitesse, Tir et Agilité", () => {
     renderPage();
 
-    expect(screen.getByText("Atelier Vitesse")).toBeInTheDocument();
-    expect(screen.getByText("Atelier Tir")).toBeInTheDocument();
-    expect(screen.getByText("Atelier Agilite")).toBeInTheDocument();
+    expect(screen.getByText("Joueur - Atelier Vitesse")).toBeInTheDocument();
+    expect(screen.getByText("Joueur - Atelier Tir")).toBeInTheDocument();
+    expect(screen.getByText("Joueur - Atelier Agilité")).toBeInTheDocument();
     expect(screen.getByText("Rennes Vitesse")).toBeInTheDocument();
     expect(screen.getByText("Rennes Tir")).toBeInTheDocument();
     expect(screen.getByText("Rennes Agilité")).toBeInTheDocument();

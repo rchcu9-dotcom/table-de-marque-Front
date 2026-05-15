@@ -701,14 +701,14 @@ export default function ChallengePage() {
                               alt="Vitesse"
                               className="h-5 w-5 object-contain"
                             />
-                            <span className="text-sm font-semibold text-white">Atelier Vitesse</span>
+                            <span className="text-sm font-semibold text-white">Joueur - Atelier Vitesse</span>
                           </div>
                           <Link to="/challenge/atelier/vitesse" className="text-emerald-300 hover:text-emerald-200 font-semibold">
                             Voir tout
                           </Link>
                         </div>
                         <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
-                        {renderTable("Atelier Vitesse", applyFilters(groupByAtelier.jour1.vitesse, "vitesse", { limitTop: 3 }), {
+                        {renderTable("Joueur - Atelier Vitesse", applyFilters(groupByAtelier.jour1.vitesse, "vitesse", { limitTop: 3 }), {
                           hideTitle: true,
                         })}
                       </div>
@@ -722,14 +722,14 @@ export default function ChallengePage() {
                               alt="Tir"
                               className="h-5 w-5 object-contain"
                             />
-                            <span className="text-sm font-semibold text-white">Atelier Tir</span>
+                            <span className="text-sm font-semibold text-white">Joueur - Atelier Tir</span>
                           </div>
                           <Link to="/challenge/atelier/tir" className="text-emerald-300 hover:text-emerald-200 font-semibold">
                             Voir tout
                           </Link>
                         </div>
                         <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
-                        {renderTable("Atelier Tir", applyFilters(groupByAtelier.jour1.tir, "tir", { limitTop: 3 }), { hideTitle: true })}
+                        {renderTable("Joueur - Atelier Tir", applyFilters(groupByAtelier.jour1.tir, "tir", { limitTop: 3 }), { hideTitle: true })}
                       </div>
                     )}
                     {showGlisse && (
@@ -741,7 +741,7 @@ export default function ChallengePage() {
                               alt="Agilite"
                               className="h-5 w-5 object-contain"
                             />
-                            <span className="text-sm font-semibold text-white">Atelier Agilite</span>
+                            <span className="text-sm font-semibold text-white">Joueur - Atelier Agilité</span>
                           </div>
                           <Link to="/challenge/atelier/glisse_crosse" className="text-emerald-300 hover:text-emerald-200 font-semibold">
                             Voir tout
@@ -749,69 +749,62 @@ export default function ChallengePage() {
                         </div>
                         <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
                         {renderTable(
-                          "Atelier Agilite",
+                          "Joueur - Atelier Agilité",
                           applyFilters(groupByAtelier.jour1.glisse_crosse, "glisse_crosse", { limitTop: 3 }),
                           { hideTitle: true }
                         )}
                       </div>
                     )}
+                    {groupByAtelier.jour1.gardien_vitesse.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs text-slate-200">
+                          <div className="flex items-center gap-2">
+                            <img
+                              src="https://drive.google.com/thumbnail?id=1rg6fHxVUWLBB5N5B27lTDW8gp0Pl9bxj&sz=w64"
+                              alt="Vitesse"
+                              className="h-5 w-5 object-contain"
+                            />
+                            <span className="text-sm font-semibold text-white">Gardien - Challenge Vitesse</span>
+                          </div>
+                          <Link to="/challenge/atelier/gardien_vitesse" className="text-emerald-300 hover:text-emerald-200 font-semibold">
+                            Voir tout
+                          </Link>
+                        </div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
+                        {renderTable("Gardien - Challenge Vitesse", applyFilters(groupByAtelier.jour1.gardien_vitesse, "vitesse", { limitTop: 3 }), { hideTitle: true })}
+                      </div>
+                    )}
+                    {groupByAtelier.jour1.gardien_arret.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs text-slate-200">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-white">Gardien - Challenge Atelier</span>
+                          </div>
+                          <Link to="/challenge/atelier/gardien_arret" className="text-emerald-300 hover:text-emerald-200 font-semibold">
+                            Voir tout
+                          </Link>
+                        </div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
+                        {renderTable("Gardien - Challenge Atelier", applyFilters(groupByAtelier.jour1.gardien_arret, "gardien_arret", { limitTop: 3 }), { hideTitle: true })}
+                      </div>
+                    )}
                   </div>
 
-                  {(groupByAtelier.jour1.gardien_vitesse.length > 0 || groupByAtelier.jour1.gardien_arret.length > 0) && (
-                    <section className="space-y-2">
-                      <h2 className="text-base font-semibold text-white">Gardiens</h2>
-                      <div className="grid gap-3 md:grid-cols-2">
-                        {groupByAtelier.jour1.gardien_vitesse.length > 0 && (
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-xs text-slate-200">
-                              <div className="flex items-center gap-2">
-                                <img
-                                  src="https://drive.google.com/thumbnail?id=1rg6fHxVUWLBB5N5B27lTDW8gp0Pl9bxj&sz=w64"
-                                  alt="Vitesse"
-                                  className="h-5 w-5 object-contain"
-                                />
-                                <span className="text-sm font-semibold text-white">Vitesse Gardien</span>
-                              </div>
-                              <Link to="/challenge/atelier/gardien_vitesse" className="text-emerald-300 hover:text-emerald-200 font-semibold">
-                                Voir tout
-                              </Link>
-                            </div>
-                            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
-                            {renderTable("Vitesse Gardien", applyFilters(groupByAtelier.jour1.gardien_vitesse, "vitesse", { limitTop: 3 }), { hideTitle: true })}
-                          </div>
-                        )}
-                        {groupByAtelier.jour1.gardien_arret.length > 0 && (
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-xs text-slate-200">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold text-white">Arrêt Gardien</span>
-                              </div>
-                              <Link to="/challenge/atelier/gardien_arret" className="text-emerald-300 hover:text-emerald-200 font-semibold">
-                                Voir tout
-                              </Link>
-                            </div>
-                            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
-                            {renderTable("Arrêt Gardien", applyFilters(groupByAtelier.jour1.gardien_arret, "gardien_arret", { limitTop: 3 }), { hideTitle: true })}
-                          </div>
-                        )}
-                        {groupByAtelier.jour1.gardien_arret.filter((a) => a.metrics.type === "gardien_arret" && a.metrics.tempsTotal > 0).length > 0 && (
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-semibold text-white">NB Buts / Temps Total</span>
-                            </div>
-                            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
-                            <GardienTotalTable
-                              attempts={applyFilters(
-                                groupByAtelier.jour1.gardien_arret.filter((a) => a.metrics.type === "gardien_arret" && a.metrics.tempsTotal > 0),
-                                "gardien_arret",
-                                { limitTop: 3 },
-                              )}
-                              teamMap={teamMap}
-                            />
-                          </div>
-                        )}
+                  {groupByAtelier.jour1.gardien_arret.filter((a) => a.metrics.type === "gardien_arret" && a.metrics.tempsTotal > 0).length > 0 && (
+                    <div className="space-y-2 mt-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-white">NB Buts / Temps Total</span>
                       </div>
-                    </section>
+                      <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
+                      <GardienTotalTable
+                        attempts={applyFilters(
+                          groupByAtelier.jour1.gardien_arret.filter((a) => a.metrics.type === "gardien_arret" && a.metrics.tempsTotal > 0),
+                          "gardien_arret",
+                          { limitTop: 3 },
+                        )}
+                        teamMap={teamMap}
+                      />
+                    </div>
                   )}
                 </section>
               )}
