@@ -2,8 +2,9 @@ import React from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useChallengeByEquipe } from "../hooks/useChallengeByEquipe";
 import { useChallengeJ1Momentum } from "../hooks/useChallengeJ1Momentum";
+import { useChallengeGardienJ3 } from "../hooks/useChallengeGardienJ3";
 import { useTeams } from "../hooks/useTeams";
-import type { ChallengeAttempt as Attempt } from "../api/challenge";
+import type { ChallengeAttempt as Attempt, GardienJ3Player } from "../api/challenge";
 import challengeIcon from "../assets/icons/nav/challenge.png";
 
 type TeamInfo = {
@@ -19,6 +20,7 @@ export default function ChallengeEquipePage() {
   const navigate = useNavigate();
   const { data, isLoading, isError } = useChallengeByEquipe(teamId);
   const { data: challengeJ1Momentum } = useChallengeJ1Momentum();
+  const { data: gardienJ3 } = useChallengeGardienJ3();
   const { data: teams, refetch: refetchTeams } = useTeams();
 
   const [showVitesse, setShowVitesse] = React.useState(true);
@@ -26,6 +28,7 @@ export default function ChallengeEquipePage() {
   const [showGlisse, setShowGlisse] = React.useState(true);
   const [showEvaluation, setShowEvaluation] = React.useState(true);
   const [showFinale, setShowFinale] = React.useState(true);
+  const [showGardienJ3, setShowGardienJ3] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
   const headerCardRef = React.useRef<HTMLDivElement | null>(null);
   const [layout, setLayout] = React.useState<{ topOffset: number; paddingTop: number }>({
@@ -128,6 +131,22 @@ export default function ChallengeEquipePage() {
     const d = new Date(first.attemptDate);
     return new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "2-digit", month: "short" }).format(d);
   }, [data]);
+
+  const gardienJ3ForTeam = React.useMemo(() => {
+    if (!gardienJ3?.slots || !teamId) return { demi: [] as { slot: string; players: GardienJ3Player[] }[], finale: [] as GardienJ3Player[] };
+    const needle = teamId.toLowerCase();
+    const filterPlayers = (players: GardienJ3Player[]) =>
+      players.filter((p) => p.teamId.toLowerCase() === needle || (p.teamName ?? "").toLowerCase() === needle);
+    const demi: { slot: string; players: GardienJ3Player[] }[] = Object.keys(gardienJ3.slots)
+      .filter((k) => /^DF\d+$/.test(k))
+      .sort((a, b) => Number(a.slice(2)) - Number(b.slice(2)))
+      .map((slot) => ({ slot, players: filterPlayers(gardienJ3.slots[slot] ?? []) }))
+      .filter((s) => s.players.length > 0);
+    const finale = filterPlayers(gardienJ3.slots.F1 ?? []);
+    return { demi, finale };
+  }, [gardienJ3, teamId]);
+
+  const hasGardienJ3 = gardienJ3ForTeam.demi.length > 0 || gardienJ3ForTeam.finale.length > 0;
 
   const renderMetrics = (m: Attempt) => {
     if (m.metrics.type === "vitesse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s`;
@@ -378,6 +397,12 @@ export default function ChallengeEquipePage() {
                 >
                   Finale
                 </button>
+                <button
+                  className={`rounded-full border px-3 py-1 ${showGardienJ3 ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-200 border-slate-600"}`}
+                  onClick={() => setShowGardienJ3((v) => !v)}
+                >
+                  Finale Gardien
+                </button>
               </div>
             </div>
           </div>
@@ -435,6 +460,33 @@ export default function ChallengeEquipePage() {
                         ))}
                       </div>
                     </div>
+                  </div>
+                </section>
+              )}
+
+              {showGardienJ3 && hasGardienJ3 && (
+                <section className="space-y-3">
+                  <h2 className="text-base font-semibold text-white">Finales Gardien</h2>
+                  <div className="space-y-3">
+                    {gardienJ3ForTeam.finale.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-semibold text-slate-200">Finale</h3>
+                        <GardienJ3PlayerList players={gardienJ3ForTeam.finale} teamMap={teamMap} />
+                      </div>
+                    )}
+                    {gardienJ3ForTeam.demi.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-semibold text-slate-200">Demi-finales</h3>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          {gardienJ3ForTeam.demi.map(({ slot, players }) => (
+                            <div key={slot} className="rounded-lg border border-slate-800 bg-slate-900/70 p-3 space-y-2">
+                              <span className="text-sm font-semibold text-white">Demi-finale {slot.slice(2)}</span>
+                              <GardienJ3PlayerList players={players} teamMap={teamMap} />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </section>
               )}
@@ -524,6 +576,12 @@ export default function ChallengeEquipePage() {
                         {renderTable("Vitesse Gardien", applyFilters(groupByAtelier.jour1.vitesse.filter((a) => a.atelierId === "atelier-gardien-vitesse")))}
                         {renderTable("Arrêt Gardien", applyFilters(groupByAtelier.jour1.gardien_arret))}
                       </div>
+                      {groupByAtelier.jour1.gardien_arret.filter((a) => a.metrics.type === "gardien_arret" && a.metrics.tempsTotal > 0).length > 0 && (
+                        <div className="space-y-2 mt-3">
+                          <span className="text-sm font-semibold text-white">NB Buts / Temps Total</span>
+                          <GardienTotalTableEquipe attempts={applyFilters(groupByAtelier.jour1.gardien_arret.filter((a) => a.metrics.type === "gardien_arret" && a.metrics.tempsTotal > 0))} teamMap={teamMap} />
+                        </div>
+                      )}
                     </section>
                   )}
                 </section>
@@ -533,5 +591,92 @@ export default function ChallengeEquipePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function GardienJ3PlayerList({
+  players,
+  teamMap,
+}: {
+  players: GardienJ3Player[];
+  teamMap: Map<string, { name: string; logoUrl?: string | null }>;
+}) {
+  if (players.length === 0) return <p className="text-slate-300 text-xs">Aucun gardien.</p>;
+  return (
+    <ul className="space-y-2">
+      {players.map((p) => {
+        const equipe = teamMap.get(p.teamId.toLowerCase());
+        const logo = equipe?.logoUrl ?? null;
+        const isWinner = p.status === "winner";
+        const statusLabel =
+          p.status === "winner" ? "Vainqueur" : p.status === "finalist" ? "Finale" : p.status === "qualified" ? "Qualifié" : null;
+        return (
+          <li key={p.id} className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              {logo ? <img src={logo} alt={p.teamName ?? "Equipe"} className="h-6 w-6 rounded-full object-cover" /> : null}
+              <div className="min-w-0">
+                <p className={`text-sm font-semibold truncate ${isWinner ? "text-amber-200" : "text-slate-100"}`}>{p.name}</p>
+                {p.teamName && <p className="text-xs text-slate-400 truncate">{p.teamName}</p>}
+              </div>
+            </div>
+            {statusLabel && (
+              <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${isWinner ? "bg-amber-400/20 text-amber-200 border-amber-300/60" : "bg-emerald-500/20 text-emerald-200 border-emerald-400/60"}`}>
+                {statusLabel}
+              </span>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function GardienTotalTableEquipe({
+  attempts,
+  teamMap,
+}: {
+  attempts: import("../api/challenge").ChallengeAttempt[];
+  teamMap: Map<string, { name: string; logoUrl?: string | null }>;
+}) {
+  const sorted = [...attempts].sort((a, b) => {
+    const ta = a.metrics.type === "gardien_arret" ? a.metrics.tempsTotal : Number.MAX_SAFE_INTEGER;
+    const tb = b.metrics.type === "gardien_arret" ? b.metrics.tempsTotal : Number.MAX_SAFE_INTEGER;
+    return ta - tb;
+  });
+  return (
+    <section className="rounded-lg border border-slate-800 bg-slate-900/70 p-3">
+      <div className="overflow-auto">
+        <table className="min-w-full text-xs text-slate-100">
+          <thead className="text-[11px] uppercase text-slate-400">
+            <tr>
+              <th className="py-1 pr-3 text-left">Joueur</th>
+              <th className="py-1 text-right">Buts</th>
+              <th className="py-1 text-right pl-3">Temps total</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800 text-[12px]">
+            {sorted.map((a, idx) => {
+              const eqKey = (a.equipeId ?? "").toLowerCase();
+              const equipe = teamMap.get(eqKey);
+              const m = a.metrics.type === "gardien_arret" ? a.metrics : null;
+              return (
+                <tr key={`${a.atelierId}-${a.joueurId}-${idx}`}>
+                  <td className="py-1 pr-3 font-semibold text-slate-100">
+                    <span className="inline-flex items-center gap-2">
+                      {a.equipeLogoUrl || equipe?.logoUrl ? (
+                        <img src={(a.equipeLogoUrl as string) || (equipe?.logoUrl as string)} alt={a.equipeName || "Equipe"} className="h-6 w-6 rounded-full object-cover" />
+                      ) : null}
+                      <span>{a.joueurName}</span>
+                    </span>
+                  </td>
+                  <td className="py-1 text-right text-slate-100">{m ? m.nbButs : "-"}</td>
+                  <td className="py-1 text-right pl-3 text-slate-100">{m && m.tempsTotal > 0 ? `${(m.tempsTotal / 1000).toFixed(2)} s` : "-"}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }

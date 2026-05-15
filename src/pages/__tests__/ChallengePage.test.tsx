@@ -155,6 +155,10 @@ vi.mock("../../hooks/useChallengeJ1Momentum", () => ({
   }),
 }));
 
+vi.mock("../../hooks/useChallengeGardienJ3", () => ({
+  useChallengeGardienJ3: () => ({ data: undefined, isLoading: false, isError: false }),
+}));
+
 vi.mock("../../hooks/useTeams", () => ({
   useTeams: () => ({
     data: [
