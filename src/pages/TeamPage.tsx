@@ -507,7 +507,7 @@ export default function TeamPage() {
               />
               <div className="grid gap-3 md:grid-cols-2">
                 <HighlightBlock
-                  title="Vitesse (2 meilleurs)"
+                  title="Joueur - Vitesse (2 meilleurs)"
                   icon={ICONS.vitesse}
                   players={playerList.slice(0, 2).map((p, idx) => ({
                     name: displayName(p),
@@ -518,7 +518,7 @@ export default function TeamPage() {
                   })) ?? []}
                 />
                 <HighlightBlock
-                  title="Adresse au tir (2 meilleurs)"
+                  title="Joueur - Adresse au tir (2 meilleurs)"
                   icon={ICONS.tir}
                   players={playerList.slice(0, 2).map((p, idx) => ({
                     name: displayName(p),
@@ -529,7 +529,7 @@ export default function TeamPage() {
                   })) ?? []}
                 />
                 <HighlightBlock
-                  title="Agilité (2 meilleurs)"
+                  title="Joueur - Agilité (2 meilleurs)"
                   icon={ICONS.glisse}
                   players={playerList.slice(0, 2).map((p, idx) => ({
                     name: displayName(p),
@@ -539,10 +539,35 @@ export default function TeamPage() {
                     icon: heroLogo,
                   })) ?? []}
                 />
+                <HighlightBlock
+                  title="Gardien - Challenge Atelier"
+                  players={gardienJ1.arret
+                    .filter((a) => a.metrics.type === "gardien_arret")
+                    .sort((a, b) => {
+                      const ta = a.metrics.type === "gardien_arret" ? a.metrics.tempsMs : Infinity;
+                      const tb = b.metrics.type === "gardien_arret" ? b.metrics.tempsMs : Infinity;
+                      return ta - tb;
+                    })
+                    .map((a) => ({
+                      name: a.joueurName,
+                      resultLabel: `${((a.metrics as { type: "gardien_arret"; tempsMs: number }).tempsMs / 1000).toFixed(2)} s`,
+                    }))}
+                />
+                <HighlightBlock
+                  title="Gardien - Challenge Vitesse"
+                  players={gardienJ1.vitesse
+                    .filter((a) => a.metrics.type === "vitesse")
+                    .sort((a, b) => {
+                      const ta = a.metrics.type === "vitesse" ? a.metrics.tempsMs : Infinity;
+                      const tb = b.metrics.type === "vitesse" ? b.metrics.tempsMs : Infinity;
+                      return ta - tb;
+                    })
+                    .map((a) => ({
+                      name: a.joueurName,
+                      resultLabel: `${((a.metrics as { type: "vitesse"; tempsMs: number }).tempsMs / 1000).toFixed(2)} s`,
+                    }))}
+                />
               </div>
-              {(gardienJ1.vitesse.length > 0 || gardienJ1.arret.length > 0) && (
-                <GardienChallengeBlock vitesse={gardienJ1.vitesse} arret={gardienJ1.arret} />
-              )}
             </Card>
           )}
 
