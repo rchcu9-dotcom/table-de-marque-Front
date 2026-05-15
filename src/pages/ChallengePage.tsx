@@ -6,8 +6,9 @@ import type { ChallengeAttempt as Attempt } from "../api/challenge";
 import challengeIcon from "../assets/icons/nav/challenge.png";
 import { useSelectedTeam } from "../providers/SelectedTeamProvider";
 import { useChallengeVitesseJ3 } from "../hooks/useChallengeVitesseJ3";
+import { useChallengeGardienJ3 } from "../hooks/useChallengeGardienJ3";
 import { useChallengeJ1Momentum } from "../hooks/useChallengeJ1Momentum";
-import type { VitesseJ3Player, VitesseJ3SlotId } from "../api/challenge";
+import type { VitesseJ3Player, VitesseJ3SlotId, GardienJ3Player } from "../api/challenge";
 import type { ChallengeJ1MomentumEntry } from "../api/challenge";
 
 type ChallengeMomentumItem = {
@@ -76,6 +77,7 @@ export default function ChallengePage() {
   const { data, isLoading, isError } = useChallengeAll();
   const { data: challengeMomentumJ1 } = useChallengeJ1Momentum();
   const { data: vitesseJ3 } = useChallengeVitesseJ3();
+  const { data: gardienJ3 } = useChallengeGardienJ3();
   const { data: teams } = useTeams();
   const { selectedTeam } = useSelectedTeam();
 
@@ -84,6 +86,7 @@ export default function ChallengePage() {
   const [showGlisse, setShowGlisse] = React.useState(true);
   const [showEvaluation, setShowEvaluation] = React.useState(true);
   const [showFinale, setShowFinale] = React.useState(true);
+  const [showGardienJ3, setShowGardienJ3] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
   const headerCardRef = React.useRef<HTMLDivElement | null>(null);
   const [layout, setLayout] = React.useState<{ topOffset: number; paddingTop: number }>({ topOffset: 64, paddingTop: 260 });
@@ -155,7 +158,7 @@ export default function ChallengePage() {
     if (m.metrics.type === "vitesse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s`;
     if (m.metrics.type === "tir") return `Points: ${m.metrics.totalPoints} (${m.metrics.tirs.join(", ")})`;
     if (m.metrics.type === "glisse_crosse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s, penalites: ${m.metrics.penalites}`;
-    if (m.metrics.type === "gardien_arret") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s, arrêts: ${m.metrics.nbButs}`;
+    if (m.metrics.type === "gardien_arret") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s`;
     return "";
   };
 
@@ -472,6 +475,30 @@ export default function ChallengePage() {
     showFinale &&
     (finalePlayers.length > 0 || nonEmptyDemiSlots.length > 0 || nonEmptyQuartSlots.length > 0);
 
+  const gardienJ3Slots = React.useMemo(() => gardienJ3?.slots ?? {}, [gardienJ3?.slots]);
+  const gardienJ3SlotsWithDefault = React.useMemo<Record<string, GardienJ3Player[]>>(
+    () => ({ F1: [], ...gardienJ3Slots }),
+    [gardienJ3Slots],
+  );
+  const gardienDemiSlots = React.useMemo(
+    () =>
+      Object.keys(gardienJ3SlotsWithDefault)
+        .filter((k) => /^DF\d+$/.test(k) && (gardienJ3SlotsWithDefault[k] ?? []).length > 0)
+        .sort((a, b) => Number(a.slice(2)) - Number(b.slice(2))),
+    [gardienJ3SlotsWithDefault],
+  );
+  const gardienFinalePlayers = gardienJ3SlotsWithDefault.F1 ?? [];
+  const gardienTotalAttempts = React.useMemo(
+    () =>
+      groupByAtelier.jour1.gardien_arret.filter(
+        (a) => a.metrics.type === "gardien_arret" && a.metrics.tempsTotal > 0,
+      ),
+    [groupByAtelier],
+  );
+  const showGardienJ3Block =
+    showGardienJ3 &&
+    (gardienFinalePlayers.length > 0 || gardienDemiSlots.length > 0 || gardienTotalAttempts.length > 0);
+
   React.useLayoutEffect(() => {
     const updateLayout = () => {
       const nav = document.querySelector("header");
@@ -544,6 +571,12 @@ export default function ChallengePage() {
                 >
                   Finale
                 </button>
+                <button
+                  className={`rounded-full border px-3 py-1 ${showGardienJ3 ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-200 border-slate-600"}`}
+                  onClick={() => setShowGardienJ3((v) => !v)}
+                >
+                  Finale Gardien
+                </button>
               </div>
             </div>
           </div>
@@ -603,6 +636,50 @@ export default function ChallengePage() {
                 </section>
               )}
 
+              {showGardienJ3Block && (
+                <section className="space-y-3">
+                  <h2 className="text-base font-semibold text-white">
+                    Finales Challenge Gardien {j3Label ? `- ${j3Label}` : ""}
+                  </h2>
+                  <div className="space-y-3">
+                    {gardienFinalePlayers.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-semibold text-slate-200">Finale</h3>
+                        <GardienJ3SlotCard players={gardienFinalePlayers} teamMap={teamMap} buildLogoUrl={buildLogoUrl} statusBadgeClass={statusBadgeClass} statusLabel={statusLabel} />
+                      </div>
+                    )}
+                    {gardienDemiSlots.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-semibold text-slate-200">Demi-finales</h3>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          {gardienDemiSlots.map((slot) => (
+                            <GardienJ3SlotCard
+                              key={slot}
+                              label={`Demi-finale ${slot.slice(2)}`}
+                              players={gardienJ3SlotsWithDefault[slot] ?? []}
+                              teamMap={teamMap}
+                              buildLogoUrl={buildLogoUrl}
+                              statusBadgeClass={statusBadgeClass}
+                              statusLabel={statusLabel}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {gardienTotalAttempts.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-semibold text-slate-200">Finale Atelier Gardien</h3>
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
+                        <GardienTotalTable
+                          attempts={applyFilters(gardienTotalAttempts, "gardien_arret", { limitTop: 3 })}
+                          teamMap={teamMap}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )}
+
               {showEvaluation && (
                 <section className="space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -641,14 +718,14 @@ export default function ChallengePage() {
                               alt="Vitesse"
                               className="h-5 w-5 object-contain"
                             />
-                            <span className="text-sm font-semibold text-white">Atelier Vitesse</span>
+                            <span className="text-sm font-semibold text-white">Joueur - Atelier Vitesse</span>
                           </div>
                           <Link to="/challenge/atelier/vitesse" className="text-emerald-300 hover:text-emerald-200 font-semibold">
                             Voir tout
                           </Link>
                         </div>
                         <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
-                        {renderTable("Atelier Vitesse", applyFilters(groupByAtelier.jour1.vitesse, "vitesse", { limitTop: 3 }), {
+                        {renderTable("Joueur - Atelier Vitesse", applyFilters(groupByAtelier.jour1.vitesse, "vitesse", { limitTop: 3 }), {
                           hideTitle: true,
                         })}
                       </div>
@@ -662,14 +739,14 @@ export default function ChallengePage() {
                               alt="Tir"
                               className="h-5 w-5 object-contain"
                             />
-                            <span className="text-sm font-semibold text-white">Atelier Tir</span>
+                            <span className="text-sm font-semibold text-white">Joueur - Atelier Tir</span>
                           </div>
                           <Link to="/challenge/atelier/tir" className="text-emerald-300 hover:text-emerald-200 font-semibold">
                             Voir tout
                           </Link>
                         </div>
                         <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
-                        {renderTable("Atelier Tir", applyFilters(groupByAtelier.jour1.tir, "tir", { limitTop: 3 }), { hideTitle: true })}
+                        {renderTable("Joueur - Atelier Tir", applyFilters(groupByAtelier.jour1.tir, "tir", { limitTop: 3 }), { hideTitle: true })}
                       </div>
                     )}
                     {showGlisse && (
@@ -681,7 +758,7 @@ export default function ChallengePage() {
                               alt="Agilite"
                               className="h-5 w-5 object-contain"
                             />
-                            <span className="text-sm font-semibold text-white">Atelier Agilite</span>
+                            <span className="text-sm font-semibold text-white">Joueur - Atelier Agilité</span>
                           </div>
                           <Link to="/challenge/atelier/glisse_crosse" className="text-emerald-300 hover:text-emerald-200 font-semibold">
                             Voir tout
@@ -689,54 +766,47 @@ export default function ChallengePage() {
                         </div>
                         <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
                         {renderTable(
-                          "Atelier Agilite",
+                          "Joueur - Atelier Agilité",
                           applyFilters(groupByAtelier.jour1.glisse_crosse, "glisse_crosse", { limitTop: 3 }),
                           { hideTitle: true }
                         )}
                       </div>
                     )}
+                    {groupByAtelier.jour1.gardien_vitesse.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs text-slate-200">
+                          <div className="flex items-center gap-2">
+                            <img
+                              src="https://drive.google.com/thumbnail?id=1rg6fHxVUWLBB5N5B27lTDW8gp0Pl9bxj&sz=w64"
+                              alt="Vitesse"
+                              className="h-5 w-5 object-contain"
+                            />
+                            <span className="text-sm font-semibold text-white">Gardien - Challenge Vitesse</span>
+                          </div>
+                          <Link to="/challenge/atelier/gardien_vitesse" className="text-emerald-300 hover:text-emerald-200 font-semibold">
+                            Voir tout
+                          </Link>
+                        </div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
+                        {renderTable("Gardien - Challenge Vitesse", applyFilters(groupByAtelier.jour1.gardien_vitesse, "vitesse", { limitTop: 3 }), { hideTitle: true })}
+                      </div>
+                    )}
+                    {groupByAtelier.jour1.gardien_arret.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs text-slate-200">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-semibold text-white">Gardien - Challenge Atelier</span>
+                          </div>
+                          <Link to="/challenge/atelier/gardien_arret" className="text-emerald-300 hover:text-emerald-200 font-semibold">
+                            Voir tout
+                          </Link>
+                        </div>
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
+                        {renderTable("Gardien - Challenge Atelier", applyFilters(groupByAtelier.jour1.gardien_arret, "gardien_arret", { limitTop: 3 }), { hideTitle: true })}
+                      </div>
+                    )}
                   </div>
 
-                  {(groupByAtelier.jour1.gardien_vitesse.length > 0 || groupByAtelier.jour1.gardien_arret.length > 0) && (
-                    <section className="space-y-2">
-                      <h2 className="text-base font-semibold text-white">Gardiens</h2>
-                      <div className="grid gap-3 md:grid-cols-2">
-                        {groupByAtelier.jour1.gardien_vitesse.length > 0 && (
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-xs text-slate-200">
-                              <div className="flex items-center gap-2">
-                                <img
-                                  src="https://drive.google.com/thumbnail?id=1rg6fHxVUWLBB5N5B27lTDW8gp0Pl9bxj&sz=w64"
-                                  alt="Vitesse"
-                                  className="h-5 w-5 object-contain"
-                                />
-                                <span className="text-sm font-semibold text-white">Vitesse Gardien</span>
-                              </div>
-                              <Link to="/challenge/atelier/gardien_vitesse" className="text-emerald-300 hover:text-emerald-200 font-semibold">
-                                Voir tout
-                              </Link>
-                            </div>
-                            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
-                            {renderTable("Vitesse Gardien", applyFilters(groupByAtelier.jour1.gardien_vitesse, "vitesse", { limitTop: 3 }), { hideTitle: true })}
-                          </div>
-                        )}
-                        {groupByAtelier.jour1.gardien_arret.length > 0 && (
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between text-xs text-slate-200">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-semibold text-white">Arrêt Gardien</span>
-                              </div>
-                              <Link to="/challenge/atelier/gardien_arret" className="text-emerald-300 hover:text-emerald-200 font-semibold">
-                                Voir tout
-                              </Link>
-                            </div>
-                            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
-                            {renderTable("Arrêt Gardien", applyFilters(groupByAtelier.jour1.gardien_arret, "gardien_arret", { limitTop: 3 }), { hideTitle: true })}
-                          </div>
-                        )}
-                      </div>
-                    </section>
-                  )}
                 </section>
               )}
 
@@ -744,6 +814,121 @@ export default function ChallengePage() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function GardienTotalTable({
+  attempts,
+  teamMap,
+}: {
+  attempts: Attempt[];
+  teamMap: Map<string, { name: string; logoUrl?: string | null }>;
+}) {
+  const sorted = [...attempts].sort((a, b) => {
+    const ta = a.metrics.type === "gardien_arret" ? a.metrics.tempsTotal : Number.MAX_SAFE_INTEGER;
+    const tb = b.metrics.type === "gardien_arret" ? b.metrics.tempsTotal : Number.MAX_SAFE_INTEGER;
+    return ta - tb;
+  });
+  return (
+    <section className="rounded-lg border border-slate-800 bg-slate-900/70 p-3">
+      <div className="overflow-auto">
+        <table className="min-w-full text-xs text-slate-100">
+          <thead className="text-[11px] uppercase text-slate-400">
+            <tr>
+              <th className="py-1 pr-3 text-left">Joueur</th>
+              <th className="py-1 text-right">Buts</th>
+              <th className="py-1 text-right pl-3">Temps total</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800 text-[12px]">
+            {sorted.map((a, idx) => {
+              const eqKey = (a.equipeId ?? "").toLowerCase();
+              const equipe = teamMap.get(eqKey);
+              const m = a.metrics.type === "gardien_arret" ? a.metrics : null;
+              return (
+                <tr key={`${a.atelierId}-${a.joueurId}-${idx}`}>
+                  <td className={`py-1 pr-3 font-semibold ${idx < 3 ? "text-emerald-200" : "text-slate-100"}`}>
+                    <span className="inline-flex items-center gap-2">
+                      {a.equipeLogoUrl || equipe?.logoUrl ? (
+                        <img
+                          src={(a.equipeLogoUrl as string) || (equipe?.logoUrl as string)}
+                          alt={a.equipeName || equipe?.name || "Equipe"}
+                          className="h-6 w-6 rounded-full object-cover"
+                        />
+                      ) : null}
+                      <span>{a.joueurName}</span>
+                    </span>
+                  </td>
+                  <td className="py-1 text-right text-slate-100">{m ? m.nbButs : "-"}</td>
+                  <td className="py-1 text-right pl-3 text-slate-100">
+                    {m && m.tempsTotal > 0 ? `${(m.tempsTotal / 1000).toFixed(2)} s` : "-"}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function GardienJ3SlotCard({
+  label,
+  players,
+  teamMap,
+  buildLogoUrl,
+  statusBadgeClass,
+  statusLabel,
+}: {
+  label?: string;
+  players: GardienJ3Player[];
+  teamMap: Map<string, { name: string; logoUrl?: string | null }>;
+  buildLogoUrl: (name: string) => string;
+  statusBadgeClass: (status?: GardienJ3Player["status"]) => string;
+  statusLabel: (status?: GardienJ3Player["status"]) => string;
+}) {
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-3 space-y-2">
+      {label && (
+        <span className="text-sm font-semibold text-white">{label}</span>
+      )}
+      {players.length === 0 ? (
+        <p className="text-slate-300 text-xs">Aucun gardien.</p>
+      ) : (
+        <ul className="space-y-2">
+          {players.map((player) => {
+            const equipe = teamMap.get(player.teamId.toLowerCase());
+            const displayTeamName = player.teamName ?? equipe?.name ?? null;
+            const fallbackLogo = displayTeamName ? buildLogoUrl(displayTeamName) : null;
+            const logo = equipe?.logoUrl ?? fallbackLogo;
+            const isWinner = player.status === "winner";
+            return (
+              <li key={player.id} className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  {logo ? (
+                    <img src={logo} alt={displayTeamName ?? "Equipe"} className="h-6 w-6 rounded-full object-cover" />
+                  ) : null}
+                  <div className="min-w-0">
+                    <p className={`text-sm font-semibold truncate ${isWinner ? "text-amber-200" : "text-slate-100"}`}>
+                      {player.name}
+                    </p>
+                    {player.teamName && (
+                      <p className="text-xs text-slate-400 truncate">{player.teamName}</p>
+                    )}
+                  </div>
+                </div>
+                {player.status ? (
+                  <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusBadgeClass(player.status)}`}>
+                    {statusLabel(player.status)}
+                  </span>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

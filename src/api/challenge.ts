@@ -22,7 +22,7 @@ export type ChallengeAttempt = {
     | { type: "vitesse"; tempsMs: number }
     | { type: "tir"; tirs: number[]; totalPoints: number }
     | { type: "glisse_crosse"; tempsMs: number; penalites: number }
-    | { type: "gardien_arret"; tempsMs: number; nbButs: number };
+    | { type: "gardien_arret"; tempsMs: number; nbButs: number; tempsTotal: number };
 };
 
 export type ChallengeEquipeResponse = {
@@ -53,6 +53,29 @@ export type ChallengeVitesseJ3Response = {
   winnerId?: string | null;
   phases?: Record<
     "QF" | "DF" | "F",
+    {
+      label: string;
+      scheduledAt: string | null;
+      status: "planned" | "ongoing" | "finished";
+      visible: boolean;
+      homeVisible: boolean;
+    }
+  >;
+};
+
+export type GardienJ3Status = "qualified" | "finalist" | "winner";
+export type GardienJ3Player = {
+  id: string;
+  name: string;
+  teamId: string;
+  teamName?: string | null;
+  status?: GardienJ3Status;
+};
+export type ChallengeGardienJ3Response = {
+  slots: Record<string, GardienJ3Player[]>;
+  winnerId?: string | null;
+  phases?: Record<
+    "DF" | "F",
     {
       label: string;
       scheduledAt: string | null;
@@ -94,6 +117,11 @@ export async function fetchChallengeAll(params?: { teamId?: string | null }): Pr
 
 export async function fetchChallengeVitesseJ3(): Promise<ChallengeVitesseJ3Response> {
   const res = await fetchWithRetry(`${API_BASE_URL}/challenge/vitesse/j3`);
+  return res.json();
+}
+
+export async function fetchChallengeGardienJ3(): Promise<ChallengeGardienJ3Response> {
+  const res = await fetchWithRetry(`${API_BASE_URL}/challenge/gardien/j3`);
   return res.json();
 }
 

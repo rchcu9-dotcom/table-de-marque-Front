@@ -507,7 +507,7 @@ export default function TeamPage() {
               />
               <div className="grid gap-3 md:grid-cols-2">
                 <HighlightBlock
-                  title="Vitesse (2 meilleurs)"
+                  title="Joueur - Vitesse (2 meilleurs)"
                   icon={ICONS.vitesse}
                   players={playerList.slice(0, 2).map((p, idx) => ({
                     name: displayName(p),
@@ -518,7 +518,7 @@ export default function TeamPage() {
                   })) ?? []}
                 />
                 <HighlightBlock
-                  title="Adresse au tir (2 meilleurs)"
+                  title="Joueur - Adresse au tir (2 meilleurs)"
                   icon={ICONS.tir}
                   players={playerList.slice(0, 2).map((p, idx) => ({
                     name: displayName(p),
@@ -529,7 +529,7 @@ export default function TeamPage() {
                   })) ?? []}
                 />
                 <HighlightBlock
-                  title="Agilité (2 meilleurs)"
+                  title="Joueur - Agilité (2 meilleurs)"
                   icon={ICONS.glisse}
                   players={playerList.slice(0, 2).map((p, idx) => ({
                     name: displayName(p),
@@ -539,10 +539,35 @@ export default function TeamPage() {
                     icon: heroLogo,
                   })) ?? []}
                 />
+                <HighlightBlock
+                  title="Gardien - Challenge Atelier"
+                  players={gardienJ1.arret
+                    .filter((a) => a.metrics.type === "gardien_arret")
+                    .sort((a, b) => {
+                      const ta = a.metrics.type === "gardien_arret" ? a.metrics.tempsMs : Infinity;
+                      const tb = b.metrics.type === "gardien_arret" ? b.metrics.tempsMs : Infinity;
+                      return ta - tb;
+                    })
+                    .map((a) => ({
+                      name: a.joueurName,
+                      resultLabel: `${((a.metrics as { type: "gardien_arret"; tempsMs: number }).tempsMs / 1000).toFixed(2)} s`,
+                    }))}
+                />
+                <HighlightBlock
+                  title="Gardien - Challenge Vitesse"
+                  players={gardienJ1.vitesse
+                    .filter((a) => a.metrics.type === "vitesse")
+                    .sort((a, b) => {
+                      const ta = a.metrics.type === "vitesse" ? a.metrics.tempsMs : Infinity;
+                      const tb = b.metrics.type === "vitesse" ? b.metrics.tempsMs : Infinity;
+                      return ta - tb;
+                    })
+                    .map((a) => ({
+                      name: a.joueurName,
+                      resultLabel: `${((a.metrics as { type: "vitesse"; tempsMs: number }).tempsMs / 1000).toFixed(2)} s`,
+                    }))}
+                />
               </div>
-              {(gardienJ1.vitesse.length > 0 || gardienJ1.arret.length > 0) && (
-                <GardienChallengeBlock vitesse={gardienJ1.vitesse} arret={gardienJ1.arret} />
-              )}
             </Card>
           )}
 
@@ -878,46 +903,6 @@ function DayClassement({
   );
 }
 
-function GardienChallengeBlock({ vitesse, arret }: { vitesse: ChallengeAttempt[]; arret: ChallengeAttempt[] }) {
-  const ids = React.useMemo(() => {
-    const set = new Set([...vitesse.map((a) => a.joueurId), ...arret.map((a) => a.joueurId)]);
-    return [...set].filter(Boolean) as string[];
-  }, [vitesse, arret]);
-
-  if (ids.length === 0) return null;
-
-  return (
-    <Card className="bg-white/5 border-slate-800 backdrop-blur space-y-2">
-      <div className="flex items-center gap-2">
-        <img src={iconChallenge} alt="Gardiens" className="h-5 w-5 object-contain" />
-        <p className="text-sm font-semibold text-slate-100">Gardiens — Challenge</p>
-      </div>
-      <div className="space-y-2">
-        {ids.map((id) => {
-          const v = vitesse.find((a) => a.joueurId === id);
-          const a = arret.find((att) => att.joueurId === id);
-          const name = v?.joueurName ?? a?.joueurName ?? id;
-          const vm = v?.metrics;
-          const am = a?.metrics;
-          const vitesseLabel = vm?.type === "vitesse" ? `${(vm.tempsMs / 1000).toFixed(2)} s` : null;
-          const arretLabel = am?.type === "gardien_arret" ? `${(am.tempsMs / 1000).toFixed(2)} s, arrêts: ${am.nbButs}` : null;
-          return (
-            <div key={id} className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-slate-800 text-slate-100 flex items-center justify-center text-xs font-semibold">
-                G
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-slate-100 truncate">{name}</p>
-                {vitesseLabel && <p className="text-xs text-slate-400">Vitesse: {vitesseLabel}</p>}
-              </div>
-              {arretLabel && <div className="text-xs font-semibold text-emerald-200 text-right">{arretLabel}</div>}
-            </div>
-          );
-        })}
-      </div>
-    </Card>
-  );
-}
 
 function HighlightBlock({ title, icon, players }: { title: string; icon?: string; players: RankedPlayer[] }) {
   if (!players || players.length === 0) return null;

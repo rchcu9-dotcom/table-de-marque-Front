@@ -13,8 +13,8 @@ const ATELIER_LABEL: Record<string, string> = {
   vitesse: "Atelier Vitesse",
   tir: "Atelier Tir",
   glisse_crosse: "Atelier Agilité",
-  gardien_vitesse: "Vitesse Gardien",
-  gardien_arret: "Arrêt Gardien",
+  gardien_vitesse: "Gardien - Challenge Vitesse",
+  gardien_arret: "Gardien - Challenge Atelier",
 };
 
 export default function ChallengeAtelierPage() {
@@ -84,7 +84,7 @@ export default function ChallengeAtelierPage() {
     if (m.metrics.type === "vitesse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s`;
     if (m.metrics.type === "tir") return `Points: ${m.metrics.totalPoints} (${m.metrics.tirs.join(", ")})`;
     if (m.metrics.type === "glisse_crosse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s, pénalités: ${m.metrics.penalites}`;
-    if (m.metrics.type === "gardien_arret") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s, arrêts: ${m.metrics.nbButs}`;
+    if (m.metrics.type === "gardien_arret") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s`;
     return "";
   };
 
