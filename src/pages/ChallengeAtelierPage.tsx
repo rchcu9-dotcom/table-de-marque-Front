@@ -13,8 +13,8 @@ const ATELIER_LABEL: Record<string, string> = {
   vitesse: "Atelier Vitesse",
   tir: "Atelier Tir",
   glisse_crosse: "Atelier Agilité",
-  gardien_vitesse: "Vitesse Gardien",
-  gardien_arret: "Arrêt Gardien",
+  gardien_vitesse: "Gardien - Challenge Vitesse",
+  gardien_arret: "Gardien - Challenge Atelier",
 };
 
 export default function ChallengeAtelierPage() {
