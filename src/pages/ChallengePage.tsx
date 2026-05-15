@@ -488,9 +488,16 @@ export default function ChallengePage() {
     [gardienJ3SlotsWithDefault],
   );
   const gardienFinalePlayers = gardienJ3SlotsWithDefault.F1 ?? [];
+  const gardienTotalAttempts = React.useMemo(
+    () =>
+      groupByAtelier.jour1.gardien_arret.filter(
+        (a) => a.metrics.type === "gardien_arret" && a.metrics.tempsTotal > 0,
+      ),
+    [groupByAtelier],
+  );
   const showGardienJ3Block =
     showGardienJ3 &&
-    (gardienFinalePlayers.length > 0 || gardienDemiSlots.length > 0);
+    (gardienFinalePlayers.length > 0 || gardienDemiSlots.length > 0 || gardienTotalAttempts.length > 0);
 
   React.useLayoutEffect(() => {
     const updateLayout = () => {
@@ -659,6 +666,16 @@ export default function ChallengePage() {
                         </div>
                       </div>
                     )}
+                    {gardienTotalAttempts.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-semibold text-slate-200">Finale Atelier Gardien</h3>
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
+                        <GardienTotalTable
+                          attempts={applyFilters(gardienTotalAttempts, "gardien_arret", { limitTop: 3 })}
+                          teamMap={teamMap}
+                        />
+                      </div>
+                    )}
                   </div>
                 </section>
               )}
@@ -790,22 +807,6 @@ export default function ChallengePage() {
                     )}
                   </div>
 
-                  {groupByAtelier.jour1.gardien_arret.filter((a) => a.metrics.type === "gardien_arret" && a.metrics.tempsTotal > 0).length > 0 && (
-                    <div className="space-y-2 mt-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-white">NB Buts / Temps Total</span>
-                      </div>
-                      <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
-                      <GardienTotalTable
-                        attempts={applyFilters(
-                          groupByAtelier.jour1.gardien_arret.filter((a) => a.metrics.type === "gardien_arret" && a.metrics.tempsTotal > 0),
-                          "gardien_arret",
-                          { limitTop: 3 },
-                        )}
-                        teamMap={teamMap}
-                      />
-                    </div>
-                  )}
                 </section>
               )}
 
