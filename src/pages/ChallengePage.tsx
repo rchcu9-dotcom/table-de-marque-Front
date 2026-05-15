@@ -95,19 +95,21 @@ export default function ChallengePage() {
   }, [teams]);
 
   const groupByAtelier = React.useMemo(() => {
-    const empty = { vitesse: [] as Attempt[], tir: [] as Attempt[], glisse_crosse: [] as Attempt[], gardien_arret: [] as Attempt[] };
+    const empty = { vitesse: [] as Attempt[], tir: [] as Attempt[], glisse_crosse: [] as Attempt[], gardien_arret: [] as Attempt[], gardien_vitesse: [] as Attempt[] };
     if (!data) return { jour1: empty, jour3: empty };
     const reducer = (acc: typeof empty, attempt: Attempt) => {
       if (attempt.atelierType === "gardien_arret") {
         acc.gardien_arret.push(attempt);
+      } else if (attempt.atelierId === "atelier-gardien-vitesse") {
+        acc.gardien_vitesse.push(attempt);
       } else if (attempt.atelierType === "vitesse" || attempt.atelierType === "tir" || attempt.atelierType === "glisse_crosse") {
         acc[attempt.atelierType].push(attempt);
       }
       return acc;
     };
     return {
-      jour1: data.jour1.reduce(reducer, { vitesse: [], tir: [], glisse_crosse: [], gardien_arret: [] }),
-      jour3: data.jour3.reduce(reducer, { vitesse: [], tir: [], glisse_crosse: [], gardien_arret: [] }),
+      jour1: data.jour1.reduce(reducer, { vitesse: [], tir: [], glisse_crosse: [], gardien_arret: [], gardien_vitesse: [] }),
+      jour3: data.jour3.reduce(reducer, { vitesse: [], tir: [], glisse_crosse: [], gardien_arret: [], gardien_vitesse: [] }),
     };
   }, [data]);
 
@@ -695,12 +697,43 @@ export default function ChallengePage() {
                     )}
                   </div>
 
-                  {(groupByAtelier.jour1.gardien_arret.length > 0 || groupByAtelier.jour1.vitesse.filter((a) => a.atelierId === "atelier-gardien-vitesse").length > 0) && (
+                  {(groupByAtelier.jour1.gardien_vitesse.length > 0 || groupByAtelier.jour1.gardien_arret.length > 0) && (
                     <section className="space-y-2">
                       <h2 className="text-base font-semibold text-white">Gardiens</h2>
                       <div className="grid gap-3 md:grid-cols-2">
-                        {renderTable("Vitesse Gardien", applyFilters(groupByAtelier.jour1.vitesse.filter((a) => a.atelierId === "atelier-gardien-vitesse"), "vitesse"))}
-                        {renderTable("Arrêt Gardien", applyFilters(groupByAtelier.jour1.gardien_arret, "gardien_arret"))}
+                        {groupByAtelier.jour1.gardien_vitesse.length > 0 && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs text-slate-200">
+                              <div className="flex items-center gap-2">
+                                <img
+                                  src="https://drive.google.com/thumbnail?id=1rg6fHxVUWLBB5N5B27lTDW8gp0Pl9bxj&sz=w64"
+                                  alt="Vitesse"
+                                  className="h-5 w-5 object-contain"
+                                />
+                                <span className="text-sm font-semibold text-white">Vitesse Gardien</span>
+                              </div>
+                              <Link to="/challenge/atelier/gardien_vitesse" className="text-emerald-300 hover:text-emerald-200 font-semibold">
+                                Voir tout
+                              </Link>
+                            </div>
+                            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
+                            {renderTable("Vitesse Gardien", applyFilters(groupByAtelier.jour1.gardien_vitesse, "vitesse", { limitTop: 3 }), { hideTitle: true })}
+                          </div>
+                        )}
+                        {groupByAtelier.jour1.gardien_arret.length > 0 && (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs text-slate-200">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-white">Arrêt Gardien</span>
+                              </div>
+                              <Link to="/challenge/atelier/gardien_arret" className="text-emerald-300 hover:text-emerald-200 font-semibold">
+                                Voir tout
+                              </Link>
+                            </div>
+                            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
+                            {renderTable("Arrêt Gardien", applyFilters(groupByAtelier.jour1.gardien_arret, "gardien_arret", { limitTop: 3 }), { hideTitle: true })}
+                          </div>
+                        )}
                       </div>
                     </section>
                   )}

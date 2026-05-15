@@ -14,6 +14,8 @@ import { useJ3FinalSquares } from "../hooks/useClassement";
 import icon5v5 from "../assets/icons/nav/fivev5.png";
 import icon3v3 from "../assets/icons/nav/threev3.png";
 import iconChallenge from "../assets/icons/nav/challenge.png";
+import { useChallengeByEquipe } from "../hooks/useChallengeByEquipe";
+import type { ChallengeAttempt } from "../api/challenge";
 import Breadcrumbs from "../components/navigation/Breadcrumbs";
 import { usePartenaires } from "../hooks/usePartenaires";
 import SponsorFooter from "../components/sponsors/SponsorFooter";
@@ -209,6 +211,15 @@ export default function TeamPage() {
     return found?.id ?? teamName;
   }, [allTeams, teamName]);
   const players = usePlayersByEquipe(equipeKey || undefined);
+  const { data: challengeData } = useChallengeByEquipe(equipeKey || undefined);
+  const gardienJ1 = React.useMemo(() => {
+    if (!challengeData) return { vitesse: [] as ChallengeAttempt[], arret: [] as ChallengeAttempt[] };
+    const j1 = challengeData.jour1;
+    return {
+      vitesse: j1.filter((a) => a.atelierId === "atelier-gardien-vitesse"),
+      arret: j1.filter((a) => a.atelierType === "gardien_arret"),
+    };
+  }, [challengeData]);
   const j3FinalSquares = useJ3FinalSquares();
   const playerList = React.useMemo(() => {
     const data = players.data;
@@ -529,6 +540,9 @@ export default function TeamPage() {
                   })) ?? []}
                 />
               </div>
+              {(gardienJ1.vitesse.length > 0 || gardienJ1.arret.length > 0) && (
+                <GardienChallengeBlock vitesse={gardienJ1.vitesse} arret={gardienJ1.arret} />
+              )}
             </Card>
           )}
 
@@ -861,6 +875,47 @@ function DayClassement({
         </table>
       </div>
     </div>
+  );
+}
+
+function GardienChallengeBlock({ vitesse, arret }: { vitesse: ChallengeAttempt[]; arret: ChallengeAttempt[] }) {
+  const ids = React.useMemo(() => {
+    const set = new Set([...vitesse.map((a) => a.joueurId), ...arret.map((a) => a.joueurId)]);
+    return [...set].filter(Boolean) as string[];
+  }, [vitesse, arret]);
+
+  if (ids.length === 0) return null;
+
+  return (
+    <Card className="bg-white/5 border-slate-800 backdrop-blur space-y-2">
+      <div className="flex items-center gap-2">
+        <img src={iconChallenge} alt="Gardiens" className="h-5 w-5 object-contain" />
+        <p className="text-sm font-semibold text-slate-100">Gardiens — Challenge</p>
+      </div>
+      <div className="space-y-2">
+        {ids.map((id) => {
+          const v = vitesse.find((a) => a.joueurId === id);
+          const a = arret.find((att) => att.joueurId === id);
+          const name = v?.joueurName ?? a?.joueurName ?? id;
+          const vm = v?.metrics;
+          const am = a?.metrics;
+          const vitesseLabel = vm?.type === "vitesse" ? `${(vm.tempsMs / 1000).toFixed(2)} s` : null;
+          const arretLabel = am?.type === "gardien_arret" ? `${(am.tempsMs / 1000).toFixed(2)} s, arrêts: ${am.nbButs}` : null;
+          return (
+            <div key={id} className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-full bg-slate-800 text-slate-100 flex items-center justify-center text-xs font-semibold">
+                G
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-100 truncate">{name}</p>
+                {vitesseLabel && <p className="text-xs text-slate-400">Vitesse: {vitesseLabel}</p>}
+              </div>
+              {arretLabel && <div className="text-xs font-semibold text-emerald-200 text-right">{arretLabel}</div>}
+            </div>
+          );
+        })}
+      </div>
+    </Card>
   );
 }
 

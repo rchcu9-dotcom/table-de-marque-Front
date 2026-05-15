@@ -13,6 +13,8 @@ const ATELIER_LABEL: Record<string, string> = {
   vitesse: "Atelier Vitesse",
   tir: "Atelier Tir",
   glisse_crosse: "Atelier Agilité",
+  gardien_vitesse: "Vitesse Gardien",
+  gardien_arret: "Arrêt Gardien",
 };
 
 export default function ChallengeAtelierPage() {
@@ -23,7 +25,7 @@ export default function ChallengeAtelierPage() {
   const { data: teams } = useTeams();
   const [search, setSearch] = React.useState("");
 
-  const atelierType = type === "tir" || type === "glisse_crosse" || type === "vitesse" ? type : null;
+  const atelierType = type === "tir" || type === "glisse_crosse" || type === "vitesse" || type === "gardien_vitesse" || type === "gardien_arret" ? type : null;
 
   const teamMap = React.useMemo(() => {
     const map = new Map<string, { name: string; logoUrl?: string | null }>();
@@ -33,7 +35,14 @@ export default function ChallengeAtelierPage() {
 
   const attempts = React.useMemo(() => {
     if (!atelierType) return [];
-    const items = (data?.jour1 ?? []).filter((a) => a.atelierType === atelierType);
+    let items: Attempt[];
+    if (atelierType === "gardien_vitesse") {
+      items = (data?.jour1 ?? []).filter((a) => a.atelierId === "atelier-gardien-vitesse");
+    } else if (atelierType === "gardien_arret") {
+      items = (data?.jour1 ?? []).filter((a) => a.atelierType === "gardien_arret");
+    } else {
+      items = (data?.jour1 ?? []).filter((a) => a.atelierType === atelierType);
+    }
     const filtered = selectedTeam?.id
       ? items.filter((a) => (a.equipeId ?? "").toLowerCase() === selectedTeam.id.toLowerCase())
       : items;
@@ -56,12 +65,16 @@ export default function ChallengeAtelierPage() {
           ? a.metrics.tempsMs
           : a.metrics.type === "glisse_crosse"
           ? a.metrics.tempsMs + a.metrics.penalites * 5000
+          : a.metrics.type === "gardien_arret"
+          ? a.metrics.tempsMs
           : Number.MAX_SAFE_INTEGER;
       const tb =
         b.metrics.type === "vitesse"
           ? b.metrics.tempsMs
           : b.metrics.type === "glisse_crosse"
           ? b.metrics.tempsMs + b.metrics.penalites * 5000
+          : b.metrics.type === "gardien_arret"
+          ? b.metrics.tempsMs
           : Number.MAX_SAFE_INTEGER;
       return ta - tb;
     });
@@ -71,12 +84,16 @@ export default function ChallengeAtelierPage() {
     if (m.metrics.type === "vitesse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s`;
     if (m.metrics.type === "tir") return `Points: ${m.metrics.totalPoints} (${m.metrics.tirs.join(", ")})`;
     if (m.metrics.type === "glisse_crosse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s, pénalités: ${m.metrics.penalites}`;
+    if (m.metrics.type === "gardien_arret") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s, arrêts: ${m.metrics.nbButs}`;
     return "";
   };
 
   const title = atelierType ? ATELIER_LABEL[atelierType] ?? "Atelier" : "Atelier";
   const headerIcon =
-    atelierType === "vitesse" ? vitesseIcon : atelierType === "tir" ? tirIcon : atelierType === "glisse_crosse" ? agiliteIcon : challengeIcon;
+    atelierType === "vitesse" || atelierType === "gardien_vitesse" ? vitesseIcon
+    : atelierType === "tir" ? tirIcon
+    : atelierType === "glisse_crosse" ? agiliteIcon
+    : challengeIcon;
 
   return (
     <div className="fixed inset-0 overflow-hidden">
