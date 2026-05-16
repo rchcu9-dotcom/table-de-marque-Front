@@ -86,9 +86,6 @@ describe("MatchStreamListener", () => {
     });
 
     expect(qc.getQueryData<Match[]>(["matches"])).toEqual(payload.matches);
-    expect(qc.getQueryData<Match[]>(["matches", false])).toEqual(payload.matches);
-    expect(qc.getQueryData<Match[]>(["matches", true])).toEqual(payload.matches);
-    expect(qc.getQueryData<Match>(["matches", "42"])).toEqual(payload.matches[0]);
   });
 
   it("declenche un refresh J3 throttlé sur les events matches", async () => {

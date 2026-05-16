@@ -83,7 +83,6 @@ export default function Tournament5v5Page() {
   const [nowMs, setNowMs] = React.useState<number | null>(null);
   const { data: momentum5v5 } = useMomentumMatches({
     competitionType: "5v5",
-    surface: "GG",
     teamId: selectedTeam?.id,
   });
   const { data: matches5v5 } = useMatchesFiltered({
