@@ -1,8 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchMatches } from "../api/match";
 import type { Match } from "../api/match";
+import { useMatches } from "../hooks/useMatches";
 import type { ChallengeJ1MomentumEntry, ChallengeVitesseJ3Response } from "../api/challenge";
 import { useTeams } from "../hooks/useTeams";
 import { useMeals } from "../hooks/useMeals";
@@ -23,34 +22,6 @@ type Triplet = { last: Match | null; live: Match | null; next: Match | null };
 type SmallGlaceMode = "3v3" | "challenge-j1" | "challenge-vitesse-j3";
 type MomentumItem = { label?: string; match: Match };
 
-function useLiveMatches() {
-  const queryClient = useQueryClient();
-  const [isDegraded, setIsDegraded] = React.useState(false);
-
-  React.useEffect(() => {
-    const onError = () => setIsDegraded(true);
-    const onOpen = () => setIsDegraded(false);
-    window.addEventListener("match-stream:error", onError);
-    window.addEventListener("match-stream:open", onOpen);
-    return () => {
-      window.removeEventListener("match-stream:error", onError);
-      window.removeEventListener("match-stream:open", onOpen);
-    };
-  }, []);
-
-  const query = useQuery<Match[]>({
-    queryKey: ["matches", isDegraded],
-    queryFn: () => fetchMatches(),
-    staleTime: 20_000,
-    refetchInterval: isDegraded ? 30_000 : false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-
-  const matches = query.data ?? (queryClient.getQueryData<Match[]>(["matches"]) ?? []);
-
-  return { matches, isDegraded, isLoading: query.isLoading };
-}
 
 function byDateAsc(a: Match, b: Match) {
   return new Date(a.date).getTime() - new Date(b.date).getTime();
@@ -746,7 +717,19 @@ export default function HomePage() {
   const namingPartners = (partenairesData ?? []).filter((p) => p.type === "naming");
   const generalPartners = (partenairesData ?? []).filter((p) => p.type === "general");
   const { selectedTeam } = useSelectedTeam();
-  const { matches, isDegraded } = useLiveMatches();
+  const { data: rawMatches } = useMatches();
+  const matches = rawMatches ?? [];
+  const [isDegraded, setIsDegraded] = React.useState(false);
+  React.useEffect(() => {
+    const onError = () => setIsDegraded(true);
+    const onOpen = () => setIsDegraded(false);
+    window.addEventListener("match-stream:error", onError);
+    window.addEventListener("match-stream:open", onOpen);
+    return () => {
+      window.removeEventListener("match-stream:error", onError);
+      window.removeEventListener("match-stream:open", onOpen);
+    };
+  }, []);
   const { data: challengeJ1Momentum } = useChallengeJ1Momentum();
   const { data: challengeVitesseJ3 } = useChallengeVitesseJ3();
   const { data: meals } = useMeals();

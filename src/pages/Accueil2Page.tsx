@@ -1,8 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { fetchMatches } from "../api/match";
 import type { Match } from "../api/match";
+import { useMatches } from "../hooks/useMatches";
 import { useTeams } from "../hooks/useTeams";
 import { useMeals } from "../hooks/useMeals";
 import { useSelectedTeam } from "../providers/SelectedTeamProvider";
@@ -20,34 +19,6 @@ function getNowMs() {
   return Date.now();
 }
 
-function useLiveMatches() {
-  const queryClient = useQueryClient();
-  const [isDegraded, setIsDegraded] = React.useState(false);
-
-  React.useEffect(() => {
-    const onError = () => setIsDegraded(true);
-    const onOpen = () => setIsDegraded(false);
-    window.addEventListener("match-stream:error", onError);
-    window.addEventListener("match-stream:open", onOpen);
-    return () => {
-      window.removeEventListener("match-stream:error", onError);
-      window.removeEventListener("match-stream:open", onOpen);
-    };
-  }, []);
-
-  const query = useQuery<Match[]>({
-    queryKey: ["matches", isDegraded],
-    queryFn: () => fetchMatches(),
-    staleTime: 20_000,
-    refetchInterval: isDegraded ? 30_000 : false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-  });
-
-  const matches = query.data ?? (queryClient.getQueryData<Match[]>(["matches"]) ?? []);
-
-  return { matches, isDegraded, isLoading: query.isLoading };
-}
 
 function byDateAsc(a: Match, b: Match) {
   return new Date(a.date).getTime() - new Date(b.date).getTime();
@@ -776,7 +747,19 @@ export default function HomePage() {
   const navigate = useNavigate();
   const { data: teams } = useTeams();
   const { selectedTeam } = useSelectedTeam();
-  const { matches, isDegraded } = useLiveMatches();
+  const { data: rawMatches } = useMatches();
+  const matches = rawMatches ?? [];
+  const [isDegraded, setIsDegraded] = React.useState(false);
+  React.useEffect(() => {
+    const onError = () => setIsDegraded(true);
+    const onOpen = () => setIsDegraded(false);
+    window.addEventListener("match-stream:error", onError);
+    window.addEventListener("match-stream:open", onOpen);
+    return () => {
+      window.removeEventListener("match-stream:error", onError);
+      window.removeEventListener("match-stream:open", onOpen);
+    };
+  }, []);
   const { data: meals } = useMeals();
   const nowMs = getNowMs();
   const [layout, setLayout] = React.useState<{ topOffset: number; paddingTop: number }>({

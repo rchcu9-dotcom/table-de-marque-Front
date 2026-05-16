@@ -11,5 +11,8 @@ export function setupQueryPersistence() {
     queryClient,
     persister,
     maxAge: queryCacheTime,
+    dehydrateOptions: {
+      shouldDehydrateQuery: (query) => query.queryKey[0] !== "matches",
+    },
   });
 }

@@ -13,12 +13,6 @@ type StreamPayload =
     }
   | { type: string };
 
-/**
- * Ouvre une connexion SSE vers /matches/stream et synchronise le cache react-query.
- * - rejoue le dernier event à la connexion (replay depuis le serveur)
- * - ping keep-alive géré côté serveur
- * - reconnexion automatique en cas de perte
- */
 type MatchStreamListenerProps = {
   onOpen?: () => void;
   onError?: () => void;
@@ -33,6 +27,7 @@ export function MatchStreamListener({ onOpen, onError }: MatchStreamListenerProp
 
     let source: EventSource | null = null;
     let reconnectHandle: number | null = null;
+    let degradedPollHandle: number | null = null;
     let j3RefetchHandle: number | null = null;
     let lastJ3RefetchAt = 0;
 
@@ -72,37 +67,6 @@ export function MatchStreamListener({ onOpen, onError }: MatchStreamListenerProp
           const matches = parsed.matches ?? [];
           await queryClient.cancelQueries({ queryKey: ["matches"], exact: false });
           queryClient.setQueryData<Match[]>(["matches"], matches);
-          queryClient.setQueryData<Match[]>(["matches", false], matches);
-          queryClient.setQueryData<Match[]>(["matches", true], matches);
-
-          const matchById = new Map(matches.map((match) => [match.id, match]));
-          queryClient.setQueriesData<Match[] | Match>(
-            {
-              predicate: (query) => {
-                if (query.queryKey[0] !== "matches") return false;
-                const k1 = query.queryKey[1];
-                // Ces clés viennent d'être remplacées en totalité ci-dessus
-                if (k1 === undefined || k1 === false || k1 === true) return false;
-                // Momentum est invalidé séparément
-                if (k1 === "momentum") return false;
-                return true;
-              },
-            },
-            (current) => {
-              if (!current) return current;
-
-              if (Array.isArray(current)) {
-                return current.map((item) => matchById.get(item.id) ?? item);
-              }
-
-              return matchById.get(current.id) ?? current;
-            },
-          );
-
-          queryClient.invalidateQueries({
-            predicate: (query) =>
-              query.queryKey[0] === "matches" && query.queryKey[1] === "momentum",
-          });
 
           maybeRefreshJ3Squares();
 
@@ -111,7 +75,6 @@ export function MatchStreamListener({ onOpen, onError }: MatchStreamListenerProp
               query.queryKey[0] === "classement" && query.queryKey[1] !== "j3",
             refetchType: "active",
           });
-
         } catch (err) {
           console.error("Match stream parse error", err);
         }
@@ -120,10 +83,13 @@ export function MatchStreamListener({ onOpen, onError }: MatchStreamListenerProp
       const scheduleReconnect = () => {
         source?.close();
         source = null;
-        if (reconnectHandle) {
-          clearTimeout(reconnectHandle);
-        }
+        if (reconnectHandle) clearTimeout(reconnectHandle);
         reconnectHandle = window.setTimeout(connect, 5000);
+        if (!degradedPollHandle) {
+          degradedPollHandle = window.setInterval(() => {
+            void queryClient.refetchQueries({ queryKey: ["matches"], exact: true });
+          }, 30_000);
+        }
         window.dispatchEvent(new CustomEvent("match-stream:error"));
         onError?.();
       };
@@ -134,6 +100,10 @@ export function MatchStreamListener({ onOpen, onError }: MatchStreamListenerProp
           clearTimeout(reconnectHandle);
           reconnectHandle = null;
         }
+        if (degradedPollHandle) {
+          clearInterval(degradedPollHandle);
+          degradedPollHandle = null;
+        }
         window.dispatchEvent(new CustomEvent("match-stream:open"));
         onOpen?.();
       };
@@ -142,12 +112,9 @@ export function MatchStreamListener({ onOpen, onError }: MatchStreamListenerProp
     connect();
 
     return () => {
-      if (reconnectHandle) {
-        clearTimeout(reconnectHandle);
-      }
-      if (j3RefetchHandle) {
-        clearTimeout(j3RefetchHandle);
-      }
+      if (reconnectHandle) clearTimeout(reconnectHandle);
+      if (degradedPollHandle) clearInterval(degradedPollHandle);
+      if (j3RefetchHandle) clearTimeout(j3RefetchHandle);
       source?.close();
     };
   }, [queryClient, onError, onOpen]);

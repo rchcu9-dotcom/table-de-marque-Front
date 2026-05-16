@@ -65,18 +65,3 @@ export async function fetchMatchById(id: string): Promise<Match> {
   }
 }
 
-export async function fetchMomentumMatches(filters: MatchFilters = {}): Promise<Match[]> {
-  const params = new URLSearchParams();
-  if (filters.surface) params.set("surface", filters.surface);
-  if (filters.competitionType) params.set("competition", filters.competitionType);
-  const url = `${API_BASE_URL}/matches/momentum${params.toString() ? `?${params.toString()}` : ""}`;
-  try {
-    const res = await fetchWithRetry(url);
-    return res.json();
-  } catch (error: unknown) {
-    if (error instanceof ServerError && error.status === 404) {
-      throw new Error("Erreur lors du chargement du momentum");
-    }
-    throw error;
-  }
-}
