@@ -1,4 +1,4 @@
-import React from "react";
+import { useEffect, useRef } from "react";
 import HexBadge from "../ds/HexBadge";
 import Badge from "../ds/Badge";
 import type { Match } from "../../api/match";
@@ -46,6 +46,13 @@ function toneClass(tone: "success" | "warning" | "muted" | "default" | "info") {
 }
 
 export default function MatchSummaryGrid({ matches, currentMatchId, onSelect, focusTeam }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (el) el.scrollLeft = el.scrollWidth;
+  }, [matches]);
+
   if (!matches || matches.length === 0) return null;
 
   const selectedBorder = (m: Match) => {
@@ -55,7 +62,7 @@ export default function MatchSummaryGrid({ matches, currentMatchId, onSelect, fo
 
   return (
     <div className="relative" data-testid="summary-grid">
-      <div className="flex gap-2 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory justify-center">
+      <div ref={containerRef} className="flex gap-2 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory">
         {matches.map((m) => {
           const hasScore =
             (m.status === "ongoing" || m.status === "finished") &&
