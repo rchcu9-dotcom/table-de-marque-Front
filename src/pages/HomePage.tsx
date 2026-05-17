@@ -801,7 +801,7 @@ export default function HomePage() {
     const teamData = (teams ?? []).find(
       (t) => t.id === selectedTeam.id || t.name === selectedTeam.name,
     );
-    const repasTime = tournamentDay === 2 ? teamData?.repasDimanche : teamData?.repasSamedi;
+    const repasTime = tournamentDay === 3 ? teamData?.repasLundi : tournamentDay === 2 ? teamData?.repasDimanche : teamData?.repasSamedi;
     if (repasTime) return { dateTime: repasTime, message: null };
     return meals?.mealOfDay ?? null;
   }, [selectedTeam, teams, tournamentDay, meals]);
