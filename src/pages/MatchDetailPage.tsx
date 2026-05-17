@@ -153,11 +153,15 @@ export default function MatchDetailPage() {
   const relatedMatches = React.useMemo(() => {
     if (isJ3FiveV5) {
       return getSquareMatches(currentJ3Square)
-        .map((match) => toMatchFromFinalSquareMatch(match, currentJ3Square!))
+        .map((match) => {
+          const base = toMatchFromFinalSquareMatch(match, currentJ3Square!);
+          const live = allMatches?.find((m) => m.id === match.id);
+          return live ? { ...base, scoreA: live.scoreA, scoreB: live.scoreB, status: live.status } : base;
+        })
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }
     return pouleMatches;
-  }, [currentJ3Square, isJ3FiveV5, pouleMatches]);
+  }, [currentJ3Square, isJ3FiveV5, pouleMatches, allMatches]);
   const j3ClassementRows = React.useMemo(() => {
     if (!currentJ3Square) return [];
     return [...currentJ3Square.ranking]
