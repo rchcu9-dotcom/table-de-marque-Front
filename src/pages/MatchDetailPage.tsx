@@ -153,11 +153,15 @@ export default function MatchDetailPage() {
   const relatedMatches = React.useMemo(() => {
     if (isJ3FiveV5) {
       return getSquareMatches(currentJ3Square)
-        .map((match) => toMatchFromFinalSquareMatch(match, currentJ3Square!))
+        .map((match) => {
+          const base = toMatchFromFinalSquareMatch(match, currentJ3Square!);
+          const live = allMatches?.find((m) => m.id === match.id);
+          return live ? { ...base, scoreA: live.scoreA, scoreB: live.scoreB, status: live.status } : base;
+        })
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }
     return pouleMatches;
-  }, [currentJ3Square, isJ3FiveV5, pouleMatches]);
+  }, [currentJ3Square, isJ3FiveV5, pouleMatches, allMatches]);
   const j3ClassementRows = React.useMemo(() => {
     if (!currentJ3Square) return [];
     return [...currentJ3Square.ranking]
@@ -292,7 +296,10 @@ export default function MatchDetailPage() {
           <div className="text-base">{new Date(data.date).toLocaleString()}</div>
           {contextLabel && (
             <div className="text-xs text-slate-400">
-              {isJ3FiveV5 ? contextLabel : (() => {
+              {isJ3FiveV5 ? (() => {
+                const partner = currentJ3Square ? getNamingPartnerForCode(currentJ3Square.dbCode, namingPartners) : null;
+                return <PouleLabel label={contextLabel} partner={partner} />;
+              })() : (() => {
                 const label = data?.pouleCode
                   ? buildNamingTitle(data.pouleCode, contextLabel ?? "", namingPartners)
                   : contextLabel ?? "";
@@ -370,7 +377,11 @@ export default function MatchDetailPage() {
           </div>
           <div className="text-sm text-slate-300">
             {isJ3FiveV5
-              ? formatSquareLabel(currentJ3Square)
+              ? (() => {
+                  const label = formatSquareLabel(currentJ3Square);
+                  const partner = currentJ3Square ? getNamingPartnerForCode(currentJ3Square.dbCode, namingPartners) : null;
+                  return <PouleLabel label={label} partner={partner} />;
+                })()
               : classement?.pouleName
                 ? (() => {
                     const label = data?.pouleCode
@@ -488,7 +499,11 @@ export default function MatchDetailPage() {
                 <img src={competitionIcon} alt={data.competitionType ?? "5v5"} className="h-6 w-6 rounded-md bg-slate-800 object-cover" />
                 <span>
                   {isJ3FiveV5
-                    ? `Matchs du carré ${formatSquareLabel(currentJ3Square)}`
+                    ? (() => {
+                        const label = `Matchs du carré ${formatSquareLabel(currentJ3Square)}`;
+                        const partner = currentJ3Square ? getNamingPartnerForCode(currentJ3Square.dbCode, namingPartners) : null;
+                        return <PouleLabel label={label} partner={partner} />;
+                      })()
                     : (() => {
                         const base = relatedMatches[0]?.pouleName || relatedMatches[0]?.pouleCode || "";
                         const code = relatedMatches[0]?.pouleCode;

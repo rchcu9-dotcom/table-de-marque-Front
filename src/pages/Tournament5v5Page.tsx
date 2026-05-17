@@ -416,6 +416,8 @@ export default function Tournament5v5Page() {
                     square={carre}
                     refMap={j3SquareRefs}
                     onSelectMatch={(id) => navigate(`/matches/${id}`)}
+                    namingPartner={getNamingPartnerForCode(carre.dbCode, namingPartners)}
+                    liveMatches={allMatches5v5}
                   />
                 ))}
               </div>
@@ -623,17 +625,26 @@ function J3FinalSquareCard({
   square,
   refMap,
   onSelectMatch,
+  namingPartner,
+  liveMatches,
 }: {
   square: FinalSquare;
   refMap?: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
   onSelectMatch?: (id: string) => void;
+  namingPartner?: Partenaire | null;
+  liveMatches?: Match[];
 }) {
   const placeLabel = square.placeRange.replace("..", " à ");
-  const allMatches = [
+  const squareMatches = [
     ...square.semiFinals,
     ...(square.finalMatch ? [square.finalMatch] : []),
     ...(square.thirdPlaceMatch ? [square.thirdPlaceMatch] : []),
   ];
+  const enrichMatch = (fsMatch: FinalSquareMatch): Match => {
+    const base = toMatchFromFinalSquareMatch(fsMatch);
+    const live = liveMatches?.find((m) => m.id === fsMatch.id);
+    return live ? { ...base, scoreA: live.scoreA, scoreB: live.scoreB, status: live.status } : base;
+  };
   return (
     <div
       className="rounded-lg border border-slate-800 bg-slate-900/70 p-3"
@@ -646,6 +657,7 @@ function J3FinalSquareCard({
     >
       <div className="mb-2">
         <h3 className="font-semibold text-slate-100">{formatJ3SquareTitle(square)}</h3>
+        {namingPartner && <NamingBadge partner={namingPartner} />}
         <p className="text-xs text-slate-300">Places jouées: {placeLabel}</p>
       </div>
 
@@ -668,11 +680,11 @@ function J3FinalSquareCard({
 
       <div className="mt-3 space-y-2" data-testid={`j3-square-matches-${square.dbCode}`}>
         <p className="text-xs text-slate-300">Matchs</p>
-        {allMatches.length > 0 ? (
-          allMatches.map((m) => (
+        {squareMatches.length > 0 ? (
+          squareMatches.map((m) => (
             <SmallMatchCard
               key={m.id}
-              match={toMatchFromFinalSquareMatch(m)}
+              match={enrichMatch(m)}
               onSelect={onSelectMatch}
               testId={`j3-match-${m.id}`}
             />
