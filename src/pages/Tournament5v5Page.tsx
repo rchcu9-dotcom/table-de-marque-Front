@@ -416,6 +416,7 @@ export default function Tournament5v5Page() {
                     square={carre}
                     refMap={j3SquareRefs}
                     onSelectMatch={(id) => navigate(`/matches/${id}`)}
+                    namingPartner={getNamingPartnerForCode(carre.dbCode, namingPartners)}
                   />
                 ))}
               </div>
@@ -623,10 +624,12 @@ function J3FinalSquareCard({
   square,
   refMap,
   onSelectMatch,
+  namingPartner,
 }: {
   square: FinalSquare;
   refMap?: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
   onSelectMatch?: (id: string) => void;
+  namingPartner?: Partenaire | null;
 }) {
   const placeLabel = square.placeRange.replace("..", " à ");
   const allMatches = [
@@ -646,6 +649,7 @@ function J3FinalSquareCard({
     >
       <div className="mb-2">
         <h3 className="font-semibold text-slate-100">{formatJ3SquareTitle(square)}</h3>
+        {namingPartner && <NamingBadge partner={namingPartner} />}
         <p className="text-xs text-slate-300">Places jouées: {placeLabel}</p>
       </div>
 
