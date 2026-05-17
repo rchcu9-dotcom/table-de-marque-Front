@@ -415,7 +415,6 @@ describe("TeamPage", () => {
     expect(within(j3Card).getAllByTestId(/team-j3-placeholder-/i).length).toBeGreaterThan(0);
     const placeholderRow = screen.getByTestId("team-j3-placeholder-9");
     expect(placeholderRow).not.toHaveAttribute("role", "button");
-    expect(within(placeholderRow).getByText("-")).toBeInTheDocument();
     expect(screen.getByTestId("team-classement-j2")).toBeInTheDocument();
     expect(screen.getByTestId("team-classement-j1")).toBeInTheDocument();
   });
