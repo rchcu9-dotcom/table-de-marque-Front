@@ -604,6 +604,9 @@ export default function TeamPage() {
                   </span>
                 )}
               </div>
+              {j3TargetSquare && getNamingPartnerForCode(j3TargetSquare.dbCode, namingPartners) && (
+                <NamingBadge partner={getNamingPartnerForCode(j3TargetSquare.dbCode, namingPartners)!} />
+              )}
               <DayClassement
                 title="Classement Final 5v5"
                 icon={icon5v5}
