@@ -166,12 +166,14 @@ export default function MatchDetailPage() {
     if (!allMatches || !data) return [];
     const teamAKey = normalizeTeamKey(data.teamA);
     const teamBKey = normalizeTeamKey(data.teamB);
+    const compType = data.competitionType ?? "5v5";
     return [...allMatches]
       .filter((m) =>
-        normalizeTeamKey(m.teamA) === teamAKey ||
-        normalizeTeamKey(m.teamB) === teamAKey ||
-        normalizeTeamKey(m.teamA) === teamBKey ||
-        normalizeTeamKey(m.teamB) === teamBKey,
+        (m.competitionType ?? "5v5") === compType &&
+        (normalizeTeamKey(m.teamA) === teamAKey ||
+          normalizeTeamKey(m.teamB) === teamAKey ||
+          normalizeTeamKey(m.teamA) === teamBKey ||
+          normalizeTeamKey(m.teamB) === teamBKey),
       )
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [allMatches, data]);
