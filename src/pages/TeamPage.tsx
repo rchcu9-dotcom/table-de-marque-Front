@@ -611,6 +611,7 @@ export default function TeamPage() {
                 focusTeam={teamName}
                 logoFor={logoFor}
                 navigate={navigate}
+                showPoints={false}
               />
             </Card>
           )}
@@ -821,6 +822,7 @@ function DayClassement({
   logoFor,
   navigate,
   showStats,
+  showPoints = true,
 }: {
   title: string;
   icon?: string;
@@ -829,6 +831,7 @@ function DayClassement({
   logoFor: (name: string) => string | undefined | null;
   navigate: (path: string) => void;
   showStats?: boolean;
+  showPoints?: boolean;
 }) {
   if (!classement || classement.length === 0) {
     return (
@@ -854,7 +857,7 @@ function DayClassement({
             <tr>
               <th className="px-3 py-2 text-left font-semibold">#</th>
               <th className="px-3 py-2 text-left font-semibold">Équipe</th>
-              <th className="px-3 py-2 text-right font-semibold">Pts</th>
+              {showPoints && <th className="px-3 py-2 text-right font-semibold">Pts</th>}
               {showStats && <th className="px-3 py-2 text-right font-semibold">V</th>}
               {showStats && <th className="px-3 py-2 text-right font-semibold">N</th>}
               {showStats && <th className="px-3 py-2 text-right font-semibold">P</th>}
@@ -886,9 +889,11 @@ function DayClassement({
                       </span>
                     </div>
                   </td>
-                  <td className="px-3 py-2 text-right text-slate-100">
-                    {isPlaceholder || Number.isNaN(entry.points) ? "-" : entry.points ?? "-"}
-                  </td>
+                  {showPoints && (
+                    <td className="px-3 py-2 text-right text-slate-100">
+                      {isPlaceholder || Number.isNaN(entry.points) ? "-" : entry.points ?? "-"}
+                    </td>
+                  )}
                   {showStats && <td className="px-3 py-2 text-right text-slate-100">{isPlaceholder ? "-" : (entry.victoires ?? "-")}</td>}
                   {showStats && <td className="px-3 py-2 text-right text-slate-100">{isPlaceholder ? "-" : (entry.nuls ?? "-")}</td>}
                   {showStats && <td className="px-3 py-2 text-right text-slate-100">{isPlaceholder ? "-" : (entry.defaites ?? "-")}</td>}
