@@ -201,6 +201,9 @@ describe("MatchDetailPage", () => {
     };
     mockAllMatches = [
       { ...baseAllMatches[0], competitionType: "5v5", jour: "J3", pouleCode: "I", pouleName: "Carré Or 1" },
+      { id: "3", date: "2025-11-29T10:00:00.000Z", teamA: "Paris", teamB: "Lyon", status: "planned" as const, scoreA: null, scoreB: null, competitionType: "5v5", jour: "J3", pouleCode: "I", pouleName: "Carré Or 1" },
+      { id: "4", date: "2025-11-29T12:00:00.000Z", teamA: "Rennes", teamB: "Paris", status: "planned" as const, scoreA: null, scoreB: null, competitionType: "5v5", jour: "J3", pouleCode: "I", pouleName: "Carré Or 1" },
+      { id: "5", date: "2025-11-29T13:00:00.000Z", teamA: "Meudon", teamB: "Lyon", status: "planned" as const, scoreA: null, scoreB: null, competitionType: "5v5", jour: "J3", pouleCode: "I", pouleName: "Carré Or 1" },
       { ...baseAllMatches[1], id: "9", competitionType: "5v5", jour: "J3", pouleCode: "Z", pouleName: "Autre contexte" },
     ];
 
@@ -234,6 +237,8 @@ describe("MatchDetailPage", () => {
     };
     mockAllMatches = [
       { ...baseAllMatches[0], id: "999", competitionType: "5v5", jour: "J3", pouleCode: "", pouleName: "" },
+      { id: "4", date: "2025-11-29T12:00:00.000Z", teamA: "Rennes", teamB: "Paris", status: "planned" as const, scoreA: null, scoreB: null, competitionType: "5v5", jour: "J3", pouleCode: "I", pouleName: "Carré Or 1" },
+      { id: "5", date: "2025-11-29T13:00:00.000Z", teamA: "Meudon", teamB: "Lyon", status: "planned" as const, scoreA: null, scoreB: null, competitionType: "5v5", jour: "J3", pouleCode: "I", pouleName: "Carré Or 1" },
       { ...baseAllMatches[1], id: "9", competitionType: "5v5", jour: "J3", pouleCode: "Z", pouleName: "Autre contexte" },
     ];
 

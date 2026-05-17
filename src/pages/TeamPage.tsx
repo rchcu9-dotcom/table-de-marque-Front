@@ -807,14 +807,14 @@ function getUpcoming(matches: Match[]) {
   return [...matches]
     .filter((m) => m.status === "planned")
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 5);
+    .slice(0, 10);
 }
 
 function getRecent(matches: Match[]) {
   return [...matches]
     .filter((m) => m.status === "ongoing" || m.status === "finished")
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 5);
+    .slice(0, 10);
 }
 
 function DayClassement({

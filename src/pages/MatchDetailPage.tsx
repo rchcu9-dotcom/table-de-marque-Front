@@ -162,6 +162,21 @@ export default function MatchDetailPage() {
     }
     return pouleMatches;
   }, [currentJ3Square, isJ3FiveV5, pouleMatches, allMatches]);
+  const allTeamMatches = React.useMemo(() => {
+    if (!allMatches || !data) return [];
+    const teamAKey = normalizeTeamKey(data.teamA);
+    const teamBKey = normalizeTeamKey(data.teamB);
+    const compType = data.competitionType ?? "5v5";
+    return [...allMatches]
+      .filter((m) =>
+        (m.competitionType ?? "5v5") === compType &&
+        (normalizeTeamKey(m.teamA) === teamAKey ||
+          normalizeTeamKey(m.teamB) === teamAKey ||
+          normalizeTeamKey(m.teamA) === teamBKey ||
+          normalizeTeamKey(m.teamB) === teamBKey),
+      )
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [allMatches, data]);
   const j3ClassementRows = React.useMemo(() => {
     if (!currentJ3Square) return [];
     return [...currentJ3Square.ranking]
@@ -341,7 +356,7 @@ export default function MatchDetailPage() {
           <div className="space-y-4">
             <div data-testid="summary-grid-teamA">
               <MatchSummaryGrid
-                matches={relatedMatches.filter(
+                matches={allTeamMatches.filter(
                   (m) =>
                     normalizeTeamKey(m.teamA) === normalizeTeamKey(data.teamA) ||
                     normalizeTeamKey(m.teamB) === normalizeTeamKey(data.teamA),
@@ -354,7 +369,7 @@ export default function MatchDetailPage() {
 
             <div data-testid="summary-grid-teamB">
               <MatchSummaryGrid
-                matches={relatedMatches.filter(
+                matches={allTeamMatches.filter(
                   (m) =>
                     normalizeTeamKey(m.teamA) === normalizeTeamKey(data.teamB) ||
                     normalizeTeamKey(m.teamB) === normalizeTeamKey(data.teamB),
