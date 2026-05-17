@@ -1,7 +1,7 @@
 import React from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { Match, MatchFilters } from "../api/match";
-import { fetchMatches, fetchMatchById } from "../api/match";
+import { fetchMatches } from "../api/match";
 
 function filterMatches(matches: Match[], filters: MatchFilters): Match[] {
   let result = matches;
@@ -40,19 +40,14 @@ export function useMatches() {
 }
 
 export function useMatch(id: string | undefined) {
-  const queryClient = useQueryClient();
-  return useQuery<Match>({
-    queryKey: ["matches", id],
-    queryFn: () => fetchMatchById(id!),
+  const select = React.useCallback(
+    (matches: Match[]) => matches.find((m) => m.id === id) ?? null,
+    [id],
+  );
+  return useQuery<Match[], Error, Match | null>({
+    ...MATCHES_BASE,
+    select,
     enabled: !!id,
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    initialData: () => {
-      if (!id) return undefined;
-      const list = queryClient.getQueryData<Match[]>(["matches"]) ?? [];
-      return list.find((m) => m.id === id);
-    },
   });
 }
 
