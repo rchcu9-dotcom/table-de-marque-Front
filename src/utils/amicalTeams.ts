@@ -16,14 +16,13 @@ const AMICAL_SLOTS: AmicalSlot[] = [
 ];
 
 function getParisHour(isoDate: string): number {
-  return parseInt(
-    new Intl.DateTimeFormat("fr-FR", {
-      hour: "2-digit",
-      hour12: false,
-      timeZone: "Europe/Paris",
-    }).format(new Date(isoDate)),
-    10,
-  );
+  const parts = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    hour12: false,
+    timeZone: "Europe/Paris",
+  }).formatToParts(new Date(isoDate));
+  const hourPart = parts.find((p) => p.type === "hour");
+  return hourPart ? parseInt(hourPart.value, 10) : NaN;
 }
 
 export function resolveTeamLabel(
@@ -32,10 +31,13 @@ export function resolveTeamLabel(
   jour?: string | null,
 ): string {
   if (!name.startsWith("Amical")) return name;
-  if (!jour) return name;
   const parisHour = getParisHour(matchDate);
+  if (!Number.isFinite(parisHour)) return name;
   const slot = AMICAL_SLOTS.find(
-    (s) => s.jour === jour && s.amical === name && s.parisHour === parisHour,
+    (s) =>
+      s.amical === name &&
+      s.parisHour === parisHour &&
+      (!jour || s.jour === jour),
   );
   return slot ? `${name} (${slot.designated})` : name;
 }
