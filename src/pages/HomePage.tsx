@@ -447,11 +447,12 @@ function TeamGrid({
 }
 
 function Logo({ name, url, size = 32 }: { name: string; url?: string | null; size?: number }) {
+  const safeName = name ?? "";
   if (url) {
     return (
       <img
         src={url}
-        alt={name}
+        alt={safeName}
         className="rounded-full object-cover bg-slate-800 flex-shrink-0"
         style={{ width: size, height: size }}
       />
@@ -462,7 +463,7 @@ function Logo({ name, url, size = 32 }: { name: string; url?: string | null; siz
       className="rounded-full bg-slate-800 text-slate-200 flex items-center justify-center flex-shrink-0 font-semibold leading-none"
       style={{ width: size, height: size, fontSize: Math.max(7, Math.round(size * 0.4)) }}
     >
-      {name.slice(0, 2).toUpperCase()}
+      {safeName.slice(0, 2).toUpperCase() || "?"}
     </div>
   );
 }

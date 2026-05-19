@@ -631,12 +631,13 @@ export default function TeamPage() {
 }
 
 function MiniLogo({ name, url }: { name: string; url?: string | null }) {
+  const safeName = name ?? "";
   if (url) {
-    return <img src={url} alt={name} className="h-5 w-5 rounded-full object-cover flex-shrink-0" />;
+    return <img src={url} alt={safeName} className="h-5 w-5 rounded-full object-cover flex-shrink-0" />;
   }
   return (
     <div className="h-5 w-5 rounded-full bg-slate-800 text-slate-200 flex items-center justify-center flex-shrink-0 font-semibold leading-none text-[7px]">
-      {name.slice(0, 2).toUpperCase()}
+      {safeName.slice(0, 2).toUpperCase() || "?"}
     </div>
   );
 }
