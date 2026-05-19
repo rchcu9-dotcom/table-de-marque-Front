@@ -447,22 +447,23 @@ function TeamGrid({
 }
 
 function Logo({ name, url, size = 32 }: { name: string; url?: string | null; size?: number }) {
+  const safeName = name ?? "";
   if (url) {
     return (
       <img
         src={url}
-        alt={name}
-        className="rounded-full object-cover bg-slate-800"
+        alt={safeName}
+        className="rounded-full object-cover bg-slate-800 flex-shrink-0"
         style={{ width: size, height: size }}
       />
     );
   }
   return (
     <div
-      className="rounded-full bg-slate-800 text-slate-200 flex items-center justify-center"
-      style={{ width: size, height: size }}
+      className="rounded-full bg-slate-800 text-slate-200 flex items-center justify-center flex-shrink-0 font-semibold leading-none"
+      style={{ width: size, height: size, fontSize: Math.max(7, Math.round(size * 0.4)) }}
     >
-      {name.slice(0, 2).toUpperCase()}
+      {safeName.slice(0, 2).toUpperCase() || "?"}
     </div>
   );
 }
@@ -571,7 +572,7 @@ function CompactMatchCard({
       </div>
       <div className={`relative items-center gap-2 ${showTeamB ? "grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]" : "flex justify-between"}`}>
         <div className="flex items-center gap-2 min-w-0">
-          {match.teamALogo && <img src={match.teamALogo} alt={match.teamA} className="h-5 w-5 rounded-full object-cover" />}
+          <Logo name={match.teamA} url={match.teamALogo} size={20} />
           <span
             className={`text-[12px] font-semibold truncate ${
               hasWinner && winnerSide === "A" ? "text-emerald-300" : ""
@@ -598,7 +599,7 @@ function CompactMatchCard({
             >
               {match.teamB}
             </span>
-            {match.teamBLogo && <img src={match.teamBLogo} alt={match.teamB} className="h-5 w-5 rounded-full object-cover" />}
+            <Logo name={match.teamB} url={match.teamBLogo} size={20} />
           </div>
         )}
       </div>
@@ -673,7 +674,7 @@ function InlineMatchCard({
 
       <div className="relative flex items-center gap-2">
         <div className="flex items-center gap-1 min-w-0 justify-start flex-1">
-          {match.teamALogo && <img src={match.teamALogo} alt={match.teamA} className="h-5 w-5 rounded-full object-cover" />}
+          <Logo name={match.teamA} url={match.teamALogo} size={20} />
           <span
             className={`text-[12px] leading-tight font-normal truncate block whitespace-nowrap ${winnerClass("A")} ${focusHighlight(match.teamA)}`}
           >
@@ -702,7 +703,7 @@ function InlineMatchCard({
             >
               {match.teamB}
             </span>
-            {match.teamBLogo && <img src={match.teamBLogo} alt={match.teamB} className="h-5 w-5 rounded-full object-cover" />}
+            <Logo name={match.teamB} url={match.teamBLogo} size={20} />
           </div>
         )}
       </div>

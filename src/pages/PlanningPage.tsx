@@ -12,6 +12,7 @@ import { formatTournamentDayKey, tournamentDateKey } from "../utils/tournamentDa
 import { usePartenaires } from "../hooks/usePartenaires";
 import type { Partenaire } from "../api/partenaire";
 import { buildNamingTitle } from "../utils/namingPartners";
+import { resolveTeamLabel } from "../utils/amicalTeams";
 
 function normalize(value?: string | null) {
   return (value ?? "").trim().toLowerCase();
@@ -329,8 +330,8 @@ export default function PlanningPage() {
                   <div className="flex items-center justify-between gap-3">
                     {m.competitionType === "challenge" ? (
                       <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <HexBadge name={m.teamA} imageUrl={m.teamALogo ?? undefined} size={36} />
-                        <div className="text-sm font-semibold text-slate-100 truncate">{m.teamA}</div>
+                        <HexBadge name={resolveTeamLabel(m.teamA, m.date, m.jour)} imageUrl={m.teamALogo ?? undefined} size={36} />
+                        <div className="text-sm font-semibold text-slate-100 truncate">{resolveTeamLabel(m.teamA, m.date, m.jour)}</div>
                       </div>
                     ) : (
                       (() => {
@@ -338,10 +339,10 @@ export default function PlanningPage() {
                         return (
                           <>
                             <div className="flex items-center gap-2 flex-1 min-w-0">
-                              <HexBadge name={m.teamA} imageUrl={m.teamALogo ?? undefined} size={36} />
+                              <HexBadge name={resolveTeamLabel(m.teamA, m.date, m.jour)} imageUrl={m.teamALogo ?? undefined} size={36} />
                               <div className="text-sm font-semibold">
                                 <div className={`${winner === m.teamA ? "text-emerald-300" : "text-slate-100"}`}>
-                                  {m.teamA}
+                                  {resolveTeamLabel(m.teamA, m.date, m.jour)}
                                 </div>
                               </div>
                             </div>
@@ -364,10 +365,10 @@ export default function PlanningPage() {
                             <div className="flex items-center gap-2 flex-1 min-w-0 justify-end">
                               <div className="text-right text-sm font-semibold">
                                 <div className={`${winner === m.teamB ? "text-emerald-300" : "text-slate-100"}`}>
-                                  {m.teamB}
+                                  {resolveTeamLabel(m.teamB, m.date, m.jour)}
                                 </div>
                               </div>
-                              <HexBadge name={m.teamB} imageUrl={m.teamBLogo ?? undefined} size={36} />
+                              <HexBadge name={resolveTeamLabel(m.teamB, m.date, m.jour)} imageUrl={m.teamBLogo ?? undefined} size={36} />
                             </div>
                           </>
                         );

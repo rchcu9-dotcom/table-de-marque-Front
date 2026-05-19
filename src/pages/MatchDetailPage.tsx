@@ -18,6 +18,7 @@ import Breadcrumbs from "../components/navigation/Breadcrumbs";
 import { usePartenaires } from "../hooks/usePartenaires";
 import type { Partenaire } from "../api/partenaire";
 import { buildNamingTitle, getNamingPartnerForCode } from "../utils/namingPartners";
+import { resolveTeamLabel } from "../utils/amicalTeams";
 
 const compIcon: Record<string, string> = {
   "5v5": icon5v5,
@@ -230,13 +231,15 @@ export default function MatchDetailPage() {
     };
   const competitionIcon = compIcon[competitionType] ?? icon5v5;
   const hasClassement = competitionType === "5v5";
+  const teamALabel = resolveTeamLabel(data.teamA, data.date, data.jour);
+  const teamBLabel = resolveTeamLabel(data.teamB, data.date, data.jour);
   const contextLabel = isJ3FiveV5
     ? formatSquareLabel(currentJ3Square)
     : (data.pouleName || data.pouleCode);
   const breadcrumbs = [
     { label: "Accueil", path: "/" },
     { label: "Planning", path: "/planning" },
-    { label: `${data.teamA} vs ${data.teamB}` },
+    { label: `${teamALabel} vs ${teamBLabel}` },
   ];
 
   return (
@@ -248,7 +251,7 @@ export default function MatchDetailPage() {
             className="transition hover:-translate-y-0.5"
             onClick={() => navigate(`/teams/${encodeURIComponent(data.teamA)}`)}
           >
-            <HexBadge name={data.teamA} imageUrl={data.teamALogo ?? undefined} size={64} />
+            <HexBadge name={teamALabel} imageUrl={data.teamALogo ?? undefined} size={64} />
         </button>
         <div className="flex flex-col items-center text-center">
           <div className="flex items-center gap-2 text-xs uppercase text-slate-500">
@@ -260,14 +263,14 @@ export default function MatchDetailPage() {
               className={`hover:underline transition ${winner === "A" ? "text-emerald-300 font-semibold" : ""}`}
               onClick={() => navigate(`/teams/${encodeURIComponent(data.teamA)}`)}
             >
-              {data.teamA}
+              {teamALabel}
             </button>{" "}
             vs{" "}
             <button
               className={`hover:underline transition ${winner === "B" ? "text-emerald-300 font-semibold" : ""}`}
               onClick={() => navigate(`/teams/${encodeURIComponent(data.teamB)}`)}
             >
-              {data.teamB}
+              {teamBLabel}
             </button>
           </div>
         </div>
@@ -275,7 +278,7 @@ export default function MatchDetailPage() {
           className="transition hover:-translate-y-0.5"
           onClick={() => navigate(`/teams/${encodeURIComponent(data.teamB)}`)}
           >
-            <HexBadge name={data.teamB} imageUrl={data.teamBLogo ?? undefined} size={64} />
+            <HexBadge name={teamBLabel} imageUrl={data.teamBLogo ?? undefined} size={64} />
           </button>
         </div>
       </div>
@@ -335,7 +338,7 @@ export default function MatchDetailPage() {
                 className="inline-flex items-center gap-2 px-2 py-1 rounded-md bg-slate-800 text-slate-100 font-semibold"
               >
                 <span className={winner === "A" ? "text-emerald-300" : ""}>
-                  {data.teamA}
+                  {teamALabel}
                 </span>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-900 text-xs">
                   <span>{data.scoreA}</span>
@@ -343,7 +346,7 @@ export default function MatchDetailPage() {
                   <span>{data.scoreB}</span>
                 </span>
                 <span className={winner === "B" ? "text-emerald-300" : ""}>
-                  {data.teamB}
+                  {teamBLabel}
                 </span>
               </span>
             </div>

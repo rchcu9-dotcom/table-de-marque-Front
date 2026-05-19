@@ -630,6 +630,18 @@ export default function TeamPage() {
   );
 }
 
+function MiniLogo({ name, url }: { name: string; url?: string | null }) {
+  const safeName = name ?? "";
+  if (url) {
+    return <img src={url} alt={safeName} className="h-5 w-5 rounded-full object-cover flex-shrink-0" />;
+  }
+  return (
+    <div className="h-5 w-5 rounded-full bg-slate-800 text-slate-200 flex items-center justify-center flex-shrink-0 font-semibold leading-none text-[7px]">
+      {safeName.slice(0, 2).toUpperCase() || "?"}
+    </div>
+  );
+}
+
 function InlineMatchCard({
   match,
   focusTeam,
@@ -691,7 +703,7 @@ function InlineMatchCard({
           <CompetitionBadge src={competitionIcon.src} alt={`Logo ${competitionIcon.label}`} />
           <div className="flex items-center justify-between gap-2 min-w-0">
             <div className="flex items-center gap-2 min-w-0">
-              {match.teamALogo && <img src={match.teamALogo} alt={match.teamA} className="h-5 w-5 rounded-full object-cover" />}
+              <MiniLogo name={match.teamA} url={match.teamALogo} />
               <span className="text-[12px] font-semibold truncate">{match.teamA}</span>
             </div>
             <span className={`text-[12px] font-semibold ${match.status === "ongoing" ? "text-amber-200" : "text-slate-100"}`}>
@@ -741,7 +753,7 @@ function InlineMatchCard({
         <CompetitionBadge src={competitionIcon.src} alt={`Logo ${competitionIcon.label}`} />
         <div className="flex items-center gap-2 min-w-0">
           <div className="flex items-center gap-1 min-w-0 justify-start flex-1">
-            {match.teamALogo && <img src={match.teamALogo} alt={match.teamA} className="h-5 w-5 rounded-full object-cover" />}
+            <MiniLogo name={match.teamA} url={match.teamALogo} />
             <span
               className={`text-[12px] leading-tight font-normal truncate block whitespace-nowrap ${winnerClass("A")} ${focusHighlight(match.teamA)}`}
             >
@@ -765,7 +777,7 @@ function InlineMatchCard({
             >
               {match.teamB}
             </span>
-            {match.teamBLogo && <img src={match.teamBLogo} alt={match.teamB} className="h-5 w-5 rounded-full object-cover" />}
+            <MiniLogo name={match.teamB} url={match.teamBLogo} />
           </div>
         </div>
       </div>
