@@ -1,6 +1,7 @@
 import React from "react";
 import HexBadge from "../ds/HexBadge";
 import type { Match } from "../../api/match";
+import { resolveTeamLabel } from "../../utils/amicalTeams";
 import icon5v5 from "../../assets/icons/nav/fivev5.png";
 import icon3v3 from "../../assets/icons/nav/threev3.png";
 import iconChallenge from "../../assets/icons/nav/challenge.png";
@@ -182,13 +183,13 @@ export default function HorizontalMatchSlider({
               );
             })()}
             <div className="mt-3 flex items-center justify-between gap-2">
-              <HexBadge name={m.teamA} imageUrl={m.teamALogo ?? undefined} size={40} />
+              <HexBadge name={resolveTeamLabel(m.teamA, m.date, m.jour)} imageUrl={m.teamALogo ?? undefined} size={40} />
               <div className="flex-1 text-center">
-                <div className={`text-[13px] font-semibold ${winnerClass(m, "A")}`}>{m.teamA}</div>
+                <div className={`text-[13px] font-semibold ${winnerClass(m, "A")}`}>{resolveTeamLabel(m.teamA, m.date, m.jour)}</div>
                 <div className="text-[11px] text-slate-500">vs</div>
-                <div className={`text-[13px] font-semibold ${winnerClass(m, "B")}`}>{m.teamB}</div>
+                <div className={`text-[13px] font-semibold ${winnerClass(m, "B")}`}>{resolveTeamLabel(m.teamB, m.date, m.jour)}</div>
               </div>
-              <HexBadge name={m.teamB} imageUrl={m.teamBLogo ?? undefined} size={40} />
+              <HexBadge name={resolveTeamLabel(m.teamB, m.date, m.jour)} imageUrl={m.teamBLogo ?? undefined} size={40} />
             </div>
           </div>
         ))}

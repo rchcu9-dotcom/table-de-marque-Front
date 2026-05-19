@@ -18,6 +18,7 @@ import type { Partenaire } from "../api/partenaire";
 import SponsorFooter from "../components/sponsors/SponsorFooter";
 import NamingBadge from "../components/sponsors/NamingBadge";
 import { buildNamingTitle, getNamingPartnerForCode } from "../utils/namingPartners";
+import { resolveTeamLabel } from "../utils/amicalTeams";
 
 const byDateAsc = (a: Match, b: Match) => new Date(a.date).getTime() - new Date(b.date).getTime();
 
@@ -808,9 +809,9 @@ function SmallMatchCard({
 
       <div className="relative flex items-center gap-2">
         <div className="flex items-center gap-1 min-w-0 justify-start flex-1">
-          <Logo name={match.teamA} url={match.teamALogo} size={20} />
+          <Logo name={resolveTeamLabel(match.teamA, match.date, match.jour)} url={match.teamALogo} size={20} />
           <span className={`text-[12px] leading-tight font-normal truncate block whitespace-nowrap ${winnerClass("A")}`}>
-            {match.teamA}
+            {resolveTeamLabel(match.teamA, match.date, match.jour)}
           </span>
         </div>
         <div className="flex-none w-20 text-center">
@@ -828,9 +829,9 @@ function SmallMatchCard({
           <span
             className={`text-[12px] leading-tight font-normal truncate text-right block whitespace-nowrap ${winnerClass("B")}`}
           >
-            {match.teamB}
+            {resolveTeamLabel(match.teamB, match.date, match.jour)}
           </span>
-          <Logo name={match.teamB} url={match.teamBLogo} size={20} />
+          <Logo name={resolveTeamLabel(match.teamB, match.date, match.jour)} url={match.teamBLogo} size={20} />
         </div>
       </div>
     </div>

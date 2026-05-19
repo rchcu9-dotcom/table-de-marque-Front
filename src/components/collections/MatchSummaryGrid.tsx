@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import HexBadge from "../ds/HexBadge";
 import Badge from "../ds/Badge";
 import type { Match } from "../../api/match";
+import { resolveTeamLabel } from "../../utils/amicalTeams";
 
 type Props = {
   matches: Match[];
@@ -79,8 +80,8 @@ export default function MatchSummaryGrid({ matches, currentMatchId, onSelect, fo
               onClick={() => onSelect?.(m.id)}
             >
               <div className="flex items-center justify-center w-full gap-1">
-                <HexBadge name={m.teamA} imageUrl={m.teamALogo ?? undefined} size={26} />
-                <HexBadge name={m.teamB} imageUrl={m.teamBLogo ?? undefined} size={26} />
+                <HexBadge name={resolveTeamLabel(m.teamA, m.date, m.jour)} imageUrl={m.teamALogo ?? undefined} size={26} />
+                <HexBadge name={resolveTeamLabel(m.teamB, m.date, m.jour)} imageUrl={m.teamBLogo ?? undefined} size={26} />
               </div>
               {hasScore ? (
                 <span
