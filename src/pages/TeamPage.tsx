@@ -22,6 +22,7 @@ import SponsorFooter from "../components/sponsors/SponsorFooter";
 import NamingBadge from "../components/sponsors/NamingBadge";
 import { getNamingPartnerForCode } from "../utils/namingPartners";
 import { formatTournamentDayKey, tournamentDateKey } from "../utils/tournamentDate";
+import { resolveTeamLabel } from "../utils/amicalTeams";
 
 type RankedPlayer = {
   name: string;
@@ -704,7 +705,7 @@ function InlineMatchCard({
           <div className="flex items-center justify-between gap-2 min-w-0">
             <div className="flex items-center gap-2 min-w-0">
               <MiniLogo name={match.teamA} url={match.teamALogo} />
-              <span className="text-[12px] font-semibold truncate">{match.teamA}</span>
+              <span className="text-[12px] font-semibold truncate">{resolveTeamLabel(match.teamA, match.date, match.jour)}</span>
             </div>
             <span className={`text-[12px] font-semibold ${match.status === "ongoing" ? "text-amber-200" : "text-slate-100"}`}>
               {subtitle}
@@ -757,7 +758,7 @@ function InlineMatchCard({
             <span
               className={`text-[12px] leading-tight font-normal truncate block whitespace-nowrap ${winnerClass("A")} ${focusHighlight(match.teamA)}`}
             >
-              {match.teamA}
+              {resolveTeamLabel(match.teamA, match.date, match.jour)}
             </span>
           </div>
           <div className="flex-none w-20 text-center">
@@ -775,7 +776,7 @@ function InlineMatchCard({
             <span
               className={`text-[12px] leading-tight font-normal truncate text-right block whitespace-nowrap ${winnerClass("B")} ${focusHighlight(match.teamB)}`}
             >
-              {match.teamB}
+              {resolveTeamLabel(match.teamB, match.date, match.jour)}
             </span>
             <MiniLogo name={match.teamB} url={match.teamBLogo} />
           </div>

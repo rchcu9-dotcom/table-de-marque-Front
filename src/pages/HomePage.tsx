@@ -17,6 +17,7 @@ import { pickTournamentState, tournamentStateLabel } from "./utils/tournamentSta
 import { deriveTournamentDay as deriveTournamentDayFromMatches, sortedTournamentDateKeys, tournamentDateKey } from "../utils/tournamentDate";
 import { usePartenaires } from "../hooks/usePartenaires";
 import SponsorFooter from "../components/sponsors/SponsorFooter";
+import { resolveTeamLabel } from "../utils/amicalTeams";
 
 type Triplet = { last: Match | null; live: Match | null; next: Match | null };
 type SmallGlaceMode = "3v3" | "challenge-j1" | "challenge-vitesse-j3";
@@ -578,7 +579,7 @@ function CompactMatchCard({
               hasWinner && winnerSide === "A" ? "text-emerald-300" : ""
             }`}
           >
-            {match.teamA}
+            {resolveTeamLabel(match.teamA, match.date, match.jour)}
           </span>
         </div>
         <div
@@ -597,7 +598,7 @@ function CompactMatchCard({
                 hasWinner && winnerSide === "B" ? "text-emerald-300" : ""
               }`}
             >
-              {match.teamB}
+              {resolveTeamLabel(match.teamB, match.date, match.jour)}
             </span>
             <Logo name={match.teamB} url={match.teamBLogo} size={20} />
           </div>
@@ -678,7 +679,7 @@ function InlineMatchCard({
           <span
             className={`text-[12px] leading-tight font-normal truncate block whitespace-nowrap ${winnerClass("A")} ${focusHighlight(match.teamA)}`}
           >
-            {match.teamA}
+            {resolveTeamLabel(match.teamA, match.date, match.jour)}
           </span>
         </div>
         <div className="flex-none w-20 text-center">
@@ -701,7 +702,7 @@ function InlineMatchCard({
             <span
               className={`text-[12px] leading-tight font-normal truncate text-right block whitespace-nowrap ${winnerClass("B")} ${focusHighlight(match.teamB)}`}
             >
-              {match.teamB}
+              {resolveTeamLabel(match.teamB, match.date, match.jour)}
             </span>
             <Logo name={match.teamB} url={match.teamBLogo} size={20} />
           </div>
