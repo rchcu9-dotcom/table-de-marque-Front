@@ -7,7 +7,7 @@ type AmicalSlot = {
 
 const AMICAL_SLOTS: AmicalSlot[] = [
   // J1
-  { jour: "J1", amical: "Amical 1", parisHour: 11, designated: "Champigny" },
+  { jour: "J1", amical: "Amical 1", parisHour: 10, designated: "Champigny" },
   { jour: "J1", amical: "Amical 1", parisHour: 13, designated: "La Roche" },
   { jour: "J1", amical: "Amical 1", parisHour: 17, designated: "Rouen" },
   { jour: "J1", amical: "Amical 2", parisHour: 11, designated: "Orléans" },
