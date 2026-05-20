@@ -410,9 +410,9 @@ describe("Tournament5v5Page", () => {
     expect(screen.getByText(/Classements Sam/i)).toBeInTheDocument();
     expect(screen.getByText(/Classements Dim/i)).toBeInTheDocument();
     expect(screen.getByText(/Classements Lun/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sam" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Dim" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Lun" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Samedi" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Dimanche" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Lundi" })).toBeEnabled();
   });
 
   it("affiche J1, J2 et J3 dès que J1 est terminé globalement", () => {
@@ -434,9 +434,9 @@ describe("Tournament5v5Page", () => {
     const sectionTitles = headers.map((header) => header.textContent).filter(Boolean);
     expect(sectionTitles).toEqual([
       "Tournoi 5v5",
-      "Classements Lun (Finales)",
-      "Classements Dim (Qualification)",
-      "Classements Sam (Brassage)",
+      "Classements Lundi (Finales)",
+      "Classements Dimanche (Qualification)",
+      "Classements Samedi (Brassage)",
     ]);
     expect(screen.getByTestId("j3-square-I")).toBeInTheDocument();
     expect(screen.getByText("I - Carré Or 1")).toBeInTheDocument();
