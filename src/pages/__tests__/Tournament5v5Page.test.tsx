@@ -454,8 +454,8 @@ describe("Tournament5v5Page", () => {
       expect(screen.getByTestId("j3-square-I")).toBeInTheDocument();
     });
     expect(screen.queryByTestId("j3-square-J")).not.toBeInTheDocument();
-    expect(screen.queryByText("Sam Poule B")).not.toBeInTheDocument();
-    expect(screen.queryByText("Dim - Or F")).not.toBeInTheDocument();
+    expect(screen.queryByText("Samedi Poule B")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dimanche - Or F")).not.toBeInTheDocument();
   });
 
   it("n'auto-scroll pas sur un carré J3 caché contenant un match ongoing", async () => {
@@ -503,14 +503,14 @@ describe("Tournament5v5Page", () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByText("Sam Poule A")).toBeInTheDocument();
+      expect(screen.getByText("Samedi Poule A")).toBeInTheDocument();
     });
-    expect(screen.getByText("Dim - Or E")).toBeInTheDocument();
-    expect(screen.queryByText("Sam Poule B")).not.toBeInTheDocument();
-    expect(screen.queryByText("Sam Poule C")).not.toBeInTheDocument();
-    expect(screen.queryByText("Sam Poule D")).not.toBeInTheDocument();
-    expect(screen.queryByText("Dim - Or F")).not.toBeInTheDocument();
-    expect(screen.queryByText("Dim - Argent G")).not.toBeInTheDocument();
-    expect(screen.queryByText("Dim - Argent H")).not.toBeInTheDocument();
+    expect(screen.getByText("Dimanche - Or E")).toBeInTheDocument();
+    expect(screen.queryByText("Samedi Poule B")).not.toBeInTheDocument();
+    expect(screen.queryByText("Samedi Poule C")).not.toBeInTheDocument();
+    expect(screen.queryByText("Samedi Poule D")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dimanche - Or F")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dimanche - Argent G")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dimanche - Argent H")).not.toBeInTheDocument();
   });
 });
