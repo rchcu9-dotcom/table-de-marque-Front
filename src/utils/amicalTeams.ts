@@ -30,7 +30,8 @@ export function resolveTeamLabel(
   matchDate: string,
   jour?: string | null,
 ): string {
-  if (!name.startsWith("Amical")) return name;
+  if (!name || !name.startsWith("Amical")) return name ?? "";
+  if (!matchDate) return name;
   const parisHour = getParisHour(matchDate);
   if (!Number.isFinite(parisHour)) return name;
   const slot = AMICAL_SLOTS.find(
