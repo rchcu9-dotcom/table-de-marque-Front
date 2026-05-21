@@ -117,14 +117,6 @@ export default function ChallengePage() {
     };
   }, [data]);
 
-  const evalLabel = React.useMemo(() => {
-    const first = (data?.jour1 ?? [])
-      .filter((a) => a.attemptDate)
-      .sort((a, b) => new Date(a.attemptDate ?? 0).getTime() - new Date(b.attemptDate ?? 0).getTime())[0];
-    if (!first?.attemptDate) return null;
-    const d = new Date(first.attemptDate);
-    return new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "2-digit", month: "short" }).format(d);
-  }, [data]);
   const momentumItems = React.useMemo(
     () => buildChallengeMomentum(challengeMomentumJ1 ?? []),
     [challengeMomentumJ1],
@@ -776,7 +768,7 @@ export default function ChallengePage() {
                 <section className="space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex flex-col">
-                        <h2 className="text-base font-semibold text-white">{evalLabel ? `Evaluation ${evalLabel}` : "Evaluation"}</h2>
+                        <h2 className="text-base font-semibold text-white">Evaluation Joueur</h2>
                       </div>
                     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
                       <button
