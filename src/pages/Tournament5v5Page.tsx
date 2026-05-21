@@ -57,17 +57,17 @@ function squareContainsTeam(square: FinalSquare, selectedTeamId?: string | null)
 }
 
 const BRASSAGE = [
-  { code: "A", title: "Sam Poule A", phase: "Brassage" },
-  { code: "B", title: "Sam Poule B", phase: "Brassage" },
-  { code: "C", title: "Sam Poule C", phase: "Brassage" },
-  { code: "D", title: "Sam Poule D", phase: "Brassage" },
+  { code: "A", title: "Samedi Poule A", phase: "Brassage" },
+  { code: "B", title: "Samedi Poule B", phase: "Brassage" },
+  { code: "C", title: "Samedi Poule C", phase: "Brassage" },
+  { code: "D", title: "Samedi Poule D", phase: "Brassage" },
 ];
 
 const QUALIF = [
-  { code: "E", title: "Dim - Or E", phase: "Qualification" },
-  { code: "F", title: "Dim - Or F", phase: "Qualification" },
-  { code: "G", title: "Dim - Argent G", phase: "Qualification" },
-  { code: "H", title: "Dim - Argent H", phase: "Qualification" },
+  { code: "E", title: "Dimanche - Or E", phase: "Qualification" },
+  { code: "F", title: "Dimanche - Or F", phase: "Qualification" },
+  { code: "G", title: "Dimanche - Argent G", phase: "Qualification" },
+  { code: "H", title: "Dimanche - Argent H", phase: "Qualification" },
 ];
 
 function formatJ3SquareTitle(square: FinalSquare) {
@@ -340,7 +340,7 @@ export default function Tournament5v5Page() {
                   onClick={() => handleSelectDay("J1")}
                   disabled={!showJ1}
                 >
-                  Sam
+                  Samedi
                 </button>
                 <button
                   className={`rounded-full border px-3 py-1 ${
@@ -351,7 +351,7 @@ export default function Tournament5v5Page() {
                   onClick={() => handleSelectDay("J2")}
                   disabled={!showJ2}
                 >
-                  Dim
+                  Dimanche
                 </button>
                 <button
                   className={`rounded-full border px-3 py-1 ${
@@ -362,7 +362,7 @@ export default function Tournament5v5Page() {
                   onClick={() => handleSelectDay("J3")}
                   disabled={!showJ3}
                 >
-                  Lun
+                  Lundi
                 </button>
               </div>
             </div>
@@ -400,7 +400,7 @@ export default function Tournament5v5Page() {
               daySectionRefs.current.J3 = el;
             }}
           >
-            <h2 className="text-lg font-semibold mb-3">Classements Lun (Finales)</h2>
+            <h2 className="text-lg font-semibold mb-3">Classements Lundi (Finales)</h2>
             {isJ3SquaresLoading && (
               <div className="text-sm text-slate-300">Chargement des carrés J3...</div>
             )}
@@ -433,7 +433,7 @@ export default function Tournament5v5Page() {
               daySectionRefs.current.J2 = el;
             }}
           >
-            <h2 className="text-lg font-semibold mb-3">Classements Dim (Qualification)</h2>
+            <h2 className="text-lg font-semibold mb-3">Classements Dimanche (Qualification)</h2>
             <div className="grid md:grid-cols-2 gap-4">
               {QUALIF.map((p) => (
                 <ClassementCard
@@ -460,7 +460,7 @@ export default function Tournament5v5Page() {
               daySectionRefs.current.J1 = el;
             }}
           >
-            <h2 className="text-lg font-semibold mb-3">Classements Sam (Brassage)</h2>
+            <h2 className="text-lg font-semibold mb-3">Classements Samedi (Brassage)</h2>
             <div className="grid md:grid-cols-2 gap-4">
               {BRASSAGE.map((p) => (
                 <ClassementCard

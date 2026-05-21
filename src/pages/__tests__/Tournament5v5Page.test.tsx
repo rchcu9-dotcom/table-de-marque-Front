@@ -410,9 +410,9 @@ describe("Tournament5v5Page", () => {
     expect(screen.getByText(/Classements Sam/i)).toBeInTheDocument();
     expect(screen.getByText(/Classements Dim/i)).toBeInTheDocument();
     expect(screen.getByText(/Classements Lun/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sam" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Dim" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Lun" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Samedi" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Dimanche" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Lundi" })).toBeEnabled();
   });
 
   it("affiche J1, J2 et J3 dès que J1 est terminé globalement", () => {
@@ -434,9 +434,9 @@ describe("Tournament5v5Page", () => {
     const sectionTitles = headers.map((header) => header.textContent).filter(Boolean);
     expect(sectionTitles).toEqual([
       "Tournoi 5v5",
-      "Classements Lun (Finales)",
-      "Classements Dim (Qualification)",
-      "Classements Sam (Brassage)",
+      "Classements Lundi (Finales)",
+      "Classements Dimanche (Qualification)",
+      "Classements Samedi (Brassage)",
     ]);
     expect(screen.getByTestId("j3-square-I")).toBeInTheDocument();
     expect(screen.getByText("I - Carré Or 1")).toBeInTheDocument();
@@ -454,8 +454,8 @@ describe("Tournament5v5Page", () => {
       expect(screen.getByTestId("j3-square-I")).toBeInTheDocument();
     });
     expect(screen.queryByTestId("j3-square-J")).not.toBeInTheDocument();
-    expect(screen.queryByText("Sam Poule B")).not.toBeInTheDocument();
-    expect(screen.queryByText("Dim - Or F")).not.toBeInTheDocument();
+    expect(screen.queryByText("Samedi Poule B")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dimanche - Or F")).not.toBeInTheDocument();
   });
 
   it("n'auto-scroll pas sur un carré J3 caché contenant un match ongoing", async () => {
@@ -503,14 +503,14 @@ describe("Tournament5v5Page", () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByText("Sam Poule A")).toBeInTheDocument();
+      expect(screen.getByText("Samedi Poule A")).toBeInTheDocument();
     });
-    expect(screen.getByText("Dim - Or E")).toBeInTheDocument();
-    expect(screen.queryByText("Sam Poule B")).not.toBeInTheDocument();
-    expect(screen.queryByText("Sam Poule C")).not.toBeInTheDocument();
-    expect(screen.queryByText("Sam Poule D")).not.toBeInTheDocument();
-    expect(screen.queryByText("Dim - Or F")).not.toBeInTheDocument();
-    expect(screen.queryByText("Dim - Argent G")).not.toBeInTheDocument();
-    expect(screen.queryByText("Dim - Argent H")).not.toBeInTheDocument();
+    expect(screen.getByText("Dimanche - Or E")).toBeInTheDocument();
+    expect(screen.queryByText("Samedi Poule B")).not.toBeInTheDocument();
+    expect(screen.queryByText("Samedi Poule C")).not.toBeInTheDocument();
+    expect(screen.queryByText("Samedi Poule D")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dimanche - Or F")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dimanche - Argent G")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dimanche - Argent H")).not.toBeInTheDocument();
   });
 });
