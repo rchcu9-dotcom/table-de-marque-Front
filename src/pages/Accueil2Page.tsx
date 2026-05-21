@@ -773,7 +773,7 @@ export default function HomePage() {
       if (match) {
         const isChallenge = (match.competitionType ?? "").toLowerCase() == "challenge";
         if (isChallenge) {
-          navigate(`/challenge/equipe/${encodeURIComponent(match.teamA)}`);
+          navigate(`/challenge`);
           return;
         }
       }
@@ -788,7 +788,7 @@ const resolveMatchRoute = React.useCallback(
       if (!match) return `/matches/${id}`;
       const isChallenge = (match.competitionType ?? "").toLowerCase() === "challenge";
       if (isChallenge) {
-        return `/challenge/equipe/${encodeURIComponent(match.teamA)}`;
+        return `/challenge`;
       }
       return `/matches/${id}`;
     },

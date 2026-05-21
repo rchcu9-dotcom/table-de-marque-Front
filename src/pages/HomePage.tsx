@@ -747,7 +747,7 @@ export default function HomePage() {
         return "/challenge";
       }
       if (isChallenge) {
-        return `/challenge/equipe/${encodeURIComponent(match.teamA)}`;
+        return `/challenge`;
       }
       return `/matches/${match.id}`;
     },
