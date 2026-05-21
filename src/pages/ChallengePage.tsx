@@ -157,7 +157,10 @@ export default function ChallengePage() {
   const renderMetrics = (m: Attempt) => {
     if (m.metrics.type === "vitesse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s`;
     if (m.metrics.type === "tir") return `Points: ${m.metrics.totalPoints} (${m.metrics.tirs.join(", ")})`;
-    if (m.metrics.type === "glisse_crosse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s, penalites: ${m.metrics.penalites}`;
+    if (m.metrics.type === "glisse_crosse") {
+      const final = m.metrics.tempsMs + m.metrics.penalites * 3000;
+      return `${(m.metrics.tempsMs / 1000).toFixed(2)} s, portes: ${m.metrics.penalites}, final: ${(final / 1000).toFixed(2)} s`;
+    }
     if (m.metrics.type === "gardien_arret") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s`;
     return "";
   };
@@ -174,13 +177,13 @@ export default function ChallengePage() {
             a.metrics.type === "vitesse"
               ? a.metrics.tempsMs
               : a.metrics.type === "glisse_crosse"
-              ? a.metrics.tempsMs
+              ? a.metrics.tempsMs + a.metrics.penalites * 3000
               : Number.MAX_SAFE_INTEGER;
           const vb =
             b.metrics.type === "vitesse"
               ? b.metrics.tempsMs
               : b.metrics.type === "glisse_crosse"
-              ? b.metrics.tempsMs
+              ? b.metrics.tempsMs + b.metrics.penalites * 3000
               : Number.MAX_SAFE_INTEGER;
           return va - vb;
         })
@@ -294,7 +297,7 @@ export default function ChallengePage() {
               a.metrics.type === "vitesse"
                 ? a.metrics.tempsMs
                 : a.metrics.type === "glisse_crosse"
-                ? a.metrics.tempsMs
+                ? a.metrics.tempsMs + a.metrics.penalites * 3000
                 : a.metrics.type === "gardien_arret"
                 ? a.metrics.tempsMs
                 : Number.MAX_SAFE_INTEGER;
@@ -302,7 +305,7 @@ export default function ChallengePage() {
               b.metrics.type === "vitesse"
                 ? b.metrics.tempsMs
                 : b.metrics.type === "glisse_crosse"
-                ? b.metrics.tempsMs
+                ? b.metrics.tempsMs + b.metrics.penalites * 3000
                 : b.metrics.type === "gardien_arret"
                 ? b.metrics.tempsMs
                 : Number.MAX_SAFE_INTEGER;
