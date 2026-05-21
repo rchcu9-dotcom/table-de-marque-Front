@@ -150,8 +150,19 @@ export default function ChallengeEquipePage() {
 
   const renderMetrics = (m: Attempt) => {
     if (m.metrics.type === "vitesse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s`;
-    if (m.metrics.type === "tir") return `Points: ${m.metrics.totalPoints} (${m.metrics.tirs.join(", ")})`;
-    if (m.metrics.type === "glisse_crosse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s, penalites: ${m.metrics.penalites}`;
+    if (m.metrics.type === "tir") {
+      const { tirs } = m.metrics;
+      const dehors = tirs.filter((t) => t === 0).length;
+      const dedans = tirs.filter((t) => t === 1).length;
+      const bas = tirs.filter((t) => t === 2).length;
+      const haut = tirs.filter((t) => t === 3).length;
+      const bonus = dehors * 1 + bas * -2 + haut * -5;
+      return `Dehors: ${dehors}, Dedans: ${dedans}, Bas: ${bas}, Haut: ${haut}, Bonus: ${bonus > 0 ? "+" : ""}${bonus} s`;
+    }
+    if (m.metrics.type === "glisse_crosse") {
+      const final = m.metrics.tempsMs + m.metrics.penalites * 3000;
+      return `${(m.metrics.tempsMs / 1000).toFixed(2)} s, portes: ${m.metrics.penalites}, final: ${(final / 1000).toFixed(2)} s`;
+    }
     if (m.metrics.type === "gardien_arret") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s, arrêts: ${m.metrics.nbButs}`;
     return "";
   };
@@ -169,7 +180,7 @@ export default function ChallengeEquipePage() {
         return a.metrics.tempsMs - b.metrics.tempsMs;
       }
       if (a.metrics.type === "glisse_crosse" && b.metrics.type === "glisse_crosse") {
-        return a.metrics.tempsMs - b.metrics.tempsMs;
+        return (a.metrics.tempsMs + a.metrics.penalites * 3000) - (b.metrics.tempsMs + b.metrics.penalites * 3000);
       }
       return 0;
     });

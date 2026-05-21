@@ -1,31 +1,17 @@
 import React from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useChallengeAll } from "../hooks/useChallengeAll";
 import { useTeams } from "../hooks/useTeams";
 import { useSelectedTeam } from "../providers/SelectedTeamProvider";
 import type { ChallengeAttempt as Attempt } from "../api/challenge";
 import challengeIcon from "../assets/icons/nav/challenge.png";
-import vitesseIcon from "../assets/icons/nav/vitesse.png";
-import tirIcon from "../assets/icons/nav/tir.png";
-import agiliteIcon from "../assets/icons/nav/agilite.png";
 
-const ATELIER_LABEL: Record<string, string> = {
-  vitesse: "Atelier Vitesse",
-  tir: "Atelier Tir",
-  glisse_crosse: "Atelier Agilité",
-  gardien_vitesse: "Gardien - Challenge Vitesse",
-  gardien_arret: "Gardien - Challenge Atelier",
-};
-
-export default function ChallengeAtelierPage() {
-  const { type } = useParams<{ type: string }>();
+export default function ChallengeFinaleCombiPage() {
   const navigate = useNavigate();
   const { selectedTeam } = useSelectedTeam();
   const { data, isLoading, isError } = useChallengeAll();
   const { data: teams } = useTeams();
   const [search, setSearch] = React.useState("");
-
-  const atelierType = type === "tir" || type === "glisse_crosse" || type === "vitesse" || type === "gardien_vitesse" || type === "gardien_arret" ? type : null;
 
   const teamMap = React.useMemo(() => {
     const map = new Map<string, { name: string; logoUrl?: string | null }>();
@@ -33,78 +19,30 @@ export default function ChallengeAtelierPage() {
     return map;
   }, [teams]);
 
-  const attempts = React.useMemo(() => {
-    if (!atelierType) return [];
-    let items: Attempt[];
-    if (atelierType === "gardien_vitesse") {
-      items = (data?.jour1 ?? []).filter((a) => a.atelierId === "atelier-gardien-vitesse");
-    } else if (atelierType === "gardien_arret") {
-      items = (data?.jour1 ?? []).filter((a) => a.atelierType === "gardien_arret");
-    } else {
-      items = (data?.jour1 ?? []).filter((a) => a.atelierType === atelierType);
-    }
-    const filtered = selectedTeam?.id
-      ? items.filter((a) => (a.equipeId ?? "").toLowerCase() === selectedTeam.id.toLowerCase())
-      : items;
-    const term = search.trim().toLowerCase();
-    if (!term) return filtered;
-    return filtered.filter((a) => {
-      const joueur = (a.joueurName ?? "").toLowerCase();
-      const equipe = (a.equipeName ?? "").toLowerCase();
-      return joueur.includes(term) || equipe.includes(term) || (a.equipeId ?? "").toLowerCase().includes(term);
-    });
-  }, [atelierType, data?.jour1, search, selectedTeam]);
-
   const sorted = React.useMemo(() => {
-    return [...attempts].sort((a, b) => {
-      if (a.metrics.type === "tir" && b.metrics.type === "tir") {
-        return b.metrics.totalPoints - a.metrics.totalPoints;
-      }
-      const ta =
-        a.metrics.type === "vitesse"
-          ? a.metrics.tempsMs
-          : a.metrics.type === "glisse_crosse"
-          ? a.metrics.tempsMs + a.metrics.penalites * 3000
-          : a.metrics.type === "gardien_arret"
-          ? a.metrics.tempsMs
-          : Number.MAX_SAFE_INTEGER;
-      const tb =
-        b.metrics.type === "vitesse"
-          ? b.metrics.tempsMs
-          : b.metrics.type === "glisse_crosse"
-          ? b.metrics.tempsMs + b.metrics.penalites * 3000
-          : b.metrics.type === "gardien_arret"
-          ? b.metrics.tempsMs
-          : Number.MAX_SAFE_INTEGER;
+    const vitesseAttempts: Attempt[] = (data?.jour1 ?? []).filter(
+      (a) => a.atelierType === "vitesse" && a.metrics.type === "vitesse" && (a.metrics.tempsTotal ?? 0) > 0,
+    );
+
+    let filtered = selectedTeam?.id
+      ? vitesseAttempts.filter((a) => (a.equipeId ?? "").toLowerCase() === selectedTeam.id.toLowerCase())
+      : vitesseAttempts;
+
+    const term = search.trim().toLowerCase();
+    if (term) {
+      filtered = filtered.filter((a) => {
+        const joueur = (a.joueurName ?? "").toLowerCase();
+        const equipe = (a.equipeName ?? "").toLowerCase();
+        return joueur.includes(term) || equipe.includes(term) || (a.equipeId ?? "").toLowerCase().includes(term);
+      });
+    }
+
+    return [...filtered].sort((a, b) => {
+      const ta = a.metrics.type === "vitesse" ? (a.metrics.tempsTotal ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER;
+      const tb = b.metrics.type === "vitesse" ? (b.metrics.tempsTotal ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER;
       return ta - tb;
     });
-  }, [attempts]);
-
-  const renderMetrics = (m: Attempt) => {
-    if (m.metrics.type === "vitesse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s`;
-    if (m.metrics.type === "tir") {
-      const { tirs } = m.metrics;
-      const dehors = tirs.filter((t) => t === 0).length;
-      const dedans = tirs.filter((t) => t === 1).length;
-      const bas = tirs.filter((t) => t === 2).length;
-      const haut = tirs.filter((t) => t === 3).length;
-      const bonus = dehors * 1 + bas * -2 + haut * -5;
-      return `Dehors: ${dehors}, Dedans: ${dedans}, Bas: ${bas}, Haut: ${haut}, Bonus: ${bonus > 0 ? "+" : ""}${bonus} s`;
-    }
-    if (m.metrics.type === "glisse_crosse") {
-      const final = m.metrics.tempsMs + m.metrics.penalites * 3000;
-      return `${(m.metrics.tempsMs / 1000).toFixed(2)} s, portes: ${m.metrics.penalites}, final: ${(final / 1000).toFixed(2)} s`;
-    }
-    if (m.metrics.type === "gardien_arret") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s`;
-    return "";
-  };
-
-  const title = atelierType ? ATELIER_LABEL[atelierType] ?? "Atelier" : "Atelier";
-  const headerIcon =
-    atelierType === "vitesse" || atelierType === "gardien_vitesse" ? vitesseIcon
-    : atelierType === "tir" ? tirIcon
-    : atelierType === "glisse_crosse" ? agiliteIcon
-    : challengeIcon;
+  }, [data, selectedTeam, search]);
 
   return (
     <div className="fixed inset-0 overflow-hidden">
@@ -128,10 +66,10 @@ export default function ChallengeAtelierPage() {
               Retour
             </button>
             <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-800/80 flex-shrink-0">
-              <img src={headerIcon} alt="Challenge" className="h-full w-full object-cover scale-150" loading="lazy" />
+              <img src={challengeIcon} alt="Challenge" className="h-full w-full object-cover scale-150" loading="lazy" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-white">{title}</h1>
+              <h1 className="text-lg font-semibold text-white">Finale Combiné Joueur</h1>
               {selectedTeam?.name && <p className="text-slate-300 text-sm">{selectedTeam.name}</p>}
             </div>
           </div>
@@ -154,18 +92,17 @@ export default function ChallengeAtelierPage() {
         <div className="max-w-6xl mx-auto h-full rounded-xl border border-slate-800 bg-slate-900/70 p-4 overflow-y-auto space-y-3">
           {isLoading && <p className="text-slate-300 text-sm">Chargement...</p>}
           {isError && <p className="text-red-400 text-sm">Erreur lors du chargement.</p>}
-          {!atelierType && <p className="text-slate-300 text-sm">Atelier inconnu.</p>}
-          {atelierType && !isLoading && !isError && (
+          {!isLoading && !isError && (
             <div className="space-y-2">
               {sorted.length === 0 ? (
                 <p className="text-slate-300 text-sm">Aucune donnée disponible.</p>
               ) : (
-                <table className="min-w-full text-xs text-slate-100" data-testid="challenge-attempts">
+                <table className="min-w-full text-xs text-slate-100">
                   <thead className="text-[11px] uppercase text-slate-400">
                     <tr>
                       <th className="py-1 pr-3 text-left w-10">Rang</th>
                       <th className="py-1 pr-3 text-left">Joueur</th>
-                      <th className="py-1 text-right">Résultat</th>
+                      <th className="py-1 text-right">Temps combiné</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800 text-[12px]">
@@ -173,11 +110,9 @@ export default function ChallengeAtelierPage() {
                       const eqKey = (a.equipeId ?? "").toLowerCase();
                       const equipe = teamMap.get(eqKey);
                       const rank = idx + 1;
+                      const tempsTotal = a.metrics.type === "vitesse" ? a.metrics.tempsTotal ?? 0 : 0;
                       return (
-                        <tr
-                          key={`${a.atelierId}-${a.joueurId}-${idx}`}
-                          data-testid={`challenge-attempt-${a.atelierId}-${a.joueurId}-${idx}`}
-                        >
+                        <tr key={`${a.atelierId}-${a.joueurId}-${idx}`}>
                           <td className="py-1 pr-3 text-slate-200 text-center">{rank}</td>
                           <td className="py-1 pr-3 font-semibold text-slate-100">
                             <span className="inline-flex items-center gap-2">
@@ -193,7 +128,9 @@ export default function ChallengeAtelierPage() {
                             </span>
                           </td>
                           <td className="py-1 text-right text-slate-100">
-                            <span className={rank <= 3 ? "text-emerald-200 font-semibold" : ""}>{renderMetrics(a)}</span>
+                            <span className={rank <= 3 ? "text-emerald-200 font-semibold" : ""}>
+                              {(tempsTotal / 1000).toFixed(2)} s
+                            </span>
                           </td>
                         </tr>
                       );

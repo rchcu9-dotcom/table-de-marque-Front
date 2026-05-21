@@ -85,6 +85,7 @@ export default function ChallengePage() {
   const [showTir, setShowTir] = React.useState(true);
   const [showGlisse, setShowGlisse] = React.useState(true);
   const [showEvaluation, setShowEvaluation] = React.useState(true);
+  const [showEvaluationGardien, setShowEvaluationGardien] = React.useState(true);
   const [showFinale, setShowFinale] = React.useState(true);
   const [showGardienJ3, setShowGardienJ3] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -116,14 +117,6 @@ export default function ChallengePage() {
     };
   }, [data]);
 
-  const evalLabel = React.useMemo(() => {
-    const first = (data?.jour1 ?? [])
-      .filter((a) => a.attemptDate)
-      .sort((a, b) => new Date(a.attemptDate ?? 0).getTime() - new Date(b.attemptDate ?? 0).getTime())[0];
-    if (!first?.attemptDate) return null;
-    const d = new Date(first.attemptDate);
-    return new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "2-digit", month: "short" }).format(d);
-  }, [data]);
   const momentumItems = React.useMemo(
     () => buildChallengeMomentum(challengeMomentumJ1 ?? []),
     [challengeMomentumJ1],
@@ -156,8 +149,19 @@ export default function ChallengePage() {
   }, [data]);
   const renderMetrics = (m: Attempt) => {
     if (m.metrics.type === "vitesse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s`;
-    if (m.metrics.type === "tir") return `Points: ${m.metrics.totalPoints} (${m.metrics.tirs.join(", ")})`;
-    if (m.metrics.type === "glisse_crosse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s, penalites: ${m.metrics.penalites}`;
+    if (m.metrics.type === "tir") {
+      const { tirs } = m.metrics;
+      const dehors = tirs.filter((t) => t === 0).length;
+      const dedans = tirs.filter((t) => t === 1).length;
+      const bas = tirs.filter((t) => t === 2).length;
+      const haut = tirs.filter((t) => t === 3).length;
+      const bonus = dehors * 1 + bas * -2 + haut * -5;
+      return `Dehors: ${dehors}, Dedans: ${dedans}, Bas: ${bas}, Haut: ${haut}, Bonus: ${bonus > 0 ? "+" : ""}${bonus} s`;
+    }
+    if (m.metrics.type === "glisse_crosse") {
+      const final = m.metrics.tempsMs + m.metrics.penalites * 3000;
+      return `${(m.metrics.tempsMs / 1000).toFixed(2)} s, portes: ${m.metrics.penalites}, final: ${(final / 1000).toFixed(2)} s`;
+    }
     if (m.metrics.type === "gardien_arret") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s`;
     return "";
   };
@@ -174,13 +178,13 @@ export default function ChallengePage() {
             a.metrics.type === "vitesse"
               ? a.metrics.tempsMs
               : a.metrics.type === "glisse_crosse"
-              ? a.metrics.tempsMs
+              ? a.metrics.tempsMs + a.metrics.penalites * 3000
               : Number.MAX_SAFE_INTEGER;
           const vb =
             b.metrics.type === "vitesse"
               ? b.metrics.tempsMs
               : b.metrics.type === "glisse_crosse"
-              ? b.metrics.tempsMs
+              ? b.metrics.tempsMs + b.metrics.penalites * 3000
               : Number.MAX_SAFE_INTEGER;
           return va - vb;
         })
@@ -294,7 +298,7 @@ export default function ChallengePage() {
               a.metrics.type === "vitesse"
                 ? a.metrics.tempsMs
                 : a.metrics.type === "glisse_crosse"
-                ? a.metrics.tempsMs
+                ? a.metrics.tempsMs + a.metrics.penalites * 3000
                 : a.metrics.type === "gardien_arret"
                 ? a.metrics.tempsMs
                 : Number.MAX_SAFE_INTEGER;
@@ -302,7 +306,7 @@ export default function ChallengePage() {
               b.metrics.type === "vitesse"
                 ? b.metrics.tempsMs
                 : b.metrics.type === "glisse_crosse"
-                ? b.metrics.tempsMs
+                ? b.metrics.tempsMs + b.metrics.penalites * 3000
                 : b.metrics.type === "gardien_arret"
                 ? b.metrics.tempsMs
                 : Number.MAX_SAFE_INTEGER;
@@ -414,9 +418,6 @@ export default function ChallengePage() {
     });
     return (
       <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-3 space-y-2">
-        <div className="flex items-center justify-between text-xs text-slate-300">
-          <span className="text-sm font-semibold text-white">Vitesse</span>
-        </div>
         {ordered.length === 0 ? (
           <p className="text-slate-300 text-xs">Aucun joueur.</p>
         ) : (
@@ -499,6 +500,29 @@ export default function ChallengePage() {
     showGardienJ3 &&
     (gardienFinalePlayers.length > 0 || gardienDemiSlots.length > 0 || gardienTotalAttempts.length > 0);
 
+  const finaleCombiTop3 = React.useMemo(() => {
+    const selectedTeamId = selectedTeam?.id?.toLowerCase();
+    const term = searchTerm.trim().toLowerCase();
+    const vitesseAttempts = groupByAtelier.jour1.vitesse.filter((a) => {
+      if (a.metrics.type !== "vitesse" || (a.metrics.tempsTotal ?? 0) === 0) return false;
+      if (selectedTeamId && (a.equipeId ?? "").toLowerCase() !== selectedTeamId) return false;
+      if (term) {
+        const j = (a.joueurName ?? "").toLowerCase();
+        const e = (a.equipeId ?? "").toLowerCase();
+        const en = (a.equipeName ?? "").toLowerCase();
+        if (!j.includes(term) && !e.includes(term) && !en.includes(term)) return false;
+      }
+      return true;
+    });
+    return [...vitesseAttempts]
+      .sort((a, b) => {
+        const ta = a.metrics.type === "vitesse" ? (a.metrics.tempsTotal ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER;
+        const tb = b.metrics.type === "vitesse" ? (b.metrics.tempsTotal ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER;
+        return ta - tb;
+      })
+      .slice(0, 3);
+  }, [groupByAtelier, selectedTeam, searchTerm]);
+
   React.useLayoutEffect(() => {
     const updateLayout = () => {
       const nav = document.querySelector("header");
@@ -566,6 +590,12 @@ export default function ChallengePage() {
                   Evaluation
                 </button>
                 <button
+                  className={`rounded-full border px-3 py-1 ${showEvaluationGardien ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-200 border-slate-600"}`}
+                  onClick={() => setShowEvaluationGardien((v) => !v)}
+                >
+                  Eval Gardien
+                </button>
+                <button
                   className={`rounded-full border px-3 py-1 ${showFinale ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-200 border-slate-600"}`}
                   onClick={() => setShowFinale((v) => !v)}
                 >
@@ -601,12 +631,12 @@ export default function ChallengePage() {
               {showFinalesBlock && (
                 <section className="space-y-3">
                   <h2 className="text-base font-semibold text-white">
-                    Finales du Challenge Vitesse {j3Label ? `- ${j3Label}` : ""}
+                    Finales Challenge Joueur {j3Label ? `- ${j3Label}` : ""}
                   </h2>
                   <div className="space-y-3">
                     {finalePlayers.length > 0 && (
                       <div className="space-y-2">
-                        <h3 className="text-sm font-semibold text-slate-200">Vitesse</h3>
+                        <h3 className="text-sm font-semibold text-slate-200">Finale Vitesse</h3>
                         {renderFinaleList()}
                       </div>
                     )}
@@ -632,6 +662,60 @@ export default function ChallengePage() {
                         </div>
                       </div>
                     )}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs text-slate-200">
+                        <h3 className="text-sm font-semibold text-slate-200">Finale Combiné Joueur</h3>
+                        <Link to="/challenge/finale-combine" className="text-emerald-300 hover:text-emerald-200 font-semibold">
+                          Voir tout
+                        </Link>
+                      </div>
+                      <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
+                      {finaleCombiTop3.length === 0 ? (
+                        <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-3">
+                          <p className="text-slate-300 text-xs">Aucune donnée disponible.</p>
+                        </div>
+                      ) : (
+                        <section className="rounded-lg border border-slate-800 bg-slate-900/70 p-3">
+                          <div className="overflow-auto">
+                            <table className="min-w-full text-xs text-slate-100">
+                              <thead className="text-[11px] uppercase text-slate-400">
+                                <tr>
+                                  <th className="py-1 pr-3 text-left">Joueur</th>
+                                  <th className="py-1 text-right">Temps combiné</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-800 text-[12px]">
+                                {finaleCombiTop3.map((a, idx) => {
+                                  const eqKey = (a.equipeId ?? "").toLowerCase();
+                                  const equipe = teamMap.get(eqKey);
+                                  const tempsTotal = a.metrics.type === "vitesse" ? (a.metrics.tempsTotal ?? 0) : 0;
+                                  return (
+                                    <tr key={`${a.atelierId}-${a.joueurId}-${idx}`}>
+                                      <td className={`py-1 pr-3 font-semibold ${idx < 3 ? "text-emerald-200" : "text-slate-100"}`}>
+                                        <span className="inline-flex items-center gap-2">
+                                          {a.equipeLogoUrl || equipe?.logoUrl ? (
+                                            <img
+                                              src={(a.equipeLogoUrl as string) || (equipe?.logoUrl as string)}
+                                              alt={a.equipeName || equipe?.name || "Equipe"}
+                                              className="h-6 w-6 rounded-full object-cover"
+                                            />
+                                          ) : null}
+                                          <span>{a.joueurName}</span>
+                                          {a.equipeName && <span className="text-slate-400 text-[11px]">({a.equipeId})</span>}
+                                        </span>
+                                      </td>
+                                      <td className={`py-1 text-right ${idx < 3 ? "text-emerald-200" : "text-slate-100"}`}>
+                                        {(tempsTotal / 1000).toFixed(2)} s
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </section>
+                      )}
+                    </div>
                   </div>
                 </section>
               )}
@@ -684,7 +768,7 @@ export default function ChallengePage() {
                 <section className="space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex flex-col">
-                        <h2 className="text-base font-semibold text-white">{evalLabel ? `Evaluation ${evalLabel}` : "Evaluation"}</h2>
+                        <h2 className="text-base font-semibold text-white">Evaluation Joueur</h2>
                       </div>
                     <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
                       <button
@@ -772,6 +856,15 @@ export default function ChallengePage() {
                         )}
                       </div>
                     )}
+                  </div>
+
+                </section>
+              )}
+
+              {showEvaluationGardien && (
+                <section className="space-y-2">
+                  <h2 className="text-base font-semibold text-white">Evaluation Gardien</h2>
+                  <div className="grid gap-3 md:grid-cols-2">
                     {groupByAtelier.jour1.gardien_vitesse.length > 0 && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-xs text-slate-200">
@@ -806,7 +899,6 @@ export default function ChallengePage() {
                       </div>
                     )}
                   </div>
-
                 </section>
               )}
 

@@ -70,7 +70,7 @@ function renderPage() {
 }
 
 function getFinalesSection() {
-  return screen.getByText(/Finales du Challenge Vitesse/i).closest("section") as HTMLElement;
+  return screen.getByText(/Finales Challenge Joueur/i).closest("section") as HTMLElement;
 }
 
 function getMomentumSection() {
@@ -377,7 +377,7 @@ describe("ChallengePage", () => {
 
     renderPage();
 
-    expect(screen.queryByText(/Finales du Challenge Vitesse/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Finales Challenge Joueur/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Legacy Only")).not.toBeInTheDocument();
   });
 
@@ -393,12 +393,12 @@ describe("ChallengePage", () => {
     renderPage();
 
     const finalesSection = getFinalesSection();
-    expect(screen.getByText(/Finales du Challenge Vitesse/i)).toBeInTheDocument();
+    expect(screen.getByText(/Finales Challenge Joueur/i)).toBeInTheDocument();
     expect(within(finalesSection).getByText("Quart de finale")).toBeInTheDocument();
     expect(within(finalesSection).getByText("Quart de Finale 1")).toBeInTheDocument();
     expect(within(finalesSection).getByText("Quart de Finale 2")).toBeInTheDocument();
     expect(within(finalesSection).queryByText("Demi Finales")).not.toBeInTheDocument();
-    expect(within(finalesSection).queryByRole("heading", { level: 3, name: "Vitesse" })).not.toBeInTheDocument();
+    expect(within(finalesSection).queryByRole("heading", { level: 3, name: "Finale Vitesse" })).not.toBeInTheDocument();
   });
 
   it("affiche uniquement les demis quand seuls des slots DF sont fournis", () => {
@@ -412,11 +412,11 @@ describe("ChallengePage", () => {
     renderPage();
 
     const finalesSection = getFinalesSection();
-    expect(screen.getByText(/Finales du Challenge Vitesse/i)).toBeInTheDocument();
+    expect(screen.getByText(/Finales Challenge Joueur/i)).toBeInTheDocument();
     expect(within(finalesSection).getByText("Demi Finales")).toBeInTheDocument();
     expect(within(finalesSection).getByText("Demi Finale 1")).toBeInTheDocument();
     expect(within(finalesSection).queryByText("Quart de finale")).not.toBeInTheDocument();
-    expect(within(finalesSection).queryByRole("heading", { level: 3, name: "Vitesse" })).not.toBeInTheDocument();
+    expect(within(finalesSection).queryByRole("heading", { level: 3, name: "Finale Vitesse" })).not.toBeInTheDocument();
   });
 
   it("affiche uniquement la finale quand F1 contient des joueurs", () => {
@@ -430,8 +430,8 @@ describe("ChallengePage", () => {
     renderPage();
 
     const finalesSection = getFinalesSection();
-    expect(screen.getByText(/Finales du Challenge Vitesse/i)).toBeInTheDocument();
-    expect(within(finalesSection).getByRole("heading", { level: 3, name: "Vitesse" })).toBeInTheDocument();
+    expect(screen.getByText(/Finales Challenge Joueur/i)).toBeInTheDocument();
+    expect(within(finalesSection).getByRole("heading", { level: 3, name: "Finale Vitesse" })).toBeInTheDocument();
     expect(within(finalesSection).getByText("Rennes Finaliste")).toBeInTheDocument();
     expect(within(finalesSection).queryByText("Demi Finales")).not.toBeInTheDocument();
     expect(within(finalesSection).queryByText("Quart de finale")).not.toBeInTheDocument();
@@ -449,7 +449,7 @@ describe("ChallengePage", () => {
 
     renderPage();
 
-    expect(screen.queryByText(/Finales du Challenge Vitesse/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Finales Challenge Joueur/i)).not.toBeInTheDocument();
   });
 
   it("rend correctement un dataset partiel mixte et met en avant le vainqueur", () => {
@@ -472,7 +472,7 @@ describe("ChallengePage", () => {
     expect(within(finalesSection).getByText("Quart de Finale 2")).toBeInTheDocument();
     expect(within(finalesSection).getByText("Demi Finales")).toBeInTheDocument();
     expect(within(finalesSection).getByText("Demi Finale 1")).toBeInTheDocument();
-    expect(within(finalesSection).getByRole("heading", { level: 3, name: "Vitesse" })).toBeInTheDocument();
+    expect(within(finalesSection).getByRole("heading", { level: 3, name: "Finale Vitesse" })).toBeInTheDocument();
     expect(within(finalesSection).getByText("Grand Vainqueur")).toBeInTheDocument();
     expect(within(finalesSection).getAllByText("Vainqueur").length).toBeGreaterThan(0);
   });
@@ -496,7 +496,7 @@ describe("ChallengePage", () => {
     expect(within(finalesSection).getByText("Paris Quart")).toBeInTheDocument();
     expect(within(finalesSection).getByText("Rennes Finale")).toBeInTheDocument();
     expect(within(finalesSection).getByText("Quart de finale")).toBeInTheDocument();
-    expect(within(finalesSection).getByRole("heading", { level: 3, name: "Vitesse" })).toBeInTheDocument();
+    expect(within(finalesSection).getByRole("heading", { level: 3, name: "Finale Vitesse" })).toBeInTheDocument();
   });
 
   it("conserve les blocs J1 d'évaluation Vitesse, Tir et Agilité", () => {
