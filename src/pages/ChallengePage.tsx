@@ -782,7 +782,12 @@ export default function ChallengePage() {
                     )}
                     {showFinaleGardienCombi && gardienTotalAttempts.length > 0 && (
                       <div className="space-y-2">
-                        <h3 className="text-sm font-semibold text-slate-200">Finale Atelier Gardien</h3>
+                        <div className="flex items-center justify-between text-xs text-slate-200">
+                          <h3 className="text-sm font-semibold text-slate-200">Finale Atelier Gardien</h3>
+                          <Link to="/challenge/finale-atelier-gardien" className="text-emerald-300 hover:text-emerald-200 font-semibold text-xs">
+                            Voir tout
+                          </Link>
+                        </div>
                         <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
                         <GardienTotalTable
                           attempts={applyFilters(gardienTotalAttempts, "gardien_arret", { limitTop: 3 })}

@@ -21,6 +21,7 @@ import TournamentTimelinePage from "../pages/TournamentTimelinePage";
 import PlanningCalendairePage from "../pages/PlanningCalendairePage";
 import ChallengeAtelierPage from "../pages/ChallengeAtelierPage";
 import ChallengeFinaleCombiPage from "../pages/ChallengeFinaleCombiPage";
+import ChallengeFinaleAtelierGardienPage from "../pages/ChallengeFinaleAtelierGardienPage";
 import LivePage from "../pages/LivePage";
 import InscriptionPage from "../pages/InscriptionPage";
 import SearchBar from "../components/ds/SearchBar";
@@ -121,6 +122,14 @@ export default function AppRouter() {
         element={
           <LayoutRoot>
             <ChallengeFinaleCombiPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/challenge/finale-atelier-gardien"
+        element={
+          <LayoutRoot>
+            <ChallengeFinaleAtelierGardienPage />
           </LayoutRoot>
         }
       />
