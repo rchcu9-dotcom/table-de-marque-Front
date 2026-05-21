@@ -87,7 +87,13 @@ export default function ChallengePage() {
   const [showEvaluation, setShowEvaluation] = React.useState(true);
   const [showEvaluationGardien, setShowEvaluationGardien] = React.useState(true);
   const [showFinale, setShowFinale] = React.useState(true);
+  const [showFinaleVitesse, setShowFinaleVitesse] = React.useState(true);
+  const [showFinaleCombi, setShowFinaleCombi] = React.useState(true);
   const [showGardienJ3, setShowGardienJ3] = React.useState(true);
+  const [showFinaleGardienVitesse, setShowFinaleGardienVitesse] = React.useState(true);
+  const [showFinaleGardienCombi, setShowFinaleGardienCombi] = React.useState(true);
+  const [showEvalGardienVitesse, setShowEvalGardienVitesse] = React.useState(true);
+  const [showEvalGardienAgilite, setShowEvalGardienAgilite] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
   const headerCardRef = React.useRef<HTMLDivElement | null>(null);
   const [layout, setLayout] = React.useState<{ topOffset: number; paddingTop: number }>({ topOffset: 64, paddingTop: 260 });
@@ -630,17 +636,29 @@ export default function ChallengePage() {
 
               {showFinalesBlock && (
                 <section className="space-y-3">
-                  <h2 className="text-base font-semibold text-white">
-                    Finales Challenge Joueur {j3Label ? `- ${j3Label}` : ""}
-                  </h2>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h2 className="text-base font-semibold text-white">
+                      Finales Challenge Joueur {j3Label ? `- ${j3Label}` : ""}
+                    </h2>
+                    <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                      <button
+                        className={`rounded-full border px-3 py-1 ${showFinaleVitesse ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-300 border-slate-700"}`}
+                        onClick={() => setShowFinaleVitesse((v) => !v)}
+                      >Vitesse</button>
+                      <button
+                        className={`rounded-full border px-3 py-1 ${showFinaleCombi ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-300 border-slate-700"}`}
+                        onClick={() => setShowFinaleCombi((v) => !v)}
+                      >Combiné</button>
+                    </div>
+                  </div>
                   <div className="space-y-3">
-                    {finalePlayers.length > 0 && (
+                    {showFinaleVitesse && finalePlayers.length > 0 && (
                       <div className="space-y-2">
                         <h3 className="text-sm font-semibold text-slate-200">Finale Vitesse</h3>
                         {renderFinaleList()}
                       </div>
                     )}
-                    {nonEmptyDemiSlots.length > 0 && (
+                    {showFinaleVitesse && nonEmptyDemiSlots.length > 0 && (
                       <div className="space-y-2">
                         <h3 className="text-sm font-semibold text-slate-200">Demi Finales</h3>
                         <div className="grid gap-3 md:grid-cols-2">
@@ -651,7 +669,7 @@ export default function ChallengePage() {
                         </div>
                       </div>
                     )}
-                    {nonEmptyQuartSlots.length > 0 && (
+                    {showFinaleVitesse && nonEmptyQuartSlots.length > 0 && (
                       <div className="space-y-2">
                         <h3 className="text-sm font-semibold text-slate-200">Quart de finale</h3>
                         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -662,7 +680,7 @@ export default function ChallengePage() {
                         </div>
                       </div>
                     )}
-                    <div className="space-y-2">
+                    {showFinaleCombi && <div className="space-y-2">
                       <div className="flex items-center justify-between text-xs text-slate-200">
                         <h3 className="text-sm font-semibold text-slate-200">Finale Combiné Joueur</h3>
                         <Link to="/challenge/finale-combine" className="text-emerald-300 hover:text-emerald-200 font-semibold">
@@ -715,24 +733,36 @@ export default function ChallengePage() {
                           </div>
                         </section>
                       )}
-                    </div>
+                    </div>}
                   </div>
                 </section>
               )}
 
               {showGardienJ3Block && (
                 <section className="space-y-3">
-                  <h2 className="text-base font-semibold text-white">
-                    Finales Challenge Gardien {j3Label ? `- ${j3Label}` : ""}
-                  </h2>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h2 className="text-base font-semibold text-white">
+                      Finales Challenge Gardien {j3Label ? `- ${j3Label}` : ""}
+                    </h2>
+                    <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                      <button
+                        className={`rounded-full border px-3 py-1 ${showFinaleGardienVitesse ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-300 border-slate-700"}`}
+                        onClick={() => setShowFinaleGardienVitesse((v) => !v)}
+                      >Vitesse</button>
+                      <button
+                        className={`rounded-full border px-3 py-1 ${showFinaleGardienCombi ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-300 border-slate-700"}`}
+                        onClick={() => setShowFinaleGardienCombi((v) => !v)}
+                      >Combiné</button>
+                    </div>
+                  </div>
                   <div className="space-y-3">
-                    {gardienFinalePlayers.length > 0 && (
+                    {showFinaleGardienVitesse && gardienFinalePlayers.length > 0 && (
                       <div className="space-y-2">
                         <h3 className="text-sm font-semibold text-slate-200">Finale</h3>
                         <GardienJ3SlotCard players={gardienFinalePlayers} teamMap={teamMap} buildLogoUrl={buildLogoUrl} statusBadgeClass={statusBadgeClass} statusLabel={statusLabel} />
                       </div>
                     )}
-                    {gardienDemiSlots.length > 0 && (
+                    {showFinaleGardienVitesse && gardienDemiSlots.length > 0 && (
                       <div className="space-y-2">
                         <h3 className="text-sm font-semibold text-slate-200">Demi-finales</h3>
                         <div className="grid gap-3 md:grid-cols-2">
@@ -750,9 +780,14 @@ export default function ChallengePage() {
                         </div>
                       </div>
                     )}
-                    {gardienTotalAttempts.length > 0 && (
+                    {showFinaleGardienCombi && gardienTotalAttempts.length > 0 && (
                       <div className="space-y-2">
-                        <h3 className="text-sm font-semibold text-slate-200">Finale Atelier Gardien</h3>
+                        <div className="flex items-center justify-between text-xs text-slate-200">
+                          <h3 className="text-sm font-semibold text-slate-200">Finale Atelier Gardien</h3>
+                          <Link to="/challenge/finale-atelier-gardien" className="text-emerald-300 hover:text-emerald-200 font-semibold text-xs">
+                            Voir tout
+                          </Link>
+                        </div>
                         <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
                         <GardienTotalTable
                           attempts={applyFilters(gardienTotalAttempts, "gardien_arret", { limitTop: 3 })}
@@ -863,9 +898,21 @@ export default function ChallengePage() {
 
               {showEvaluationGardien && (
                 <section className="space-y-2">
-                  <h2 className="text-base font-semibold text-white">Evaluation Gardien</h2>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h2 className="text-base font-semibold text-white">Evaluation Gardien</h2>
+                    <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+                      <button
+                        className={`rounded-full border px-3 py-1 ${showEvalGardienVitesse ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-300 border-slate-700"}`}
+                        onClick={() => setShowEvalGardienVitesse((v) => !v)}
+                      >Vitesse</button>
+                      <button
+                        className={`rounded-full border px-3 py-1 ${showEvalGardienAgilite ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-300 border-slate-700"}`}
+                        onClick={() => setShowEvalGardienAgilite((v) => !v)}
+                      >Agilité</button>
+                    </div>
+                  </div>
                   <div className="grid gap-3 md:grid-cols-2">
-                    {groupByAtelier.jour1.gardien_vitesse.length > 0 && (
+                    {showEvalGardienVitesse && groupByAtelier.jour1.gardien_vitesse.length > 0 && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-xs text-slate-200">
                           <div className="flex items-center gap-2">
@@ -884,7 +931,7 @@ export default function ChallengePage() {
                         {renderTable("Gardien - Challenge Vitesse", applyFilters(groupByAtelier.jour1.gardien_vitesse, "vitesse", { limitTop: 3 }), { hideTitle: true })}
                       </div>
                     )}
-                    {groupByAtelier.jour1.gardien_arret.length > 0 && (
+                    {showEvalGardienAgilite && groupByAtelier.jour1.gardien_arret.length > 0 && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-xs text-slate-200">
                           <div className="flex items-center gap-2">
