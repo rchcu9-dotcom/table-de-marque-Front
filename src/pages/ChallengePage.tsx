@@ -85,6 +85,7 @@ export default function ChallengePage() {
   const [showTir, setShowTir] = React.useState(true);
   const [showGlisse, setShowGlisse] = React.useState(true);
   const [showEvaluation, setShowEvaluation] = React.useState(true);
+  const [showEvaluationGardien, setShowEvaluationGardien] = React.useState(true);
   const [showFinale, setShowFinale] = React.useState(true);
   const [showGardienJ3, setShowGardienJ3] = React.useState(true);
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -577,6 +578,12 @@ export default function ChallengePage() {
                   Evaluation
                 </button>
                 <button
+                  className={`rounded-full border px-3 py-1 ${showEvaluationGardien ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-200 border-slate-600"}`}
+                  onClick={() => setShowEvaluationGardien((v) => !v)}
+                >
+                  Eval Gardien
+                </button>
+                <button
                   className={`rounded-full border px-3 py-1 ${showFinale ? "bg-emerald-500/20 text-emerald-200 border-emerald-400/60" : "bg-slate-800 text-slate-200 border-slate-600"}`}
                   onClick={() => setShowFinale((v) => !v)}
                 >
@@ -783,6 +790,15 @@ export default function ChallengePage() {
                         )}
                       </div>
                     )}
+                  </div>
+
+                </section>
+              )}
+
+              {showEvaluationGardien && (
+                <section className="space-y-2">
+                  <h2 className="text-base font-semibold text-white">Evaluation Gardien</h2>
+                  <div className="grid gap-3 md:grid-cols-2">
                     {groupByAtelier.jour1.gardien_vitesse.length > 0 && (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-xs text-slate-200">
@@ -817,7 +833,6 @@ export default function ChallengePage() {
                       </div>
                     )}
                   </div>
-
                 </section>
               )}
 
