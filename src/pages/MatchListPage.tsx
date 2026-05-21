@@ -95,7 +95,7 @@ export default function MatchListPage({
     (match: Match) => {
       const isChallenge = (match.competitionType ?? "").toLowerCase() === "challenge";
       if (isChallenge) {
-        navigate(`/challenge/equipe/${encodeURIComponent(match.teamA)}`);
+        navigate(`/challenge`);
       } else {
         navigate(`/matches/${match.id}`);
       }

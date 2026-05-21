@@ -324,7 +324,7 @@ export default function TeamPage() {
       }
       const isChallenge = (match.competitionType ?? "").toLowerCase() === "challenge";
       if (isChallenge) {
-        navigate(`/challenge/equipe/${encodeURIComponent(match.teamA)}`);
+        navigate(`/challenge`);
         return;
       }
       navigate(`/matches/${id}`);
