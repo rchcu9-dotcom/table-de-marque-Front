@@ -77,7 +77,7 @@ export default function ChallengeDetailPage() {
       const dedans = tirs.filter((t) => t === 1).length;
       const bas = tirs.filter((t) => t === 2).length;
       const haut = tirs.filter((t) => t === 3).length;
-      const bonus = dehors * 5 + bas * -5 + haut * -10;
+      const bonus = dehors * 1 + bas * -2 + haut * -5;
       return `Dehors: ${dehors}, Dedans: ${dedans}, Bas: ${bas}, Haut: ${haut}, Bonus: ${bonus > 0 ? "+" : ""}${bonus} s`;
     }
     if (m.metrics.type === "glisse_crosse") return `${(m.metrics.tempsMs / 1000).toFixed(2)} s, pénalités: ${m.metrics.penalites}`;
