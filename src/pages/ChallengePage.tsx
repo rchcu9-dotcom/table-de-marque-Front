@@ -426,9 +426,6 @@ export default function ChallengePage() {
     });
     return (
       <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-3 space-y-2">
-        <div className="flex items-center justify-between text-xs text-slate-300">
-          <span className="text-sm font-semibold text-white">Vitesse</span>
-        </div>
         {ordered.length === 0 ? (
           <p className="text-slate-300 text-xs">Aucun joueur.</p>
         ) : (
@@ -642,12 +639,12 @@ export default function ChallengePage() {
               {showFinalesBlock && (
                 <section className="space-y-3">
                   <h2 className="text-base font-semibold text-white">
-                    Finales du Challenge Vitesse {j3Label ? `- ${j3Label}` : ""}
+                    Finales Challenge Joueur {j3Label ? `- ${j3Label}` : ""}
                   </h2>
                   <div className="space-y-3">
                     {finalePlayers.length > 0 && (
                       <div className="space-y-2">
-                        <h3 className="text-sm font-semibold text-slate-200">Vitesse</h3>
+                        <h3 className="text-sm font-semibold text-slate-200">Finale Vitesse</h3>
                         {renderFinaleList()}
                       </div>
                     )}
