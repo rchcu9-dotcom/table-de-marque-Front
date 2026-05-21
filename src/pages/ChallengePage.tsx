@@ -511,6 +511,29 @@ export default function ChallengePage() {
     showGardienJ3 &&
     (gardienFinalePlayers.length > 0 || gardienDemiSlots.length > 0 || gardienTotalAttempts.length > 0);
 
+  const finaleCombiTop3 = React.useMemo(() => {
+    const selectedTeamId = selectedTeam?.id?.toLowerCase();
+    const term = searchTerm.trim().toLowerCase();
+    const vitesseAttempts = groupByAtelier.jour1.vitesse.filter((a) => {
+      if (a.metrics.type !== "vitesse" || (a.metrics.tempsTotal ?? 0) === 0) return false;
+      if (selectedTeamId && (a.equipeId ?? "").toLowerCase() !== selectedTeamId) return false;
+      if (term) {
+        const j = (a.joueurName ?? "").toLowerCase();
+        const e = (a.equipeId ?? "").toLowerCase();
+        const en = (a.equipeName ?? "").toLowerCase();
+        if (!j.includes(term) && !e.includes(term) && !en.includes(term)) return false;
+      }
+      return true;
+    });
+    return [...vitesseAttempts]
+      .sort((a, b) => {
+        const ta = a.metrics.type === "vitesse" ? (a.metrics.tempsTotal ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER;
+        const tb = b.metrics.type === "vitesse" ? (b.metrics.tempsTotal ?? Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER;
+        return ta - tb;
+      })
+      .slice(0, 3);
+  }, [groupByAtelier, selectedTeam, searchTerm]);
+
   React.useLayoutEffect(() => {
     const updateLayout = () => {
       const nav = document.querySelector("header");
@@ -650,6 +673,60 @@ export default function ChallengePage() {
                         </div>
                       </div>
                     )}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs text-slate-200">
+                        <h3 className="text-sm font-semibold text-slate-200">Finale Combiné Joueur</h3>
+                        <Link to="/challenge/finale-combine" className="text-emerald-300 hover:text-emerald-200 font-semibold">
+                          Voir tout
+                        </Link>
+                      </div>
+                      <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
+                      {finaleCombiTop3.length === 0 ? (
+                        <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-3">
+                          <p className="text-slate-300 text-xs">Aucune donnée disponible.</p>
+                        </div>
+                      ) : (
+                        <section className="rounded-lg border border-slate-800 bg-slate-900/70 p-3">
+                          <div className="overflow-auto">
+                            <table className="min-w-full text-xs text-slate-100">
+                              <thead className="text-[11px] uppercase text-slate-400">
+                                <tr>
+                                  <th className="py-1 pr-3 text-left">Joueur</th>
+                                  <th className="py-1 text-right">Temps combiné</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-800 text-[12px]">
+                                {finaleCombiTop3.map((a, idx) => {
+                                  const eqKey = (a.equipeId ?? "").toLowerCase();
+                                  const equipe = teamMap.get(eqKey);
+                                  const tempsTotal = a.metrics.type === "vitesse" ? (a.metrics.tempsTotal ?? 0) : 0;
+                                  return (
+                                    <tr key={`${a.atelierId}-${a.joueurId}-${idx}`}>
+                                      <td className={`py-1 pr-3 font-semibold ${idx < 3 ? "text-emerald-200" : "text-slate-100"}`}>
+                                        <span className="inline-flex items-center gap-2">
+                                          {a.equipeLogoUrl || equipe?.logoUrl ? (
+                                            <img
+                                              src={(a.equipeLogoUrl as string) || (equipe?.logoUrl as string)}
+                                              alt={a.equipeName || equipe?.name || "Equipe"}
+                                              className="h-6 w-6 rounded-full object-cover"
+                                            />
+                                          ) : null}
+                                          <span>{a.joueurName}</span>
+                                          {a.equipeName && <span className="text-slate-400 text-[11px]">({a.equipeId})</span>}
+                                        </span>
+                                      </td>
+                                      <td className={`py-1 text-right ${idx < 3 ? "text-emerald-200" : "text-slate-100"}`}>
+                                        {(tempsTotal / 1000).toFixed(2)} s
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </section>
+                      )}
+                    </div>
                   </div>
                 </section>
               )}
