@@ -87,10 +87,10 @@ describe("LivePage", () => {
 
     expect(await screen.findByTestId("live-badge")).toBeInTheDocument();
     const iframe = (await screen.findByTestId("live-iframe")) as HTMLIFrameElement;
-    expect(iframe.src).toContain("Lxfrp0j4VXQ");
+    expect(iframe.src).toContain("live-id");
   });
 
-  it("affiche la video fallback quand aucun live n'est actif", async () => {
+  it("n'affiche pas d'iframe live quand aucun live n'est actif", async () => {
     mockFetchLiveStatus.mockResolvedValue({
       isLive: false,
       fallbackEmbedUrl: "https://www.youtube.com/embed/at3v7WepbDg",
@@ -98,8 +98,8 @@ describe("LivePage", () => {
 
     render(<LivePage />);
 
-    const iframe = (await screen.findByTestId("live-iframe")) as HTMLIFrameElement;
-    expect(iframe.src).toContain("Lxfrp0j4VXQ");
+    await screen.findByTestId("youtube-channel-link");
+    expect(screen.queryByTestId("live-iframe")).not.toBeInTheDocument();
   });
 
   it("applique un fallback silencieux quand /live/status est en erreur", async () => {
@@ -107,8 +107,8 @@ describe("LivePage", () => {
 
     render(<LivePage />);
 
-    const iframe = (await screen.findByTestId("live-iframe")) as HTMLIFrameElement;
-    expect(iframe.src).toContain("Lxfrp0j4VXQ");
+    await screen.findByTestId("youtube-channel-link");
+    expect(screen.queryByTestId("live-iframe")).not.toBeInTheDocument();
     expect(screen.queryByTestId("live-error")).not.toBeInTheDocument();
   });
 
@@ -122,8 +122,8 @@ describe("LivePage", () => {
 
     render(<LivePage />);
 
-    const iframe = (await screen.findByTestId("live-iframe")) as HTMLIFrameElement;
-    expect(iframe.src).toContain("Lxfrp0j4VXQ");
+    await screen.findByTestId("youtube-channel-link");
+    expect(screen.queryByTestId("live-iframe")).not.toBeInTheDocument();
     expect(screen.queryByTestId("live-error")).not.toBeInTheDocument();
   });
 
@@ -135,8 +135,8 @@ describe("LivePage", () => {
 
     render(<LivePage />);
 
-    const fallbackIframe = (await screen.findByTestId("live-iframe")) as HTMLIFrameElement;
-    expect(fallbackIframe.src).toContain("Lxfrp0j4VXQ");
+    await screen.findByTestId("youtube-channel-link");
+    expect(screen.queryByTestId("live-iframe")).not.toBeInTheDocument();
 
     const stream = MockEventSource.instances[0];
     await act(async () => {
@@ -152,7 +152,7 @@ describe("LivePage", () => {
 
     await waitFor(() => expect(screen.getByTestId("live-badge")).toBeInTheDocument());
     const liveIframe = screen.getByTestId("live-iframe") as HTMLIFrameElement;
-    expect(liveIframe.src).toContain("Lxfrp0j4VXQ");
+    expect(liveIframe.src).toContain("live-id");
   });
 
   it("bascule live -> fallback sur event SSE direct", async () => {
@@ -164,7 +164,7 @@ describe("LivePage", () => {
 
     render(<LivePage />);
     const liveIframe = (await screen.findByTestId("live-iframe")) as HTMLIFrameElement;
-    expect(liveIframe.src).toContain("Lxfrp0j4VXQ");
+    expect(liveIframe.src).toContain("live-id");
 
     const stream = MockEventSource.instances[0];
     await act(async () => {
@@ -175,8 +175,7 @@ describe("LivePage", () => {
     });
 
     await waitFor(() => expect(screen.queryByTestId("live-badge")).not.toBeInTheDocument());
-    const fallbackIframe = screen.getByTestId("live-iframe") as HTMLIFrameElement;
-    expect(fallbackIframe.src).toContain("Lxfrp0j4VXQ");
+    expect(screen.queryByTestId("live-iframe")).not.toBeInTheDocument();
   });
 
   it("active le polling apres erreur SSE puis le stoppe a la reconnexion", async () => {
@@ -186,7 +185,7 @@ describe("LivePage", () => {
     });
 
     render(<LivePage />);
-    await screen.findByTestId("live-iframe");
+    await screen.findByTestId("youtube-channel-link");
     vi.useFakeTimers();
 
     const firstStream = MockEventSource.instances[0];
@@ -224,15 +223,14 @@ describe("LivePage", () => {
     render(<LivePage />);
 
     const stream = MockEventSource.instances[0];
-    const before = (await screen.findByTestId("live-iframe")) as HTMLIFrameElement;
-    expect(before.src).toContain("Lxfrp0j4VXQ");
+    await screen.findByTestId("youtube-channel-link");
+    expect(screen.queryByTestId("live-iframe")).not.toBeInTheDocument();
 
     await act(async () => {
       stream.emitMessage("{not-json");
     });
 
-    const after = screen.getByTestId("live-iframe") as HTMLIFrameElement;
-    expect(after.src).toContain("Lxfrp0j4VXQ");
+    expect(screen.queryByTestId("live-iframe")).not.toBeInTheDocument();
     expect(screen.queryByTestId("live-error")).not.toBeInTheDocument();
   });
 
@@ -243,7 +241,7 @@ describe("LivePage", () => {
     });
 
     render(<LivePage />);
-    await screen.findByTestId("live-iframe");
+    await screen.findByTestId("youtube-channel-link");
 
     const stream = MockEventSource.instances[0];
     await act(async () => {
@@ -283,8 +281,7 @@ describe("LivePage", () => {
     });
 
     await waitFor(() => expect(screen.queryByTestId("live-badge")).not.toBeInTheDocument());
-    const iframe = screen.getByTestId("live-iframe") as HTMLIFrameElement;
-    expect(iframe.src).toContain("Lxfrp0j4VXQ");
+    expect(screen.queryByTestId("live-iframe")).not.toBeInTheDocument();
   });
 
   it("affiche le bloc reel avec l'iframe pointant vers le bon embed Facebook", async () => {
@@ -294,7 +291,7 @@ describe("LivePage", () => {
     });
 
     render(<LivePage />);
-    await screen.findByTestId("live-iframe");
+    await screen.findByTestId("youtube-channel-link");
 
     const reelIframe = screen.getByTestId("reel-iframe") as HTMLIFrameElement;
     expect(reelIframe).toBeInTheDocument();
@@ -309,7 +306,7 @@ describe("LivePage", () => {
     });
 
     render(<LivePage />);
-    await screen.findByTestId("live-iframe");
+    await screen.findByTestId("youtube-channel-link");
 
     const reelLink = screen.getByTestId("reel-link") as HTMLAnchorElement;
     expect(reelLink).toBeInTheDocument();
@@ -332,7 +329,7 @@ describe("LivePage", () => {
 
     expect(await screen.findByTestId("live-badge")).toBeInTheDocument();
     const iframe = (await screen.findByTestId("live-iframe")) as HTMLIFrameElement;
-    expect(iframe.src).toContain("Lxfrp0j4VXQ");
+    expect(iframe.src).toContain("forced-live-id");
   });
 
   it("reconnecte le stream apres timeout et garde une seule connexion active", async () => {
@@ -342,7 +339,7 @@ describe("LivePage", () => {
     });
 
     render(<LivePage />);
-    await screen.findByTestId("live-iframe");
+    await screen.findByTestId("youtube-channel-link");
     vi.useFakeTimers();
 
     const firstStream = MockEventSource.instances[0];
