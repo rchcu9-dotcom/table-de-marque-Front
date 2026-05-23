@@ -7,6 +7,7 @@ import { API_BASE_URL, fetchLiveStatus } from "../api/live";
 import type { LiveStatus, LiveStreamEnvelope } from "../api/live";
 
 const DEFAULT_FALLBACK_EMBED_URL = "https://www.youtube.com/embed/at3v7WepbDg";
+const YOUTUBE_CHANNEL_URL = "https://www.youtube.com/@titouankerogues2051";
 const FALLBACK_POLLING_MS = 30_000;
 const STREAM_RECONNECT_MS = 5_000;
 const FACEBOOK_PAGE_URL = "https://www.facebook.com/profile.php?id=61567163188148";
@@ -61,6 +62,7 @@ function parseLiveStatusEvent(payload: string): LiveStatus | null {
 export default function LivePage() {
   const [state, setState] = React.useState<LoadState>("loading");
   const [source, setSource] = React.useState<SourceType | null>(null);
+  const [liveEmbedUrl, setLiveEmbedUrl] = React.useState<string | null>(null);
   const [streamNonce, setStreamNonce] = React.useState(0);
   const [facebookSdkState, setFacebookSdkState] = React.useState<FacebookSdkState>("loading");
   const [facebookWidth, setFacebookWidth] = React.useState(500);
@@ -95,17 +97,17 @@ export default function LivePage() {
   const applyStatus = React.useCallback((incoming: LiveStatus) => {
     const normalized = normalizeStatus(incoming);
     if (normalized.isLive && normalized.liveEmbedUrl) {
+      setLiveEmbedUrl(normalized.liveEmbedUrl);
       setSource("live");
       setState("ready");
       return;
     }
-
+    setLiveEmbedUrl(null);
     if (normalized.fallbackEmbedUrl) {
       setSource("fallback");
       setState("ready");
       return;
     }
-
     setState("error");
   }, []);
 
@@ -299,6 +301,19 @@ export default function LivePage() {
   return (
     <Page title="Live du tournoi">
       <div className="space-y-6">
+      <a
+        href={YOUTUBE_CHANNEL_URL}
+        target="_blank"
+        rel="noreferrer"
+        data-testid="youtube-channel-link"
+        className="flex items-center gap-3 rounded-xl border border-red-800/50 bg-red-950/20 px-4 py-3 text-sm font-medium text-slate-100 transition hover:border-red-600/70 hover:bg-red-950/40"
+      >
+        <svg className="h-6 w-6 shrink-0 text-red-500" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+        </svg>
+        <span>Suivez le live en direct sur YouTube</span>
+        <span className="ml-auto text-xs text-slate-400">@titouankerogues2051</span>
+      </a>
       <Card className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-slate-200">Diffusion</h2>
@@ -311,18 +326,20 @@ export default function LivePage() {
           ) : null}
         </div>
 
-        <div className="relative w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
-          <div className="w-full pb-[56.25%]" />
-          <iframe
-            title="Live du tournoi"
-            src="https://www.youtube.com/embed/Lxfrp0j4VXQ?autoplay=1&mute=1&playsinline=1"
-            className="absolute inset-0 h-full w-full"
-            allow="autoplay; encrypted-media; picture-in-picture"
-            allowFullScreen
-            onError={handlePlayerError}
-            data-testid="live-iframe"
-          />
-        </div>
+        {source === "live" && liveEmbedUrl ? (
+          <div className="relative w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
+            <div className="w-full pb-[56.25%]" />
+            <iframe
+              title="Live du tournoi"
+              src={liveEmbedUrl}
+              className="absolute inset-0 h-full w-full"
+              allow="autoplay; encrypted-media; picture-in-picture"
+              allowFullScreen
+              onError={handlePlayerError}
+              data-testid="live-iframe"
+            />
+          </div>
+        ) : null}
       </Card>
       <Card className="space-y-4">
         <div className="flex items-center justify-between gap-3">
