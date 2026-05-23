@@ -31,22 +31,6 @@ declare global {
   }
 }
 
-function withAutoplayParams(url: string) {
-  const separator = url.includes("?") ? "&" : "?";
-  return `${url}${separator}autoplay=1&mute=1&playsinline=1`;
-}
-
-function getYoutubeEmbedId(url: string) {
-  const match = url.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/);
-  return match ? match[1] : null;
-}
-
-function withLoopParams(url: string) {
-  const videoId = getYoutubeEmbedId(url);
-  if (!videoId) return url;
-  const separator = url.includes("?") ? "&" : "?";
-  return `${url}${separator}loop=1&playlist=${videoId}`;
-}
 
 function normalizeStatus(raw: LiveStatus): LiveStatus {
   return {
@@ -76,7 +60,6 @@ function parseLiveStatusEvent(payload: string): LiveStatus | null {
 
 export default function LivePage() {
   const [state, setState] = React.useState<LoadState>("loading");
-  const [liveStatus, setLiveStatus] = React.useState<LiveStatus | null>(null);
   const [source, setSource] = React.useState<SourceType | null>(null);
   const [streamNonce, setStreamNonce] = React.useState(0);
   const [facebookSdkState, setFacebookSdkState] = React.useState<FacebookSdkState>("loading");
@@ -111,8 +94,6 @@ export default function LivePage() {
 
   const applyStatus = React.useCallback((incoming: LiveStatus) => {
     const normalized = normalizeStatus(incoming);
-    setLiveStatus(normalized);
-
     if (normalized.isLive && normalized.liveEmbedUrl) {
       setSource("live");
       setState("ready");
@@ -212,40 +193,9 @@ export default function LivePage() {
     };
   }, [clearPolling, clearReconnect, closeStream]);
 
-  const fallbackUrl = React.useMemo(() => {
-    if (!liveStatus) return undefined;
-    if (liveStatus.fallbackEmbedUrl) return liveStatus.fallbackEmbedUrl;
-    if (!liveStatus.isLive) return DEFAULT_FALLBACK_EMBED_URL;
-    return undefined;
-  }, [liveStatus]);
-
-  const liveUrl = liveStatus?.liveEmbedUrl ?? undefined;
-  const rawEmbedUrl = source === "live" ? liveUrl : source === "fallback" ? fallbackUrl : undefined;
-  const embedUrl = rawEmbedUrl
-    ? withAutoplayParams(source === "fallback" ? withLoopParams(rawEmbedUrl) : rawEmbedUrl)
-    : undefined;
-
-  React.useEffect(() => {
-    if (state !== "ready" || !liveStatus || !source) return;
-    if (source === "live" && !liveUrl) {
-      if (fallbackUrl) {
-        setSource("fallback");
-      } else {
-        setState("error");
-      }
-    }
-    if (source === "fallback" && !fallbackUrl) {
-      setState("error");
-    }
-  }, [state, liveStatus, source, liveUrl, fallbackUrl]);
-
   const handlePlayerError = React.useCallback(() => {
-    if (source === "live" && fallbackUrl) {
-      setSource("fallback");
-      return;
-    }
     setState("error");
-  }, [source, fallbackUrl]);
+  }, []);
 
   React.useEffect(() => {
     const updateWidth = () => {
@@ -365,7 +315,7 @@ export default function LivePage() {
           <div className="w-full pb-[56.25%]" />
           <iframe
             title="Live du tournoi"
-            src={embedUrl ?? withAutoplayParams(withLoopParams(DEFAULT_FALLBACK_EMBED_URL))}
+            src="https://www.youtube.com/embed/Lxfrp0j4VXQ?autoplay=1&mute=1&playsinline=1"
             className="absolute inset-0 h-full w-full"
             allow="autoplay; encrypted-media; picture-in-picture"
             allowFullScreen
