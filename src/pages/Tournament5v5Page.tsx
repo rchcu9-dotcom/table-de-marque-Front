@@ -569,12 +569,16 @@ function ClassementCard({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800">
-            {data.equipes.map((eq) => {
+            {[...data.equipes].sort((a, b) => {
+              const aOrdre = a.ordre ?? a.rang;
+              const bOrdre = b.ordre ?? b.rang;
+              return aOrdre - bOrdre;
+            }).map((eq) => {
               const highlight = highlightTeams?.has(eq.id);
               const displayName = (eq as any).shortName ?? (eq as any).nameShort ?? eq.id ?? eq.name;
               return (
                 <tr key={eq.id} className={`text-slate-100 ${highlight ? "bg-amber-500/10 animate-pulse" : ""}`}>
-                  <td className="py-1 pr-2">{eq.rang}</td>
+                  <td className="py-1 pr-2">{eq.ordre ?? eq.rang}</td>
                   <td className="py-1 pr-2">
                     <Link to={`/teams/${encodeURIComponent(eq.id)}`} className="flex items-center gap-2 hover:underline">
                       <Logo name={displayName} url={eq.logoUrl} size={28} />
