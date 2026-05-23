@@ -332,7 +332,7 @@ describe("LivePage", () => {
 
     expect(await screen.findByTestId("live-badge")).toBeInTheDocument();
     const iframe = (await screen.findByTestId("live-iframe")) as HTMLIFrameElement;
-    expect(iframe.src).toContain("forced-live-id");
+    expect(iframe.src).toContain("Lxfrp0j4VXQ");
   });
 
   it("reconnecte le stream apres timeout et garde une seule connexion active", async () => {
