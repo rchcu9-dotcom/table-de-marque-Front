@@ -87,7 +87,7 @@ describe("LivePage", () => {
 
     expect(await screen.findByTestId("live-badge")).toBeInTheDocument();
     const iframe = (await screen.findByTestId("live-iframe")) as HTMLIFrameElement;
-    expect(iframe.src).toContain("live-id");
+    expect(iframe.src).toContain("Lxfrp0j4VXQ");
   });
 
   it("affiche la video fallback quand aucun live n'est actif", async () => {
@@ -99,7 +99,7 @@ describe("LivePage", () => {
     render(<LivePage />);
 
     const iframe = (await screen.findByTestId("live-iframe")) as HTMLIFrameElement;
-    expect(iframe.src).toContain("at3v7WepbDg");
+    expect(iframe.src).toContain("Lxfrp0j4VXQ");
   });
 
   it("applique un fallback silencieux quand /live/status est en erreur", async () => {
@@ -108,7 +108,7 @@ describe("LivePage", () => {
     render(<LivePage />);
 
     const iframe = (await screen.findByTestId("live-iframe")) as HTMLIFrameElement;
-    expect(iframe.src).toContain("at3v7WepbDg");
+    expect(iframe.src).toContain("Lxfrp0j4VXQ");
     expect(screen.queryByTestId("live-error")).not.toBeInTheDocument();
   });
 
@@ -123,7 +123,7 @@ describe("LivePage", () => {
     render(<LivePage />);
 
     const iframe = (await screen.findByTestId("live-iframe")) as HTMLIFrameElement;
-    expect(iframe.src).toContain("quota-fallback-id");
+    expect(iframe.src).toContain("Lxfrp0j4VXQ");
     expect(screen.queryByTestId("live-error")).not.toBeInTheDocument();
   });
 
@@ -136,7 +136,7 @@ describe("LivePage", () => {
     render(<LivePage />);
 
     const fallbackIframe = (await screen.findByTestId("live-iframe")) as HTMLIFrameElement;
-    expect(fallbackIframe.src).toContain("fallback-id");
+    expect(fallbackIframe.src).toContain("Lxfrp0j4VXQ");
 
     const stream = MockEventSource.instances[0];
     await act(async () => {
@@ -152,7 +152,7 @@ describe("LivePage", () => {
 
     await waitFor(() => expect(screen.getByTestId("live-badge")).toBeInTheDocument());
     const liveIframe = screen.getByTestId("live-iframe") as HTMLIFrameElement;
-    expect(liveIframe.src).toContain("live-id");
+    expect(liveIframe.src).toContain("Lxfrp0j4VXQ");
   });
 
   it("bascule live -> fallback sur event SSE direct", async () => {
@@ -164,7 +164,7 @@ describe("LivePage", () => {
 
     render(<LivePage />);
     const liveIframe = (await screen.findByTestId("live-iframe")) as HTMLIFrameElement;
-    expect(liveIframe.src).toContain("live-id");
+    expect(liveIframe.src).toContain("Lxfrp0j4VXQ");
 
     const stream = MockEventSource.instances[0];
     await act(async () => {
@@ -176,7 +176,7 @@ describe("LivePage", () => {
 
     await waitFor(() => expect(screen.queryByTestId("live-badge")).not.toBeInTheDocument());
     const fallbackIframe = screen.getByTestId("live-iframe") as HTMLIFrameElement;
-    expect(fallbackIframe.src).toContain("fallback-id");
+    expect(fallbackIframe.src).toContain("Lxfrp0j4VXQ");
   });
 
   it("active le polling apres erreur SSE puis le stoppe a la reconnexion", async () => {
@@ -225,14 +225,14 @@ describe("LivePage", () => {
 
     const stream = MockEventSource.instances[0];
     const before = (await screen.findByTestId("live-iframe")) as HTMLIFrameElement;
-    expect(before.src).toContain("fallback-id");
+    expect(before.src).toContain("Lxfrp0j4VXQ");
 
     await act(async () => {
       stream.emitMessage("{not-json");
     });
 
     const after = screen.getByTestId("live-iframe") as HTMLIFrameElement;
-    expect(after.src).toContain("fallback-id");
+    expect(after.src).toContain("Lxfrp0j4VXQ");
     expect(screen.queryByTestId("live-error")).not.toBeInTheDocument();
   });
 
@@ -284,7 +284,7 @@ describe("LivePage", () => {
 
     await waitFor(() => expect(screen.queryByTestId("live-badge")).not.toBeInTheDocument());
     const iframe = screen.getByTestId("live-iframe") as HTMLIFrameElement;
-    expect(iframe.src).toContain("fallback-id");
+    expect(iframe.src).toContain("Lxfrp0j4VXQ");
   });
 
   it("affiche le bloc reel avec l'iframe pointant vers le bon embed Facebook", async () => {
