@@ -277,7 +277,13 @@ export default function ChallengePage() {
   };
 
   const applyFilters = (attempts: Attempt[], type: "vitesse" | "tir" | "glisse_crosse" | "gardien_arret", opts?: { limitTop?: number }) => {
-    let filtered = attempts;
+    let filtered = attempts.filter((a) => {
+      if (a.metrics.type === "vitesse") return a.metrics.tempsMs > 0;
+      if (a.metrics.type === "glisse_crosse") return a.metrics.tempsMs > 0;
+      if (a.metrics.type === "gardien_arret") return a.metrics.tempsMs > 0;
+      if (a.metrics.type === "tir") return a.metrics.tirs.length > 0;
+      return true;
+    });
     const selectedTeamId = selectedTeam?.id?.toLowerCase();
     if (selectedTeamId) {
       filtered = filtered.filter((a) => (a.equipeId ?? "").toLowerCase() === selectedTeamId);
