@@ -61,10 +61,44 @@ function buildMomentumEntry(overrides: Partial<ChallengeJ1MomentumEntry>): Chall
   };
 }
 
-function addActiveTeam(teamId: string) {
+function addPlannedTeam(teamId: string) {
   mockChallengeAll.jour1.push(
     buildAttempt({
-      joueurId: `active-${teamId}`,
+      joueurId: `p-${teamId}`,
+      joueurName: `${teamId} Player`,
+      equipeId: teamId,
+      equipeName: teamId,
+      atelierType: "vitesse",
+      metrics: { type: "vitesse", tempsMs: 0 },
+    }),
+  );
+}
+
+function addOngoingTeam(teamId: string) {
+  mockChallengeAll.jour1.push(
+    buildAttempt({
+      joueurId: `o-started-${teamId}`,
+      joueurName: `${teamId} Player A`,
+      equipeId: teamId,
+      equipeName: teamId,
+      atelierType: "vitesse",
+      metrics: { type: "vitesse", tempsMs: 25000 },
+    }),
+    buildAttempt({
+      joueurId: `o-waiting-${teamId}`,
+      joueurName: `${teamId} Player B`,
+      equipeId: teamId,
+      equipeName: teamId,
+      atelierType: "vitesse",
+      metrics: { type: "vitesse", tempsMs: 0 },
+    }),
+  );
+}
+
+function addFinishedTeam(teamId: string) {
+  mockChallengeAll.jour1.push(
+    buildAttempt({
+      joueurId: `f-${teamId}`,
       joueurName: `${teamId} Player`,
       equipeId: teamId,
       equipeName: teamId,
@@ -201,7 +235,7 @@ describe("ChallengePage", () => {
         status: "ongoing",
       }),
     ];
-    addActiveTeam("momentum-team");
+    addOngoingTeam("momentum-team");
 
     renderPage();
 
@@ -235,9 +269,9 @@ describe("ChallengePage", () => {
         slotEnd: "2026-05-23T10:40:00.000Z",
       }),
     ];
-    addActiveTeam("finished-team");
-    addActiveTeam("ongoing-team");
-    addActiveTeam("planned-team");
+    addFinishedTeam("finished-team");
+    addOngoingTeam("ongoing-team");
+    addPlannedTeam("planned-team");
 
     renderPage();
 
@@ -273,9 +307,9 @@ describe("ChallengePage", () => {
         slotEnd: "2026-05-23T10:40:00.000Z",
       }),
     ];
-    addActiveTeam("finished-early");
-    addActiveTeam("finished-late");
-    addActiveTeam("planned-team");
+    addFinishedTeam("finished-early");
+    addFinishedTeam("finished-late");
+    addPlannedTeam("planned-team");
 
     renderPage();
 
@@ -303,8 +337,8 @@ describe("ChallengePage", () => {
         slotEnd: "2026-05-23T10:40:00.000Z",
       }),
     ];
-    addActiveTeam("planned-early");
-    addActiveTeam("planned-late");
+    addPlannedTeam("planned-early");
+    addPlannedTeam("planned-late");
 
     renderPage();
 
@@ -323,7 +357,9 @@ describe("ChallengePage", () => {
       buildMomentumEntry({ teamId: "t4", teamName: "Team 4", status: "planned", slotStart: "2026-05-23T11:00:00.000Z", slotEnd: "2026-05-23T11:40:00.000Z" }),
       buildMomentumEntry({ teamId: "t5", teamName: "Team 5", status: "planned", slotStart: "2026-05-23T12:00:00.000Z", slotEnd: "2026-05-23T12:40:00.000Z" }),
     ];
-    ["t1", "t2", "t3", "t4", "t5"].forEach(addActiveTeam);
+    ["t1", "t2"].forEach(addFinishedTeam);
+    addOngoingTeam("t3");
+    ["t4", "t5"].forEach(addPlannedTeam);
 
     renderPage();
 
@@ -348,9 +384,9 @@ describe("ChallengePage", () => {
       buildMomentumEntry({ teamId: "finished", teamName: "Finished Team", status: "finished", slotStart: "2026-05-23T08:00:00.000Z" }),
       buildMomentumEntry({ teamId: "planned", teamName: "Planned Team", status: "planned", slotStart: "2026-05-23T10:15:00.000Z" }),
     ];
-    addActiveTeam("ongoing");
-    addActiveTeam("finished");
-    addActiveTeam("planned");
+    addOngoingTeam("ongoing");
+    addFinishedTeam("finished");
+    addPlannedTeam("planned");
 
     renderPage();
 
@@ -371,7 +407,7 @@ describe("ChallengePage", () => {
         status: "ongoing",
       }),
     ];
-    addActiveTeam("long");
+    addOngoingTeam("long");
     window.innerWidth = 320;
     window.dispatchEvent(new Event("resize"));
 

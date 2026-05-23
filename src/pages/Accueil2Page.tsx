@@ -749,6 +749,19 @@ export default function HomePage() {
   const { selectedTeam } = useSelectedTeam();
   const { data: rawMatches } = useMatches();
   const matches = rawMatches ?? [];
+  const allMatchesEffective = React.useMemo(() => {
+    const now = getNowMs();
+    return matches.map((m) => {
+      if ((m.competitionType ?? "5v5") !== "challenge") return m;
+      const startMs = new Date(m.date).getTime();
+      const endMs = startMs + 40 * 60 * 1000;
+      let status: Match["status"];
+      if (now >= endMs) status = "finished";
+      else if (now >= startMs) status = "ongoing";
+      else status = "planned";
+      return status === m.status ? m : { ...m, status };
+    });
+  }, [matches]);
   const [isDegraded, setIsDegraded] = React.useState(false);
   React.useEffect(() => {
     const onError = () => setIsDegraded(true);
@@ -818,12 +831,12 @@ const resolveMatchRoute = React.useCallback(
 
   const triplet5v5 = React.useMemo(() => tripletForCompetition(matches, "5v5"), [matches]);
   const tripletSmallGlace = React.useMemo(
-    () => tripletForCompetition(matches, smallGlaceType),
-    [matches, smallGlaceType],
+    () => tripletForCompetition(allMatchesEffective, smallGlaceType),
+    [allMatchesEffective, smallGlaceType],
   );
   const orderedSmallGlace = React.useMemo(
-    () => liveCenteredOrder(tripletSmallGlace, filterByCompetition(matches, smallGlaceType)),
-    [tripletSmallGlace, matches, smallGlaceType],
+    () => liveCenteredOrder(tripletSmallGlace, filterByCompetition(allMatchesEffective, smallGlaceType)),
+    [tripletSmallGlace, allMatchesEffective, smallGlaceType],
   );
   const autoIndexSmallGlace = React.useMemo(
     () =>
@@ -944,8 +957,8 @@ const resolveMatchRoute = React.useCallback(
 
   const beforeUpcoming5v5 = React.useMemo(() => upcomingMatches(matches, "5v5").slice(0, 3), [matches]);
   const beforeUpcomingChallenge = React.useMemo(
-    () => upcomingMatches(matches, "challenge").slice(0, 3),
-    [matches],
+    () => upcomingMatches(allMatchesEffective, "challenge").slice(0, 3),
+    [allMatchesEffective],
   );
   const beforeFocus5v5 = React.useMemo(() => beforeUpcoming5v5[0]?.id ?? null, [beforeUpcoming5v5]);
   const beforeFocusChallenge = React.useMemo(
@@ -953,8 +966,8 @@ const resolveMatchRoute = React.useCallback(
     [beforeUpcomingChallenge],
   );
   const afterChallengeWinners = React.useMemo(
-    () => recentMatches(matches, "challenge").slice(-3).reverse(),
-    [matches],
+    () => recentMatches(allMatchesEffective, "challenge").slice(-3).reverse(),
+    [allMatchesEffective],
   );
   const afterFocusChallenge = React.useMemo(
     () => (afterChallengeWinners[0]?.id ? afterChallengeWinners[0].id : null),
