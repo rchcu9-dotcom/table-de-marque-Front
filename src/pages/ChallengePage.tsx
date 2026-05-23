@@ -123,10 +123,27 @@ export default function ChallengePage() {
     };
   }, [data]);
 
-  const momentumItems = React.useMemo(
-    () => buildChallengeMomentum(challengeMomentumJ1 ?? []),
-    [challengeMomentumJ1],
-  );
+  const activeTeamIds = React.useMemo(() => {
+    if (!data) return null;
+    const set = new Set<string>();
+    (data.jour1 ?? []).forEach((a) => {
+      const started =
+        (a.metrics.type === "vitesse" && a.metrics.tempsMs > 0) ||
+        (a.metrics.type === "glisse_crosse" && a.metrics.tempsMs > 0) ||
+        (a.metrics.type === "gardien_arret" && a.metrics.tempsMs > 0) ||
+        (a.metrics.type === "tir" && a.metrics.tirs.length > 0);
+      if (started && a.equipeId) {
+        set.add(a.equipeId.toLowerCase());
+      }
+    });
+    return set;
+  }, [data]);
+
+  const momentumItems = React.useMemo(() => {
+    const all = buildChallengeMomentum(challengeMomentumJ1 ?? []);
+    if (!activeTeamIds) return all;
+    return all.filter((item) => activeTeamIds.has(item.teamId.toLowerCase()));
+  }, [challengeMomentumJ1, activeTeamIds]);
   const momentumFocusId = React.useMemo(() => {
     const live = momentumItems.find((item) => item.status === "ongoing");
     if (live) return live.id;
