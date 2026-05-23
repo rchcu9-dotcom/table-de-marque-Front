@@ -2,8 +2,7 @@ import React from "react";
 import Page from "../components/layout/Page";
 import Card from "../components/ds/Card";
 import Badge from "../components/ds/Badge";
-import Button from "../components/ds/Button";
-import Spinner from "../components/ds/Spinner";
+
 import { API_BASE_URL, fetchLiveStatus } from "../api/live";
 import type { LiveStatus, LiveStreamEnvelope } from "../api/live";
 
@@ -248,11 +247,6 @@ export default function LivePage() {
     setState("error");
   }, [source, fallbackUrl]);
 
-  const handleRetry = React.useCallback(() => {
-    setStreamNonce((v) => v + 1);
-    void loadStatus(true);
-  }, [loadStatus]);
-
   React.useEffect(() => {
     const updateWidth = () => {
       const nextWidth = facebookHostRef.current?.clientWidth ?? 500;
@@ -367,39 +361,18 @@ export default function LivePage() {
           ) : null}
         </div>
 
-        {state === "loading" && (
-          <div className="flex items-center gap-2 text-sm text-slate-300" data-testid="live-loading">
-            <Spinner />
-            <span>Chargement du live.</span>
-          </div>
-        )}
-
-        {state === "error" && (
-          <div
-            className="rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-100 space-y-3"
-            data-testid="live-error"
-          >
-            <p>Video indisponible, reessayez plus tard.</p>
-            <Button variant="ghost" onClick={handleRetry} data-testid="live-retry">
-              Reessayer
-            </Button>
-          </div>
-        )}
-
-        {state === "ready" && embedUrl && (
-          <div className="relative w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
-            <div className="w-full pb-[56.25%]" />
-            <iframe
-              title="Live du tournoi"
-              src={embedUrl}
-              className="absolute inset-0 h-full w-full"
-              allow="autoplay; encrypted-media; picture-in-picture"
-              allowFullScreen
-              onError={handlePlayerError}
-              data-testid="live-iframe"
-            />
-          </div>
-        )}
+        <div className="relative w-full overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
+          <div className="w-full pb-[56.25%]" />
+          <iframe
+            title="Live du tournoi"
+            src={embedUrl ?? withAutoplayParams(withLoopParams(DEFAULT_FALLBACK_EMBED_URL))}
+            className="absolute inset-0 h-full w-full"
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+            onError={handlePlayerError}
+            data-testid="live-iframe"
+          />
+        </div>
       </Card>
       <Card className="space-y-4">
         <div className="flex items-center justify-between gap-3">
