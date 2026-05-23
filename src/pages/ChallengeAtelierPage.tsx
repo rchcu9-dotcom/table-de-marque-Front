@@ -43,9 +43,16 @@ export default function ChallengeAtelierPage() {
     } else {
       items = (data?.jour1 ?? []).filter((a) => a.atelierType === atelierType);
     }
+    const started = items.filter((a) => {
+      if (a.metrics.type === "vitesse") return a.metrics.tempsMs > 0;
+      if (a.metrics.type === "glisse_crosse") return a.metrics.tempsMs > 0;
+      if (a.metrics.type === "gardien_arret") return a.metrics.tempsMs > 0;
+      if (a.metrics.type === "tir") return a.metrics.tirs.length > 0;
+      return true;
+    });
     const filtered = selectedTeam?.id
-      ? items.filter((a) => (a.equipeId ?? "").toLowerCase() === selectedTeam.id.toLowerCase())
-      : items;
+      ? started.filter((a) => (a.equipeId ?? "").toLowerCase() === selectedTeam.id.toLowerCase())
+      : started;
     const term = search.trim().toLowerCase();
     if (!term) return filtered;
     return filtered.filter((a) => {
