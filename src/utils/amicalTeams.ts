@@ -13,6 +13,13 @@ const AMICAL_SLOTS: AmicalSlot[] = [
   { jour: "J1", amical: "Amical 2", parisHour: 11, designated: "Orléans" },
   { jour: "J1", amical: "Amical 2", parisHour: 16, designated: "Tours" },
   { jour: "J1", amical: "Amical 2", parisHour: 19, designated: "Dammarie" },
+  // J2
+  { jour: "J2", amical: "Amical 2", parisHour: 11, designated: "Le Havre" },
+  { jour: "J2", amical: "Amical 1", parisHour: 12, designated: "Rennes" },
+  { jour: "J2", amical: "Amical 1", parisHour: 15, designated: "Neuilly" },
+  { jour: "J2", amical: "Amical 2", parisHour: 16, designated: "Les Volants" },
+  { jour: "J2", amical: "Amical 2", parisHour: 20, designated: "Cholet" },
+  { jour: "J2", amical: "Amical 1", parisHour: 20, designated: "Courbevoie" },
 ];
 
 function getParisHour(isoDate: string): number {
