@@ -123,27 +123,44 @@ export default function ChallengePage() {
     };
   }, [data]);
 
-  const activeTeamIds = React.useMemo(() => {
-    if (!data) return null;
-    const set = new Set<string>();
+  const teamChallengeStatus = React.useMemo(() => {
+    const result = new Map<string, "planned" | "ongoing" | "finished">();
+    if (!data) return result;
+    const byTeam = new Map<string, { total: number; started: number }>();
     (data.jour1 ?? []).forEach((a) => {
+      const key = (a.equipeId ?? "").toLowerCase();
+      if (!key) return;
+      const entry = byTeam.get(key) ?? { total: 0, started: 0 };
+      entry.total++;
       const started =
         (a.metrics.type === "vitesse" && a.metrics.tempsMs > 0) ||
         (a.metrics.type === "glisse_crosse" && a.metrics.tempsMs > 0) ||
         (a.metrics.type === "gardien_arret" && a.metrics.tempsMs > 0) ||
         (a.metrics.type === "tir" && a.metrics.tirs.length > 0);
-      if (started && a.equipeId) {
-        set.add(a.equipeId.toLowerCase());
+      if (started) entry.started++;
+      byTeam.set(key, entry);
+    });
+    byTeam.forEach((entry, teamKey) => {
+      if (entry.started >= entry.total && entry.total > 0) {
+        result.set(teamKey, "finished");
+      } else if (entry.started > 0) {
+        result.set(teamKey, "ongoing");
+      } else {
+        result.set(teamKey, "planned");
       }
     });
-    return set;
+    return result;
   }, [data]);
 
   const momentumItems = React.useMemo(() => {
     const all = buildChallengeMomentum(challengeMomentumJ1 ?? []);
-    if (!activeTeamIds) return all;
-    return all.filter((item) => activeTeamIds.has(item.teamId.toLowerCase()));
-  }, [challengeMomentumJ1, activeTeamIds]);
+    if (!data) return all;
+    return all.map((item) => {
+      const computedStatus = teamChallengeStatus.get(item.teamId.toLowerCase());
+      if (!computedStatus) return item;
+      return { ...item, status: computedStatus };
+    });
+  }, [challengeMomentumJ1, teamChallengeStatus, data]);
   const momentumFocusId = React.useMemo(() => {
     const live = momentumItems.find((item) => item.status === "ongoing");
     if (live) return live.id;
