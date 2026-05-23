@@ -156,7 +156,11 @@ export default function ChallengePage() {
     const all = buildChallengeMomentum(challengeMomentumJ1 ?? []);
     if (!data) return all;
     return all.map((item) => {
-      const computedStatus = teamChallengeStatus.get(item.teamId.toLowerCase());
+      // equipeId in atelier data = team name string (e.g. "Ligue IDF"),
+      // while teamId in momentum = numeric DB id (e.g. "7") — match by name first.
+      const computedStatus =
+        teamChallengeStatus.get(item.teamName.toLowerCase()) ??
+        teamChallengeStatus.get(item.teamId.toLowerCase());
       if (!computedStatus) return item;
       return { ...item, status: computedStatus };
     });
