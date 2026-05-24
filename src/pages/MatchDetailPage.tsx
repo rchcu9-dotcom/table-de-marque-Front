@@ -50,11 +50,7 @@ function toMatchFromFinalSquareMatch(match: FinalSquareMatch, square: FinalSquar
 
 function getSquareMatches(square?: FinalSquare | null) {
   if (!square) return [];
-  return [
-    ...square.semiFinals,
-    ...(square.finalMatch ? [square.finalMatch] : []),
-    ...(square.thirdPlaceMatch ? [square.thirdPlaceMatch] : []),
-  ];
+  return square.matches;
 }
 
 function squareContainsTeams(square: FinalSquare, teamA: string, teamB: string) {

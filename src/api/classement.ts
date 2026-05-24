@@ -56,9 +56,7 @@ export type FinalSquare = {
   dbCode: "I" | "J" | "K" | "L";
   label: string;
   placeRange: string;
-  semiFinals: FinalSquareMatch[];
-  finalMatch: FinalSquareMatch | null;
-  thirdPlaceMatch: FinalSquareMatch | null;
+  matches: FinalSquareMatch[];
   ranking: FinalSquareRankingRow[];
 };
 
