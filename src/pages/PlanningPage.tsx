@@ -13,6 +13,7 @@ import { usePartenaires } from "../hooks/usePartenaires";
 import type { Partenaire } from "../api/partenaire";
 import { buildNamingTitle } from "../utils/namingPartners";
 import { resolveTeamLabel } from "../utils/amicalTeams";
+import { useJ3FinalSquares } from "../hooks/useClassement";
 
 function normalize(value?: string | null) {
   return (value ?? "").trim().toLowerCase();
@@ -29,6 +30,17 @@ export default function PlanningPage() {
   const { data: partenairesData } = usePartenaires();
   const namingPartners = (partenairesData ?? []).filter((p) => p.type === "naming");
   const { data: matches } = useMatchesFiltered({ teamId: selectedTeam?.id });
+  const { data: j3Squares } = useJ3FinalSquares();
+  const carreForMatch = React.useMemo(() => {
+    const map = new Map<string, { dbCode: string; label: string }>();
+    if (!j3Squares) return map;
+    for (const carre of j3Squares.carres) {
+      for (const match of carre.matches) {
+        map.set(match.id, { dbCode: carre.dbCode, label: carre.label });
+      }
+    }
+    return map;
+  }, [j3Squares]);
   const navigate = useNavigate();
   const listRef = React.useRef<HTMLDivElement | null>(null);
   const itemRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
@@ -314,9 +326,16 @@ export default function PlanningPage() {
                       <SponsorTag sponsor={sponsors[threeV3SponsorIndex.get(m.id)! % sponsors.length]} />
                     ) : (
                       <span>
-                        {m.pouleCode
-                          ? buildNamingTitle(m.pouleCode, m.pouleName ?? m.pouleCode, namingPartners)
-                          : (m.pouleName ?? "Poule")}
+                        {(() => {
+                          const carre = m.jour === "J3" && m.competitionType === "5v5"
+                            ? carreForMatch.get(m.id)
+                            : undefined;
+                          const code = carre?.dbCode ?? m.pouleCode;
+                          const name = carre?.label ?? m.pouleName ?? m.pouleCode;
+                          return code
+                            ? buildNamingTitle(code, name ?? code, namingPartners)
+                            : (name ?? "Poule");
+                        })()}
                       </span>
                     )}
                     <span>
