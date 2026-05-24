@@ -163,9 +163,7 @@ function buildJ3Square(
     dbCode: code,
     label: J3_LABELS[code],
     placeRange: J3_PLACE_RANGES[code],
-    semiFinals: [buildSquareMatch(code, primaryTeam, secondaryTeam, options.live ? "ongoing" : "planned")],
-    finalMatch: null,
-    thirdPlaceMatch: null,
+    matches: [buildSquareMatch(code, primaryTeam, secondaryTeam, options.live ? "ongoing" : "planned")],
     ranking: [
       buildRankingRow(startPlace, 1, options.includesRennes ? primaryTeam : undefined),
       buildRankingRow(startPlace + 1, 2),

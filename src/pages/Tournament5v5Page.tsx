@@ -47,13 +47,7 @@ function squareContainsTeam(square: FinalSquare, selectedTeamId?: string | null)
     return true;
   }
 
-  const squareMatches = [
-    ...square.semiFinals,
-    ...(square.finalMatch ? [square.finalMatch] : []),
-    ...(square.thirdPlaceMatch ? [square.thirdPlaceMatch] : []),
-  ];
-
-  return squareMatches.some((match) => matchesTeam(match.teamA) || matchesTeam(match.teamB));
+  return square.matches.some((match) => matchesTeam(match.teamA) || matchesTeam(match.teamB));
 }
 
 const BRASSAGE = [
@@ -232,9 +226,7 @@ export default function Tournament5v5Page() {
 
   const liveJ3SquareCode = React.useMemo(() => {
     const liveSquare = visibleJ3Squares.find((square) =>
-      [...square.semiFinals, square.finalMatch, square.thirdPlaceMatch]
-        .filter((m): m is FinalSquareMatch => Boolean(m))
-        .some((m) => m.status === "ongoing"),
+      square.matches.some((m) => m.status === "ongoing"),
     );
     return liveSquare?.dbCode ?? null;
   }, [visibleJ3Squares]);
@@ -640,11 +632,6 @@ function J3FinalSquareCard({
   liveMatches?: Match[];
 }) {
   const placeLabel = square.placeRange.replace("..", " à ");
-  const squareMatches = [
-    ...square.semiFinals,
-    ...(square.finalMatch ? [square.finalMatch] : []),
-    ...(square.thirdPlaceMatch ? [square.thirdPlaceMatch] : []),
-  ];
   const enrichMatch = (fsMatch: FinalSquareMatch): Match => {
     const base = toMatchFromFinalSquareMatch(fsMatch);
     const live = liveMatches?.find((m) => m.id === fsMatch.id);
@@ -685,8 +672,8 @@ function J3FinalSquareCard({
 
       <div className="mt-3 space-y-2" data-testid={`j3-square-matches-${square.dbCode}`}>
         <p className="text-xs text-slate-300">Matchs</p>
-        {squareMatches.length > 0 ? (
-          squareMatches.map((m) => (
+        {square.matches.length > 0 ? (
+          square.matches.map((m) => (
             <SmallMatchCard
               key={m.id}
               match={enrichMatch(m)}
