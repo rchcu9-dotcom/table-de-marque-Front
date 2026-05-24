@@ -48,6 +48,10 @@ vi.mock("../../hooks/usePartenaires", () => ({
   usePartenaires: () => ({ data: [], isLoading: false }),
 }));
 
+vi.mock("../../hooks/useClassement", () => ({
+  useJ3FinalSquares: () => ({ data: undefined, isLoading: false }),
+}));
+
 describe("PlanningPage", () => {
   it("affiche le header Planning et la liste des matchs", () => {
     render(
