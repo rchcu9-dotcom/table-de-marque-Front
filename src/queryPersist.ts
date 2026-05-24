@@ -11,6 +11,7 @@ export function setupQueryPersistence() {
     queryClient,
     persister,
     maxAge: queryCacheTime,
+    buster: "j3-flat-matches-v1",
     dehydrateOptions: {
       shouldDehydrateQuery: (query) => query.queryKey[0] !== "matches",
     },
