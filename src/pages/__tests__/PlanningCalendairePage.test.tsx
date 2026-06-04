@@ -168,6 +168,8 @@ describe("PlanningCalendairePage", () => {
   it("keeps J1/J2 rows and renders stable J3 trajectory rows", async () => {
     renderPage();
 
+    // Today is past tournament dates so default view is J3 — force J1 explicitly
+    fireEvent.click(screen.getByRole("button", { name: "Samedi" }));
     await waitFor(() => {
       expect(screen.getByText("Rennes")).toBeInTheDocument();
     });
