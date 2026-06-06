@@ -546,6 +546,29 @@ export default function ChallengePage() {
       ),
     [groupByAtelier],
   );
+  const gardienAtelierTop3 = React.useMemo(() => {
+    let filtered = gardienTotalAttempts;
+    const selectedTeamId = selectedTeam?.id?.toLowerCase();
+    if (selectedTeamId) {
+      filtered = filtered.filter((a) => (a.equipeId ?? "").toLowerCase() === selectedTeamId);
+    }
+    const term = searchTerm.trim().toLowerCase();
+    if (term) {
+      filtered = filtered.filter((a) => {
+        const joueur = (a.joueurName ?? "").toLowerCase();
+        const equipe = (a.equipeId ?? "").toLowerCase();
+        const equipeName = (a.equipeName ?? "").toLowerCase();
+        return joueur.includes(term) || equipe.includes(term) || equipeName.includes(term);
+      });
+    }
+    return [...filtered]
+      .sort((a, b) => {
+        const ta = a.metrics.type === "gardien_arret" ? a.metrics.tempsTotal : Number.MAX_SAFE_INTEGER;
+        const tb = b.metrics.type === "gardien_arret" ? b.metrics.tempsTotal : Number.MAX_SAFE_INTEGER;
+        return ta - tb;
+      })
+      .slice(0, 3);
+  }, [gardienTotalAttempts, selectedTeam, searchTerm]);
   const showGardienJ3Block =
     showGardienJ3 &&
     (gardienFinalePlayers.length > 0 || gardienDemiSlots.length > 0 || gardienTotalAttempts.length > 0);
@@ -834,7 +857,7 @@ export default function ChallengePage() {
                         </div>
                         <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-300">Top 3</div>
                         <GardienTotalTable
-                          attempts={applyFilters(gardienTotalAttempts, "gardien_arret", { limitTop: 3 })}
+                          attempts={gardienAtelierTop3}
                           teamMap={teamMap}
                         />
                       </div>
