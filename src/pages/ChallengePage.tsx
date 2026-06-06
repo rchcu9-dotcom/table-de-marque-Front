@@ -541,10 +541,10 @@ export default function ChallengePage() {
   const gardienFinalePlayers = gardienJ3SlotsWithDefault.F1 ?? [];
   const gardienTotalAttempts = React.useMemo(
     () =>
-      groupByAtelier.jour1.gardien_arret.filter(
+      (data?.jour1 ?? []).filter(
         (a) => a.metrics.type === "gardien_arret" && a.metrics.tempsTotal > 0,
       ),
-    [groupByAtelier],
+    [data],
   );
   const gardienAtelierTop3 = React.useMemo(() => {
     let filtered = gardienTotalAttempts;
