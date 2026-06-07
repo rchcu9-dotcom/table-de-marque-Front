@@ -17,7 +17,7 @@ export default function TopBar({ children }: Props) {
   const navigate = useNavigate();
   const menuBtnRefMobile = React.useRef<HTMLButtonElement | null>(null);
   const menuBtnRefDesktop = React.useRef<HTMLButtonElement | null>(null);
-  const selectorBtnRef = React.useRef<HTMLButtonElement | null>(null);
+  const selectorBtnRef = React.useRef<HTMLElement | null>(null);
   const { selectedTeam, setSelectedTeam, toggleMuted } = useSelectedTeam();
   const { data: teams } = useTeams();
   const uniqueTeams = React.useMemo(() => {
@@ -116,24 +116,22 @@ export default function TopBar({ children }: Props) {
             </span>
             <span className="text-xs font-semibold">Plus</span>
           </button>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-300">Mon équipe</span>
-            <button
-              type="button"
-              ref={selectorBtnRef}
-              onClick={() => {
-                setSelectorOpen((v) => !v);
-                updateSelectorPos();
-              }}
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                toggleMuted();
-              }}
-              className="h-10 w-10 rounded-full overflow-hidden border border-slate-700 bg-slate-800/70 hover:border-slate-400 transition relative"
-              title={selectedTeam ? `Équipe sélectionnée : ${selectedTeam.name}` : "Sélectionner une équipe"}
-            >
-              {selectedTeam ? (
-                selectedTeam.logoUrl ? (
+          <div className="flex items-center gap-2" ref={(node) => { selectorBtnRef.current = node; }}>
+            {selectedTeam ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedTeam(null);
+                  setSelectorOpen(false);
+                }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  toggleMuted();
+                }}
+                className="h-10 w-10 rounded-full overflow-hidden border border-slate-700 bg-slate-800/70 hover:border-amber-400 transition relative"
+                title={`Annuler la sélection : ${selectedTeam.name}`}
+              >
+                {selectedTeam.logoUrl ? (
                   <img
                     src={selectedTeam.logoUrl}
                     alt={selectedTeam.name}
@@ -144,11 +142,21 @@ export default function TopBar({ children }: Props) {
                   <div className="h-full w-full flex items-center justify-center text-xs font-semibold text-white">
                     {selectedTeam.name.slice(0, 2).toUpperCase()}
                   </div>
-                )
-              ) : (
-                <div className="h-full w-full flex items-center justify-center text-lg font-semibold text-white">?</div>
-              )}
-            </button>
+                )}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectorOpen((v) => !v);
+                  updateSelectorPos();
+                }}
+                className="text-xs text-slate-300 hover:text-white px-2 py-1 rounded hover:bg-slate-800/70 transition"
+                title="Sélectionner une équipe"
+              >
+                Mon équipe
+              </button>
+            )}
           </div>
         </div>
       </div>
