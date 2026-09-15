@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../auth/AuthContext';
+import type { AuthUser } from '../auth/types';
+import { rememberCurrentPath } from '../auth/postLoginRedirect';
+import { useInscriptionSession, PROFIL_QUERY_KEY } from '../hooks/useInscriptionSession';
 import {
-  fetchEditionCourante,
   fetchEquipesReferentiel,
   createEquipeDemande,
-  fetchProfilInscription,
+  updatePseudo,
   fetchMaCandidature,
   soumettreCanditature,
   fetchToutesCandidatures,
@@ -13,15 +17,26 @@ import {
   mettreListeAttente,
   refuserCandidature,
   validerPaiement,
+  validerDossier,
+  rouvrirDossier,
 } from '../api/inscription';
 import type {
   Edition,
+  EditionEtape,
   EquipeRef,
-  ProfilInscription,
   MaCandidature,
   CandidatureOrganisateur,
   StatutInscription,
 } from '../api/types/inscription.types';
+import DossierPanel from './inscription/DossierPanel';
+import { interpolerMsgPaiementAttendu } from '../utils/msgPaiementAttendu';
+import { msgOr } from '../utils/msgOr';
+import { isImageUrl } from '../utils/isImageUrl';
+import {
+  lireEquipeIdPersistee,
+  ecrireEquipeIdPersistee,
+  effacerEquipeIdPersistee,
+} from '../utils/selectedEquipePersistence';
 
 // ─── Composants utilitaires ────────────────────────────────────────────────
 
@@ -70,11 +85,12 @@ function StatutBadge({ statut }: { statut: StatutInscription }) {
 
 interface AddEquipeModalProps {
   token: string;
+  introMessage?: string | null;
   onClose: () => void;
   onCreated: (equipe: EquipeRef) => void;
 }
 
-function AddEquipeModal({ token, onClose, onCreated }: AddEquipeModalProps) {
+function AddEquipeModal({ token, introMessage, onClose, onCreated }: AddEquipeModalProps) {
   const [nom, setNom] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -103,8 +119,11 @@ function AddEquipeModal({ token, onClose, onCreated }: AddEquipeModalProps) {
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
       <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-xl w-full max-w-md p-6">
-        <h2 className="text-lg font-bold mb-4 text-slate-100">Ajouter une équipe</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <h2 className="text-lg font-bold mb-1 text-slate-100">Ajouter une équipe</h2>
+        {introMessage && introMessage.trim() && (
+          <p className="text-sm text-slate-400 mb-4 whitespace-pre-line">{introMessage}</p>
+        )}
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div>
             <label className="block text-sm font-medium mb-1 text-slate-200" htmlFor="equipe-nom">
               Nom de l'équipe
@@ -318,7 +337,14 @@ function EquipeDropdown({ equipes, selected, onSelect }: EquipeDropdownProps) {
               {equipe.logoUrl && (
                 <img src={equipe.logoUrl} alt="" className="w-6 h-6 object-contain rounded-full" />
               )}
-              {equipe.nom}
+              <span className={equipe.candidatureEnCours ? 'text-slate-400 italic' : ''}>
+                {equipe.nom}
+              </span>
+              {equipe.candidatureEnCours && (
+                <span className="ml-auto text-xs text-orange-300 shrink-0">
+                  Déjà en cours d'inscription
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -331,7 +357,7 @@ function EquipeDropdown({ equipes, selected, onSelect }: EquipeDropdownProps) {
 
 interface HeaderProps {
   edition: Edition | null;
-  user: import('firebase/auth').User | null;
+  user: AuthUser | null;
   onSignOut: () => void;
 }
 
@@ -396,9 +422,10 @@ function Footer({ edition }: FooterProps) {
 interface VueOrganisateurProps {
   edition: Edition | null;
   token: string;
+  etape: EditionEtape | null;
 }
 
-function VueOrganisateur({ edition, token }: VueOrganisateurProps) {
+function VueOrganisateur({ edition, token, etape }: VueOrganisateurProps) {
   const [candidatures, setCandidatures] = useState<CandidatureOrganisateur[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -458,6 +485,13 @@ function VueOrganisateur({ edition, token }: VueOrganisateurProps) {
 
   return (
     <div className="space-y-4">
+      {/* Bannière informative quand les inscriptions sont clôturées */}
+      {etape === 'CLOTUREE' && (
+        <div className="bg-yellow-900/40 border border-yellow-500/40 text-yellow-200 rounded-lg px-4 py-3 text-sm">
+          Les inscriptions sont clôturées. Vous pouvez toujours figer ou rouvrir les dossiers des équipes.
+        </div>
+      )}
+
       {/* Compteur */}
       <div className="flex items-center justify-between bg-blue-900/40 border border-blue-500/40 rounded-lg px-4 py-3">
         <span className="text-sm font-medium text-blue-200">Équipes réservées</span>
@@ -561,6 +595,32 @@ function VueOrganisateur({ edition, token }: VueOrganisateurProps) {
                   )}
                 </div>
               )}
+
+              {c.statut === 'DOSSIER_EN_COURS' && (
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() =>
+                      void handleAction(() => validerDossier(c.id, token))
+                    }
+                    className="px-3 py-1.5 rounded bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-500 transition"
+                  >
+                    Valider le dossier
+                  </button>
+                </div>
+              )}
+
+              {c.statut === 'DOSSIER_COMPLET' && (
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={() =>
+                      void handleAction(() => rouvrirDossier(c.id, token))
+                    }
+                    className="px-3 py-1.5 rounded bg-orange-500 text-white text-xs font-medium hover:bg-orange-400 transition"
+                  >
+                    Rouvrir le dossier
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -585,22 +645,39 @@ interface VueResponsableProps {
   edition: Edition | null;
   equipes: EquipeRef[];
   token: string;
+  uid: string;
   onEquipeCreated: (equipe: EquipeRef) => void;
+  etape: EditionEtape | null;
 }
 
 function VueResponsable({
   edition,
   equipes,
   token,
+  uid,
   onEquipeCreated,
+  etape,
 }: VueResponsableProps) {
   const [candidature, setCandidature] = useState<MaCandidature>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedEquipe, setSelectedEquipe] = useState<EquipeRef | null>(null);
+  // Réhydraté depuis localStorage (namespacé par uid) au montage : équipes est
+  // déjà chargé à ce stade, le parent bloque le rendu tant que equipeLoading
+  // est vrai (InscriptionPage, plus bas) — pas besoin de useEffect.
+  const [selectedEquipe, setSelectedEquipeState] = useState<EquipeRef | null>(() => {
+    const persistedId = lireEquipeIdPersistee(uid);
+    if (persistedId == null) return null;
+    return equipes.find((e) => e.id === persistedId) ?? null;
+  });
   const [showAddModal, setShowAddModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showDossier, setShowDossier] = useState(false);
+
+  function setSelectedEquipe(equipe: EquipeRef) {
+    setSelectedEquipeState(equipe);
+    ecrireEquipeIdPersistee(uid, equipe.id);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -632,6 +709,9 @@ function VueResponsable({
         statut: result.statut as MaCandidature extends null ? never : NonNullable<MaCandidature>['statut'],
         createdAt: result.createdAt,
       });
+      // La demande est lancée : candidature (serveur) devient la source de
+      // vérité, la sélection persistée localement n'a plus lieu d'être (CA3).
+      effacerEquipeIdPersistee(uid);
     } catch (e: unknown) {
       const msg =
         e && typeof e === 'object' && 'message' in e
@@ -647,7 +727,19 @@ function VueResponsable({
   if (error) return <ErrorBanner message={error} />;
 
   // Candidature existante → afficher le tableau de bord
+  // Note : l'accès au dossier reste possible même en phase CLOTUREE si le statut
+  // est DOSSIER_EN_COURS — seul assertDossierModifiable (backend) contrôle les
+  // droits d'écriture, pas l'étape de l'édition (cf. DossierAccessService).
+  //
+  // Accès direct par URL après TOURNOI_DEMARRE (le menu ne propose alors plus
+  // aucun lien vers /inscription) : le backend bloque déjà toute écriture
+  // (DossierAccessService.assertDossierModifiable), mais sans ce garde le CTA
+  // d'édition resterait affiché ici, laissant croire à tort que le dossier est
+  // modifiable jusqu'au moment de la sauvegarde. DOSSIER_COMPLET n'est pas
+  // concerné : déjà en lecture seule via DossierPanel.
   if (candidature) {
+    const dossierVerrouille =
+      etape === 'TOURNOI_DEMARRE' && candidature.statut !== 'DOSSIER_COMPLET';
     return (
       <div className="space-y-6">
         {/* Récapitulatif candidature */}
@@ -674,50 +766,156 @@ function VueResponsable({
           {/* Message selon statut */}
           {candidature.statut === 'CANDIDATE' && (
             <p className="text-sm text-slate-300 whitespace-pre-line">
-              {edition?.msgDemandeSoumise ?? 'Ta demande a bien été soumise. En attente de validation.'}
+              {msgOr(edition?.msgDemandeSoumise, 'Ta demande a bien été soumise. En attente de validation.')}
             </p>
           )}
           {candidature.statut === 'LISTE_ATTENTE' && (
             <p className="text-sm text-orange-300 whitespace-pre-line">
-              {edition?.msgListeAttente ?? "Tu es sur liste d'attente."}
+              {msgOr(edition?.msgListeAttente, "Tu es sur liste d'attente.")}
             </p>
           )}
           {(candidature.statut === 'RESERVEE' || candidature.statut === 'PAIEMENT_ATTENDU') && (
             <div className="space-y-2 text-sm">
               <p className="text-slate-200 whitespace-pre-line">
-                {edition?.msgPaiementAttendu ?? 'Paiement attendu.'}
+                {interpolerMsgPaiementAttendu(
+                  msgOr(edition?.msgPaiementAttendu, 'Paiement attendu.'),
+                  edition?.fraisInscription ?? 0,
+                )}
               </p>
               {edition?.msgChequeInfo1 && (
                 <p className="text-slate-300">{edition.msgChequeInfo1}</p>
               )}
-              {edition?.msgRibUrl && (
-                <a
-                  href={edition.msgRibUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-400 hover:text-blue-300 hover:underline transition"
-                >
-                  Voir le RIB
-                </a>
+              {edition?.msgChequeInfo2 && (
+                <p className="text-slate-300">{edition.msgChequeInfo2}</p>
+              )}
+              {edition?.imageRibUrl && (
+                <div className="space-y-1">
+                  {isImageUrl(edition.imageRibUrl) && (
+                    <img
+                      src={edition.imageRibUrl}
+                      alt="RIB du tournoi"
+                      className="max-w-xs rounded border border-slate-700"
+                    />
+                  )}
+                  <a
+                    href={edition.imageRibUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300 hover:underline transition block"
+                  >
+                    Voir le RIB{isImageUrl(edition.imageRibUrl) ? ' en grand' : ''}
+                  </a>
+                </div>
               )}
             </div>
           )}
           {candidature.statut === 'VALIDEE' && (
-            <div className="space-y-3">
-              <p className="text-sm text-green-300 whitespace-pre-line">
-                {edition?.msgInscriptionConfirmee ?? 'Inscription confirmée !'}
+            dossierVerrouille ? (
+              <p className="text-sm text-yellow-300 whitespace-pre-line">
+                Le tournoi a démarré, les dossiers ne sont plus modifiables.
               </p>
-              <button className="w-full bg-green-600 text-white rounded-lg py-2 font-medium hover:bg-green-500 transition text-sm">
-                Renseigner mes joueurs
-              </button>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-green-300 whitespace-pre-line">
+                  {msgOr(edition?.msgInscriptionConfirmee, 'Inscription confirmée !')}
+                </p>
+                {!showDossier && (
+                  <button
+                    onClick={() => setShowDossier(true)}
+                    className="w-full bg-green-600 text-white rounded-lg py-2 font-medium hover:bg-green-500 transition text-sm"
+                  >
+                    Renseigner mon dossier
+                  </button>
+                )}
+              </div>
+            )
+          )}
+          {candidature.statut === 'DOSSIER_EN_COURS' && (
+            dossierVerrouille ? (
+              <p className="text-sm text-yellow-300 whitespace-pre-line">
+                Le tournoi a démarré, les dossiers ne sont plus modifiables.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-cyan-300 whitespace-pre-line">
+                  {msgOr(edition?.msgRenseigneJoueurs, 'Complète le dossier de ton équipe (joueurs, coachs, droits à l\'image).')}
+                </p>
+                {!showDossier && (
+                  <button
+                    onClick={() => setShowDossier(true)}
+                    className="w-full bg-cyan-600 text-white rounded-lg py-2 font-medium hover:bg-cyan-500 transition text-sm"
+                  >
+                    Compléter mon dossier
+                  </button>
+                )}
+              </div>
+            )
+          )}
+          {candidature.statut === 'DOSSIER_COMPLET' && (
+            <div className="space-y-3">
+              <p className="text-sm text-emerald-300 whitespace-pre-line">
+                {msgOr(edition?.msgInscriptionValidee, "Le dossier de ton équipe a été validé par l'organisateur.")}
+              </p>
+              {!showDossier && (
+                <button
+                  onClick={() => setShowDossier(true)}
+                  className="w-full bg-emerald-600 text-white rounded-lg py-2 font-medium hover:bg-emerald-500 transition text-sm"
+                >
+                  Voir mon dossier
+                </button>
+              )}
             </div>
           )}
           {candidature.statut === 'REFUSEE' && (
-            <p className="text-sm text-red-300">
-              Ta candidature a été refusée. Contacte l'organisateur pour plus d'informations.
+            <p className="text-sm text-red-300 whitespace-pre-line">
+              {msgOr(
+                edition?.msgEquipeRefusee,
+                "Nous ne sommes malheureusement pas en mesure de confirmer l'inscription de ton équipe pour cette édition du tournoi. N'hésite pas à contacter l'organisateur si tu as des questions — et à retenter ta chance lors d'une prochaine édition !",
+              )}
             </p>
           )}
         </div>
+
+        {showDossier &&
+          !dossierVerrouille &&
+          (candidature.statut === 'VALIDEE' ||
+            candidature.statut === 'DOSSIER_EN_COURS' ||
+            candidature.statut === 'DOSSIER_COMPLET') && (
+            <DossierPanel
+              token={token}
+              readOnly={candidature.statut === 'DOSSIER_COMPLET'}
+              onClose={() => setShowDossier(false)}
+            />
+          )}
+      </div>
+    );
+  }
+
+  // Inscriptions clôturées et aucune candidature existante → plus de soumission possible
+  if (etape === 'CLOTUREE') {
+    return (
+      <div className="bg-yellow-900/40 border border-yellow-500/40 rounded-xl px-4 py-5 text-sm text-yellow-200">
+        Les inscriptions pour cette édition sont désormais clôturées. Aucune nouvelle candidature ne peut être soumise.
+      </div>
+    );
+  }
+
+  // Tournoi démarré → plus de soumission possible non plus
+  if (etape === 'TOURNOI_DEMARRE') {
+    return (
+      <div className="bg-yellow-900/40 border border-yellow-500/40 rounded-xl px-4 py-5 text-sm text-yellow-200">
+        Le tournoi a déjà démarré. Les inscriptions ne sont plus ouvertes.
+      </div>
+    );
+  }
+
+  // Édition pas encore ouverte aux inscriptions (CREEE) ou pas encore résolue →
+  // le backend refuse toute soumission (voir soumettre-candidature.usecase.ts),
+  // donc on bloque le formulaire ici pour éviter un Bad Request à l'étape 2.
+  if (etape !== 'INSCRIPTIONS_OUVERTES') {
+    return (
+      <div className="bg-yellow-900/40 border border-yellow-500/40 rounded-xl px-4 py-5 text-sm text-yellow-200">
+        Les inscriptions ne sont pas encore ouvertes pour cette édition. Reviens un peu plus tard.
       </div>
     );
   }
@@ -776,14 +974,29 @@ function VueResponsable({
             <p className="text-sm text-slate-300 whitespace-pre-line">{edition.msgLancerDemande}</p>
           )}
           {submitError && <ErrorBanner message={submitError} />}
+          {selectedEquipe && !selectedEquipe.active && (
+            <p className="text-sm text-orange-300 italic">
+              Cette équipe vient d'être ajoutée et attend la validation de l'organisateur avant de pouvoir être inscrite.
+            </p>
+          )}
+          {selectedEquipe?.candidatureEnCours && (
+            <p className="text-sm text-orange-300 italic whitespace-pre-line">
+              {msgOr(
+                edition?.msgInscriptionEnCours,
+                "L'inscription de cette équipe a déjà été demandée. Rapproche-toi du club ou du porteur de l'équipe, ou contacte-nous (rubrique Contact ci-dessous) si tu penses qu'il s'agit d'une erreur.",
+              )}
+            </p>
+          )}
           {selectedEquipe ? (
-            <button
-              onClick={() => void handleSoumettre()}
-              disabled={submitting}
-              className="w-full bg-blue-600 text-white rounded-lg py-2 font-medium hover:bg-blue-500 disabled:opacity-50 transition"
-            >
-              {submitting ? 'Envoi...' : 'Lancer la demande'}
-            </button>
+            selectedEquipe.candidatureEnCours ? null : (
+              <button
+                onClick={() => void handleSoumettre()}
+                disabled={submitting || !selectedEquipe.active}
+                className="w-full bg-blue-600 text-white rounded-lg py-2 font-medium hover:bg-blue-500 disabled:opacity-50 transition"
+              >
+                {submitting ? 'Envoi...' : 'Lancer la demande'}
+              </button>
+            )
           ) : (
             <p className="text-sm text-slate-500 italic">
               Sélectionne d'abord ton équipe à l'étape 1.
@@ -810,6 +1023,7 @@ function VueResponsable({
       {showAddModal && (
         <AddEquipeModal
           token={token}
+          introMessage={edition?.msgAjoutEquipe}
           onClose={() => setShowAddModal(false)}
           onCreated={(equipe) => {
             onEquipeCreated(equipe);
@@ -824,115 +1038,56 @@ function VueResponsable({
 // ─── Page principale ──────────────────────────────────────────────────────
 
 export default function InscriptionPage() {
-  const { user, loading: authLoading, configured, signInWithGoogle, signOut } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const [edition, setEdition] = useState<Edition | null>(null);
+  // Source partagée édition + profil + token via TanStack Query (dédupliqué
+  // avec la navigation — pas de double fetch). Remplace les useState/useEffect
+  // locaux précédents pour edition, profil, token, pageLoading, pageError.
+  const { edition, etape, profil, token, isLoading: sessionLoading } = useInscriptionSession();
+
   const [equipes, setEquipes] = useState<EquipeRef[]>([]);
-  const [profil, setProfil] = useState<ProfilInscription | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [pageLoading, setPageLoading] = useState(true);
-  const [pageError, setPageError] = useState<string | null>(null);
+  const [equipeLoading, setEquipeLoading] = useState(true);
+  const [equipeError, setEquipeError] = useState<string | null>(null);
   const [pseudoInput, setPseudoInput] = useState('');
+  const [pseudoSaving, setPseudoSaving] = useState(false);
+  const [pseudoError, setPseudoError] = useState<string | null>(null);
 
-  // Charger édition + équipes au montage
+  // Charger les équipes du référentiel au montage (restera en useState local :
+  // ces données n'ont pas besoin d'être partagées avec d'autres composants)
   useEffect(() => {
     let cancelled = false;
-    Promise.all([fetchEditionCourante(), fetchEquipesReferentiel()])
-      .then(([ed, eq]) => {
-        if (cancelled) return;
-        setEdition(ed);
-        setEquipes(eq);
-      })
-      .catch(() => {
-        if (!cancelled) setPageError('Impossible de charger les données. Réessaie plus tard.');
-      })
-      .finally(() => {
-        if (!cancelled) setPageLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+    fetchEquipesReferentiel()
+      .then((eq) => { if (!cancelled) setEquipes(eq); })
+      .catch(() => { if (!cancelled) setEquipeError('Impossible de charger les données. Réessaie plus tard.'); })
+      .finally(() => { if (!cancelled) setEquipeLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
-  // Charger le profil + token quand l'utilisateur est authentifié
+  // Point d'entrée de connexion unique : redirige vers /connexion au lieu
+  // d'afficher un lien inline (spec §2).
   useEffect(() => {
-    if (!user) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setProfil(null);
-      setToken(null);
-      return;
+    if (!sessionLoading && !user) {
+      rememberCurrentPath();
+      navigate('/connexion', { replace: true });
     }
-    let cancelled = false;
-    user.getIdToken().then((t) => {
-      if (cancelled) return;
-      setToken(t);
-      fetchProfilInscription(t)
-        .then((p) => {
-          if (!cancelled) setProfil(p);
-        })
-        .catch(() => {
-          // Profil non trouvé = nouvel utilisateur, on ignore
-        });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
+  }, [sessionLoading, user, navigate]);
 
-  // ── Cas : Firebase non configuré ────────────────────────────────────────
-  if (!configured) {
-    return (
-      <div className="max-w-lg mx-auto px-4 py-12 text-center">
-        <div className="bg-yellow-900/40 border border-yellow-500/40 rounded-xl p-6">
-          <p className="text-yellow-200 font-medium">Module inscriptions non disponible</p>
-          <p className="text-yellow-300/80 text-sm mt-2">
-            Firebase n'est pas encore configuré pour cet environnement.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Chargement ───────────────────────────────────────────────────────────
-  if (authLoading || pageLoading) {
+  // ── Chargement (session + équipes) ───────────────────────────────────────
+  if (sessionLoading || equipeLoading || !user) {
     return <Spinner />;
   }
 
-  if (pageError) {
+  if (equipeError) {
     return (
       <div className="max-w-lg mx-auto px-4 py-12">
-        <ErrorBanner message={pageError} />
+        <ErrorBanner message={equipeError} />
       </div>
     );
   }
 
-  const handleSignOut = () => void signOut();
-
-  // ── Cas : Non authentifié ─────────────────────────────────────────────────
-  if (!user) {
-    return (
-      <div className="max-w-lg mx-auto px-4 py-8">
-        <Header edition={edition} user={user} onSignOut={handleSignOut} />
-        {edition?.msgBienvenue && (
-          <p className="text-slate-300 mb-6 whitespace-pre-line">{edition.msgBienvenue}</p>
-        )}
-        <div className="flex flex-col items-center gap-4 py-6">
-          <button
-            onClick={() => void signInWithGoogle()}
-            className="flex items-center gap-3 bg-slate-100 border border-slate-300 rounded-lg px-6 py-3 shadow-sm hover:shadow-md hover:bg-white transition text-slate-800 font-medium"
-          >
-            <img
-              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-              alt="Google"
-              className="w-5 h-5"
-            />
-            Se connecter avec Google
-          </button>
-        </div>
-        <Footer edition={edition} />
-      </div>
-    );
-  }
+  const handleSignOut = () => logout();
 
   // ── Cas : Authentifié mais sans pseudo (faisons connaissance) ─────────────
   if (user && !profil?.pseudo) {
@@ -957,19 +1112,25 @@ export default function InscriptionPage() {
               onChange={(e) => setPseudoInput(e.target.value)}
             />
           </div>
+          {pseudoError && <ErrorBanner message={pseudoError} />}
           <button
-            disabled={!pseudoInput.trim()}
+            disabled={!pseudoInput.trim() || pseudoSaving || !token}
             className="w-full bg-blue-600 text-white rounded-lg py-2 font-medium disabled:opacity-50 hover:bg-blue-500 transition"
             onClick={() => {
-              // TODO: appel API pour sauvegarder le pseudo
-              setProfil((prev) =>
-                prev
-                  ? { ...prev, pseudo: pseudoInput.trim() }
-                  : { id: 0, pseudo: pseudoInput.trim(), role: 'RESPONSABLE_EQUIPE' },
-              );
+              if (!token) return;
+              setPseudoSaving(true);
+              setPseudoError(null);
+              updatePseudo(pseudoInput.trim(), token)
+                .then((updatedProfil) => {
+                  // Mise à jour directe du cache TanStack Query — déclenche un
+                  // re-render via useInscriptionSession sans refetch réseau.
+                  queryClient.setQueryData(PROFIL_QUERY_KEY(user.uid), updatedProfil);
+                })
+                .catch(() => setPseudoError('Impossible d\'enregistrer le pseudo. Réessaie.'))
+                .finally(() => setPseudoSaving(false));
             }}
           >
-            Valider
+            {pseudoSaving ? 'Enregistrement...' : 'Valider'}
           </button>
         </div>
         <Footer edition={edition} />
@@ -983,7 +1144,7 @@ export default function InscriptionPage() {
       <div className="max-w-2xl mx-auto px-4 py-8">
         <Header edition={edition} user={user} onSignOut={handleSignOut} />
         <h2 className="font-bold text-slate-100 text-lg mb-4">Gestion des candidatures</h2>
-        <VueOrganisateur edition={edition} token={token} />
+        <VueOrganisateur edition={edition} token={token} etape={etape} />
         <Footer edition={edition} />
       </div>
     );
@@ -998,6 +1159,8 @@ export default function InscriptionPage() {
           edition={edition}
           equipes={equipes}
           token={token}
+          uid={user.uid}
+          etape={etape}
           onEquipeCreated={(equipe) => setEquipes((prev) => [...prev, equipe])}
         />
       )}
