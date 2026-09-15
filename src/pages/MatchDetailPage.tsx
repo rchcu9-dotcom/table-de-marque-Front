@@ -1,6 +1,8 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useMatch, useMatches } from "../hooks/useMatches";
+import { useMatchLive } from "../hooks/useMatchLive";
+import ScoreBoard from "../components/tableDeMarque/ScoreBoard";
 import Spinner from "../components/ds/Spinner";
 import Card from "../components/ds/Card";
 import Badge from "../components/ds/Badge";
@@ -111,6 +113,9 @@ export default function MatchDetailPage() {
   const navigate = useNavigate();
   const { data, isLoading, isError } = useMatch(id);
   const { data: allMatches } = useMatches();
+  const numMatch = id && /^\d+$/.test(id) ? parseInt(id, 10) : undefined;
+  const { data: liveData } = useMatchLive(numMatch);
+  const showLive = liveData?.matchLive && liveData.matchLive.etat !== "PLANIFIE";
   const { data: partenairesData } = usePartenaires();
   const namingPartners = (partenairesData ?? []).filter((p) => p.type === "naming");
   const competitionType = (data?.competitionType ?? "5v5").toLowerCase();
@@ -349,6 +354,14 @@ export default function MatchDetailPage() {
           )}
         </div>
       </Card>
+
+      {showLive && numMatch && (
+        <ScoreBoard
+          numMatch={numMatch}
+          equipe1Nom={teamALabel}
+          equipe2Nom={teamBLabel}
+        />
+      )}
 
       {relatedMatches.length > 0 && (
         <Card data-testid="summary-section">

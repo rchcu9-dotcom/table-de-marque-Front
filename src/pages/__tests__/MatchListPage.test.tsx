@@ -64,6 +64,17 @@ describe("MatchListPage", () => {
     ];
   });
 
+  it("affiche le fil d'ariane Accueil > Matchs", () => {
+    render(
+      <MemoryRouter>
+        <MatchListPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Accueil")).toBeInTheDocument();
+    expect(screen.getByText("Matchs")).toBeInTheDocument();
+  });
+
   it("affiche le score et met en avant l'equipe gagnante", () => {
     render(
       <MemoryRouter>

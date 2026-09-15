@@ -1,11 +1,13 @@
 import React from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useChallengeByEquipe } from "../hooks/useChallengeByEquipe";
 import { useChallengeJ1Momentum } from "../hooks/useChallengeJ1Momentum";
 import { useChallengeGardienJ3 } from "../hooks/useChallengeGardienJ3";
 import { useTeams } from "../hooks/useTeams";
 import type { ChallengeAttempt as Attempt, GardienJ3Player } from "../api/challenge";
 import challengeIcon from "../assets/icons/nav/challenge.png";
+import Breadcrumbs from "../components/navigation/Breadcrumbs";
+import { ACCUEIL_CRUMB, CHALLENGE_CRUMB } from "../components/navigation/breadcrumbItems";
 
 type TeamInfo = {
   id: string;
@@ -352,26 +354,7 @@ export default function ChallengeEquipePage() {
             }}
           />
           <div className="relative flex flex-col gap-3">
-            <div className="flex items-center gap-3">
-              <button
-                className="rounded-full border border-slate-700 bg-slate-800/70 px-3 py-1 text-slate-200 text-sm hover:border-slate-500"
-                onClick={() => navigate(-1)}
-                type="button"
-              >
-                Retour
-              </button>
-              <div className="flex items-center gap-2 text-xs text-slate-300">
-                <Link to="/" className="hover:text-white">
-                  Accueil
-                </Link>
-                <span>{">"}</span>
-                <Link to="/challenge" className="hover:text-white">
-                  Challenge
-                </Link>
-                <span>{">"}</span>
-                <span className="text-white font-semibold">{teamLabel}</span>
-              </div>
-            </div>
+            <Breadcrumbs items={[ACCUEIL_CRUMB, CHALLENGE_CRUMB, { label: teamLabel }]} />
 
             <div className="flex items-center gap-2">
               <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-800/80 flex-shrink-0">

@@ -1,13 +1,13 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
 import { useChallengeAll } from "../hooks/useChallengeAll";
 import { useTeams } from "../hooks/useTeams";
 import { useSelectedTeam } from "../providers/SelectedTeamProvider";
 import type { ChallengeAttempt as Attempt } from "../api/challenge";
 import challengeIcon from "../assets/icons/nav/challenge.png";
+import Breadcrumbs from "../components/navigation/Breadcrumbs";
+import { ACCUEIL_CRUMB, CHALLENGE_CRUMB } from "../components/navigation/breadcrumbItems";
 
 export default function ChallengeFinaleCombiPage() {
-  const navigate = useNavigate();
   const { selectedTeam } = useSelectedTeam();
   const { data, isLoading, isError } = useChallengeAll();
   const { data: teams } = useTeams();
@@ -48,6 +48,7 @@ export default function ChallengeFinaleCombiPage() {
     <div className="fixed inset-0 overflow-hidden">
       <div className="absolute left-0 right-0 px-4" style={{ top: "72px" }}>
         <div className="relative overflow-hidden max-w-6xl mx-auto rounded-xl border border-slate-800 bg-slate-900/90 p-4 shadow-md shadow-slate-950">
+          <Breadcrumbs items={[ACCUEIL_CRUMB, CHALLENGE_CRUMB, { label: "Finale combinée" }]} />
           <div
             className="pointer-events-none absolute inset-0 opacity-10"
             style={{
@@ -58,13 +59,7 @@ export default function ChallengeFinaleCombiPage() {
               backgroundSize: "200px",
             }}
           />
-          <div className="relative flex items-center gap-3">
-            <button
-              className="rounded-full border border-slate-700 bg-slate-800/70 px-3 py-1 text-slate-200 text-sm hover:border-slate-500"
-              onClick={() => navigate(-1)}
-            >
-              Retour
-            </button>
+          <div className="relative flex items-center gap-3 mt-2">
             <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-800/80 flex-shrink-0">
               <img src={challengeIcon} alt="Challenge" className="h-full w-full object-cover scale-150" loading="lazy" />
             </div>

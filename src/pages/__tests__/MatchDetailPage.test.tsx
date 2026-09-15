@@ -129,6 +129,11 @@ const mockJ3Squares = {
   ],
 };
 
+vi.mock("../../hooks/useMatchLive", () => ({
+  useMatchLive: () => ({ data: undefined, isLoading: false }),
+  matchLiveQueryKey: (n: number) => ["match-live", n],
+}));
+
 vi.mock("../../hooks/usePartenaires", () => ({
   usePartenaires: () => ({ data: [], isLoading: false }),
 }));

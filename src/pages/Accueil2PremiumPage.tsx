@@ -1,4 +1,5 @@
 import React from "react";
+import { useInscriptionSession } from "../hooks/useInscriptionSession";
 
 type PremiumCard = {
   id: string;
@@ -151,6 +152,9 @@ function MomentumRow({ title, cards }: { title: string; cards: PremiumCard[] }) 
 }
 
 export default function Accueil2PremiumPage() {
+  const { edition } = useInscriptionSession();
+  const nomTournoi = edition?.nom ?? "Tournoi RCHC U11 2026";
+
   return (
     <div
       className="min-h-screen px-4 py-5 text-slate-100 md:px-6 md:py-7"
@@ -169,7 +173,7 @@ export default function Accueil2PremiumPage() {
             </span>
           </div>
           <h1 className="text-3xl font-semibold tracking-[0.02em] text-amber-50 md:text-4xl">
-            Tournoi RCHC U11 2026
+            {nomTournoi}
           </h1>
           <p className="mt-2 text-base text-slate-300">
             Bienvenue dans l&apos;espace officiel du tournoi

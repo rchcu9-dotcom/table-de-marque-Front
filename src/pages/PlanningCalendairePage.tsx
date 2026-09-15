@@ -6,6 +6,8 @@ import { useMatchesFiltered } from "../hooks/useMatches";
 import { useTeams } from "../hooks/useTeams";
 import { deriveTournamentDay, sortedTournamentDateKeys, tournamentDateKey } from "../utils/tournamentDate";
 import { buildPlanningJ3Lines } from "./planningCalendaireJ3";
+import Breadcrumbs from "../components/navigation/Breadcrumbs";
+import { ACCUEIL_CRUMB, PLANNING_CRUMB } from "../components/navigation/breadcrumbItems";
 
 const J2_POOLS = ["E", "F", "G", "H"] as const;
 const J3_FINAL_SQUARES = ["I", "J", "K", "L"] as const;
@@ -352,7 +354,8 @@ export default function PlanningCalendairePage() {
         ref={headerRef}
         className="bg-slate-900 border-b border-slate-800 px-4 pt-3 pb-2 shadow-md flex-shrink-0"
       >
-        <div className="flex items-center gap-3 mb-2">
+        <Breadcrumbs items={[ACCUEIL_CRUMB, PLANNING_CRUMB, { label: "Planning calendaire" }]} />
+        <div className="flex items-center gap-3 mb-2 mt-2">
           <div className="h-10 w-10 rounded-full overflow-hidden bg-slate-800/80 flex-shrink-0">
             <img
               src={planningIcon}

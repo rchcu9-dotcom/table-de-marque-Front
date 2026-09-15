@@ -1,12 +1,15 @@
 ﻿import React from "react";
 import { useTeams } from "../hooks/useTeams";
+import Breadcrumbs from "../components/navigation/Breadcrumbs";
+import { ACCUEIL_CRUMB } from "../components/navigation/breadcrumbItems";
 
 export default function TeamsPage() {
   const { data: teams, isLoading, isError } = useTeams();
 
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-      <h2 className="text-lg font-semibold mb-3">Toutes les Ã©quipes</h2>
+      <Breadcrumbs items={[ACCUEIL_CRUMB, { label: "Équipes" }]} />
+      <h2 className="text-lg font-semibold mb-3 mt-3">Toutes les Ã©quipes</h2>
       {isLoading && <p className="text-slate-300 text-sm">Chargement...</p>}
       {isError && <p className="text-red-300 text-sm">Erreur lors du chargement des Ã©quipes.</p>}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">

@@ -152,12 +152,14 @@ export default function PlanningPage() {
               <img src={planningIcon} alt="Planning" className="h-full w-full object-cover scale-150" loading="lazy" />
             </div>
             <h1 className="text-xl font-semibold text-white">Planning</h1>
-            <Link
-              to="/planning/calendaire"
-              className="ml-auto text-xs text-emerald-300 border border-emerald-500/30 bg-emerald-500/10 rounded-full px-3 py-1 hover:bg-emerald-500/20"
-            >
-              Vue calendaire
-            </Link>
+            <div className="ml-auto flex items-center gap-2">
+              <Link
+                to="/planning/calendaire"
+                className="text-xs text-emerald-300 border border-emerald-500/30 bg-emerald-500/10 rounded-full px-3 py-1 hover:bg-emerald-500/20"
+              >
+                Vue calendaire
+              </Link>
+            </div>
           </div>
           {selectedTeam && (
             <div className="flex items-center gap-2 text-xs text-emerald-200 mb-2 pr-1">

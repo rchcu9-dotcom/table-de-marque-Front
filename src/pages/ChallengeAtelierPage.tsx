@@ -1,5 +1,5 @@
 import React from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useChallengeAll } from "../hooks/useChallengeAll";
 import { useTeams } from "../hooks/useTeams";
 import { useSelectedTeam } from "../providers/SelectedTeamProvider";
@@ -8,6 +8,8 @@ import challengeIcon from "../assets/icons/nav/challenge.png";
 import vitesseIcon from "../assets/icons/nav/vitesse.png";
 import tirIcon from "../assets/icons/nav/tir.png";
 import agiliteIcon from "../assets/icons/nav/agilite.png";
+import Breadcrumbs from "../components/navigation/Breadcrumbs";
+import { ACCUEIL_CRUMB, CHALLENGE_CRUMB } from "../components/navigation/breadcrumbItems";
 
 const ATELIER_LABEL: Record<string, string> = {
   vitesse: "Atelier Vitesse",
@@ -19,7 +21,6 @@ const ATELIER_LABEL: Record<string, string> = {
 
 export default function ChallengeAtelierPage() {
   const { type } = useParams<{ type: string }>();
-  const navigate = useNavigate();
   const { selectedTeam } = useSelectedTeam();
   const { data, isLoading, isError } = useChallengeAll();
   const { data: teams } = useTeams();
@@ -117,6 +118,7 @@ export default function ChallengeAtelierPage() {
     <div className="fixed inset-0 overflow-hidden">
       <div className="absolute left-0 right-0 px-4" style={{ top: "72px" }}>
         <div className="relative overflow-hidden max-w-6xl mx-auto rounded-xl border border-slate-800 bg-slate-900/90 p-4 shadow-md shadow-slate-950">
+          <Breadcrumbs items={[ACCUEIL_CRUMB, CHALLENGE_CRUMB, { label: title }]} />
           <div
             className="pointer-events-none absolute inset-0 opacity-10"
             style={{
@@ -127,13 +129,7 @@ export default function ChallengeAtelierPage() {
               backgroundSize: "200px",
             }}
           />
-          <div className="relative flex items-center gap-3">
-            <button
-              className="rounded-full border border-slate-700 bg-slate-800/70 px-3 py-1 text-slate-200 text-sm hover:border-slate-500"
-              onClick={() => navigate(-1)}
-            >
-              Retour
-            </button>
+          <div className="relative flex items-center gap-3 mt-2">
             <div className="h-12 w-12 rounded-full overflow-hidden bg-slate-800/80 flex-shrink-0">
               <img src={headerIcon} alt="Challenge" className="h-full w-full object-cover scale-150" loading="lazy" />
             </div>

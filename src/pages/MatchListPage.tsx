@@ -7,6 +7,8 @@ import type { Match } from "../api/match";
 import { useMatches } from "../hooks/useMatches";
 import { useNavigate } from "react-router-dom";
 import HorizontalMatchSlider from "../components/collections/HorizontalMatchSlider";
+import Breadcrumbs from "../components/navigation/Breadcrumbs";
+import { ACCUEIL_CRUMB } from "../components/navigation/breadcrumbItems";
 
 type Props = {
   searchQuery?: string;
@@ -304,6 +306,8 @@ export default function MatchListPage({
   const fields = renderFields(false);
   return (
     <div className="space-y-4">
+      <Breadcrumbs items={[ACCUEIL_CRUMB, { label: "Matchs" }]} />
+
       {isPlanningLoading && (
         <div className="flex items-center gap-2 text-slate-300 text-sm">
           <Spinner />

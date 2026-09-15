@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { useMatches } from "../hooks/useMatches";
 import type { Match } from "../api/match";
 import { useSelectedTeam } from "../providers/SelectedTeamProvider";
+import Breadcrumbs from "../components/navigation/Breadcrumbs";
+import { ACCUEIL_CRUMB, PLANNING_CRUMB } from "../components/navigation/breadcrumbItems";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -301,6 +303,10 @@ export default function TournamentTimelinePage() {
 
   return (
     <div className="min-h-screen bg-slate-950 pb-24">
+      <div className="max-w-3xl mx-auto px-4 pt-3">
+        <Breadcrumbs items={[ACCUEIL_CRUMB, PLANNING_CRUMB, { label: "Timeline en direct" }]} />
+      </div>
+
       {/* Sticky header */}
       <div className="sticky top-0 z-10 bg-slate-950/95 backdrop-blur-sm border-b border-slate-800 px-4 py-3">
         <div className="max-w-3xl mx-auto">

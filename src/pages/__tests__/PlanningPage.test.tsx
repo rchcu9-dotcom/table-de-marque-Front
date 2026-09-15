@@ -64,4 +64,17 @@ describe("PlanningPage", () => {
     expect(screen.getByText("Rennes")).toBeInTheDocument();
     expect(screen.getByText("Dammarie")).toBeInTheDocument();
   });
+
+  it("n'affiche aucun lien vers /admin/*, quel que soit le rôle (accès admin réservé au menu Admin)", () => {
+    render(
+      <MemoryRouter>
+        <PlanningPage />
+      </MemoryRouter>,
+    );
+
+    const adminLinks = screen
+      .getAllByRole("link")
+      .filter((link) => (link.getAttribute("href") ?? "").startsWith("/admin"));
+    expect(adminLinks).toHaveLength(0);
+  });
 });

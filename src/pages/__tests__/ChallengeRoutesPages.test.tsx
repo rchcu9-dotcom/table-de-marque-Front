@@ -6,6 +6,8 @@ import TeamsPage from "../TeamsPage";
 import ChallengeAtelierPage from "../ChallengeAtelierPage";
 import ChallengeDetailPage from "../ChallengeDetailPage";
 import ChallengeEquipePage from "../ChallengeEquipePage";
+import ChallengeFinaleCombiPage from "../ChallengeFinaleCombiPage";
+import ChallengeFinaleAtelierGardienPage from "../ChallengeFinaleAtelierGardienPage";
 import type { ChallengeAllResponse, ChallengeAttempt, ChallengeEquipeResponse } from "../../api/challenge";
 import type { Team } from "../../api/team";
 
@@ -139,6 +141,17 @@ describe("TeamsPage", () => {
     expect(screen.getByRole("link", { name: /Paris/i })).toHaveAttribute("href", "/teams/paris");
   });
 
+  it("affiche le fil d'ariane Accueil > Équipes", () => {
+    render(
+      <MemoryRouter>
+        <TeamsPage />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("Accueil")).toBeInTheDocument();
+    expect(screen.getByText("Équipes")).toBeInTheDocument();
+  });
+
   it("affiche les etats loading et erreur sans masquer le conteneur", () => {
     teamsLoading = true;
     teamsError = true;
@@ -182,6 +195,15 @@ describe("ChallengeAtelierPage", () => {
 
     expect(screen.getByText("Atelier inconnu.")).toBeInTheDocument();
   });
+
+  it("affiche le fil d'ariane Accueil > Challenge > Atelier Vitesse", () => {
+    renderRoute("/challenge/atelier/vitesse", <ChallengeAtelierPage />, "/challenge/atelier/:type");
+
+    const nav = within(screen.getByRole("navigation"));
+    expect(nav.getByText("Accueil")).toBeInTheDocument();
+    expect(nav.getByText("Challenge")).toBeInTheDocument();
+    expect(nav.getByText("Atelier Vitesse")).toBeInTheDocument();
+  });
 });
 
 describe("ChallengeEquipePage", () => {
@@ -208,6 +230,15 @@ describe("ChallengeEquipePage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Evaluation" }));
     expect(screen.queryByText("Rennes Tir")).not.toBeInTheDocument();
   });
+
+  it("affiche le fil d'ariane Accueil > Challenge > Rennes", () => {
+    renderRoute("/challenge/equipe/rennes", <ChallengeEquipePage />, "/challenge/equipe/:teamId");
+
+    const nav = within(screen.getByRole("navigation"));
+    expect(nav.getByText("Accueil")).toBeInTheDocument();
+    expect(nav.getByText("Challenge")).toBeInTheDocument();
+    expect(nav.getByText("Rennes")).toBeInTheDocument();
+  });
 });
 
 describe("ChallengeDetailPage", () => {
@@ -232,5 +263,41 @@ describe("ChallengeDetailPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Top 3" }));
     expect(screen.getAllByText("Rennes Tir").length).toBeGreaterThan(0);
+  });
+});
+
+describe("ChallengeFinaleCombiPage", () => {
+  beforeEach(resetFixtures);
+
+  it("affiche le fil d'ariane Accueil > Challenge > Finale combinée", () => {
+    render(
+      <MemoryRouter>
+        <ChallengeFinaleCombiPage />
+      </MemoryRouter>,
+    );
+
+    const nav = within(screen.getByRole("navigation"));
+    expect(nav.getByText("Accueil")).toBeInTheDocument();
+    expect(nav.getByText("Challenge")).toBeInTheDocument();
+    expect(nav.getByText("Finale combinée")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Finale Combiné Joueur" })).toBeInTheDocument();
+  });
+});
+
+describe("ChallengeFinaleAtelierGardienPage", () => {
+  beforeEach(resetFixtures);
+
+  it("affiche le fil d'ariane Accueil > Challenge > Finale atelier gardien", () => {
+    render(
+      <MemoryRouter>
+        <ChallengeFinaleAtelierGardienPage />
+      </MemoryRouter>,
+    );
+
+    const nav = within(screen.getByRole("navigation"));
+    expect(nav.getByText("Accueil")).toBeInTheDocument();
+    expect(nav.getByText("Challenge")).toBeInTheDocument();
+    expect(nav.getByText("Finale atelier gardien")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Finale Atelier Gardien" })).toBeInTheDocument();
   });
 });

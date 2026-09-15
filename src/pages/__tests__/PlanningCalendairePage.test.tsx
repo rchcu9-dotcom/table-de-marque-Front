@@ -2,6 +2,7 @@ import "@testing-library/jest-dom/vitest";
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
 import type { Match } from "../../api/match";
 import type { PouleClassement } from "../../api/classement";
 import PlanningCalendairePage from "../PlanningCalendairePage";
@@ -158,13 +159,23 @@ vi.mock("../../api/classement", () => ({
 function renderPage() {
   const client = new QueryClient();
   return render(
-    <QueryClientProvider client={client}>
-      <PlanningCalendairePage />
-    </QueryClientProvider>,
+    <MemoryRouter>
+      <QueryClientProvider client={client}>
+        <PlanningCalendairePage />
+      </QueryClientProvider>
+    </MemoryRouter>,
   );
 }
 
 describe("PlanningCalendairePage", () => {
+  it("affiche le fil d'ariane Accueil > Planning > Planning calendaire", () => {
+    renderPage();
+
+    expect(screen.getByText("Accueil")).toBeInTheDocument();
+    expect(screen.getByText("Planning")).toBeInTheDocument();
+    expect(screen.getByText("Planning calendaire")).toBeInTheDocument();
+  });
+
   it("keeps J1/J2 rows and renders stable J3 trajectory rows", async () => {
     renderPage();
 
