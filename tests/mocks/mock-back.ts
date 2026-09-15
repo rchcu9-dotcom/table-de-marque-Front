@@ -15,7 +15,23 @@ type ServerHandle = {
   port: number;
 };
 
-export async function startMockBack(port = 4000): Promise<ServerHandle> {
+export type MockBackOptions = {
+  /**
+   * Etape de l'édition renvoyée par GET /inscription/edition/courante.
+   * `undefined`/`null` reproduit le comportement "aucune édition connue"
+   * (404), que le front interprète comme etape=null (cf. fetchEditionCourante).
+   */
+  editionEtape?: string | null;
+  /** Corps renvoyé par GET /presentation. Par défaut : tableau vide. */
+  presentationGroupes?: unknown[];
+};
+
+export async function startMockBack(
+  port = 4000,
+  options: MockBackOptions = {},
+): Promise<ServerHandle> {
+  const editionEtape = options.editionEtape ?? null;
+  const presentationGroupes = options.presentationGroupes ?? [];
   const matches: Match[] = [
     {
       id: "1",
@@ -84,6 +100,25 @@ export async function startMockBack(port = 4000): Promise<ServerHandle> {
       req.on("close", () => {
         clearInterval(ping);
       });
+      return;
+    }
+
+    if (req.url === "/inscription/edition/courante" && req.method === "GET") {
+      res.setHeader("Content-Type", "application/json");
+      if (!editionEtape) {
+        res.writeHead(404);
+        res.end(JSON.stringify({ message: "Not found" }));
+        return;
+      }
+      res.writeHead(200);
+      res.end(JSON.stringify({ id: 1, etape: editionEtape }));
+      return;
+    }
+
+    if (req.url === "/presentation" && req.method === "GET") {
+      res.setHeader("Content-Type", "application/json");
+      res.writeHead(200);
+      res.end(JSON.stringify(presentationGroupes));
       return;
     }
 

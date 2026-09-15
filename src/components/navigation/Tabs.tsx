@@ -1,6 +1,8 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { tabsConfig } from "./tabsConfig";
+import { useInscriptionSession } from "../../hooks/useInscriptionSession";
+import { getInscriptionMenuItems, getTournamentTabItems } from "../../utils/inscriptionMenus";
 
 type Props = {
   variant: "top" | "bottom";
@@ -9,6 +11,11 @@ type Props = {
 export default function Tabs({ variant }: Props) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { role, etape, hasDossierAccess } = useInscriptionSession();
+  const items = [
+    ...getTournamentTabItems(tabsConfig, role, etape),
+    ...getInscriptionMenuItems(role, etape, hasDossierAccess),
+  ];
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -18,7 +25,7 @@ export default function Tabs({ variant }: Props) {
         variant === "bottom" ? "justify-around px-2 py-2" : "justify-start gap-1 px-3 py-2"
       }`}
     >
-      {tabsConfig.map((tab) => {
+      {items.map((tab) => {
         const active = isActive(tab.path);
         const commonClasses =
           variant === "bottom"

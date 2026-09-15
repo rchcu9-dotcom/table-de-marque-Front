@@ -6,6 +6,8 @@ import MatchDetailPage from "../pages/MatchDetailPage";
 import TeamPage from "../pages/TeamPage";
 import NotFoundPage from "../pages/NotFoundPage";
 import HomePage from "../pages/HomePage";
+import PresentationTournoiPage from "../pages/PresentationTournoiPage";
+import { useInscriptionSession } from "../hooks/useInscriptionSession";
 import Accueil2Page from "../pages/Accueil2Page";
 import Accueil2BroadcastPage from "../pages/Accueil2BroadcastPage";
 import Accueil2PremiumPage from "../pages/Accueil2PremiumPage";
@@ -24,6 +26,16 @@ import ChallengeFinaleCombiPage from "../pages/ChallengeFinaleCombiPage";
 import ChallengeFinaleAtelierGardienPage from "../pages/ChallengeFinaleAtelierGardienPage";
 import LivePage from "../pages/LivePage";
 import InscriptionPage from "../pages/InscriptionPage";
+import AuthCallbackPage from "../pages/AuthCallbackPage";
+import TableDeMarqueOperatorPage from "../pages/TableDeMarqueOperatorPage";
+import ParametresSportifsPage from "../pages/ParametresSportifsPage";
+import ParametresInscriptionPage from "../pages/ParametresInscriptionPage";
+import ParametresPresentationPage from "../pages/ParametresPresentationPage";
+import PlanningSimulationPage from "../pages/PlanningSimulationPage";
+import FormatCompetitionBuilderPage from "../pages/FormatCompetitionBuilderPage";
+import ConnexionPage from "../pages/ConnexionPage";
+import ProfilPage from "../pages/ProfilPage";
+import AdminPage from "../pages/AdminPage";
 import SearchBar from "../components/ds/SearchBar";
 import type { SortConfig } from "../components/collections/List";
 import type { Match } from "../api/match";
@@ -34,14 +46,15 @@ export default function AppRouter() {
     key: "date",
     direction: "asc",
   });
+  const { etape } = useInscriptionSession();
 
   return (
     <Routes>
       <Route
         path="/"
         element={
-          <LayoutRoot>
-            <HomePage />
+          <LayoutRoot fullBleed={etape === "INSCRIPTIONS_OUVERTES"}>
+            {etape === "INSCRIPTIONS_OUVERTES" ? <PresentationTournoiPage /> : <HomePage />}
           </LayoutRoot>
         }
       />
@@ -203,10 +216,86 @@ export default function AppRouter() {
         }
       />
       <Route
+        path="/auth/callback"
+        element={<AuthCallbackPage />}
+      />
+      <Route
         path="/inscription"
         element={
           <LayoutRoot>
             <InscriptionPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/connexion"
+        element={
+          <LayoutRoot>
+            <ConnexionPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/profil"
+        element={
+          <LayoutRoot>
+            <ProfilPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <LayoutRoot>
+            <AdminPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/table-de-marque"
+        element={
+          <LayoutRoot>
+            <TableDeMarqueOperatorPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/admin/parametres-sportifs"
+        element={
+          <LayoutRoot>
+            <ParametresSportifsPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/admin/parametres-inscription"
+        element={
+          <LayoutRoot>
+            <ParametresInscriptionPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/admin/presentation-tournoi"
+        element={
+          <LayoutRoot>
+            <ParametresPresentationPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/admin/planning/simulation"
+        element={
+          <LayoutRoot>
+            <PlanningSimulationPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/admin/format-competition"
+        element={
+          <LayoutRoot>
+            <FormatCompetitionBuilderPage />
           </LayoutRoot>
         }
       />

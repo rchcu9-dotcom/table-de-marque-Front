@@ -11,6 +11,12 @@ export type TabItem = {
   shortLabel: string;
   path: string;
   iconUrl?: string;
+  /**
+   * true = n'a de sens qu'une fois le tournoi construit (matchs générés à la
+   * clôture des inscriptions). Masqué tant que l'édition est en
+   * CREEE/INSCRIPTIONS_OUVERTES — voir utils/inscriptionMenus.ts:isTournamentBuilt.
+   */
+  tournamentContent?: boolean;
 };
 
 export const tabsConfig: TabItem[] = [
@@ -27,6 +33,7 @@ export const tabsConfig: TabItem[] = [
     shortLabel: "Planning",
     path: "/planning",
     iconUrl: planningIcon,
+    tournamentContent: true,
   },
   {
     id: "tournament",
@@ -34,6 +41,7 @@ export const tabsConfig: TabItem[] = [
     shortLabel: "5v5",
     path: "/tournament/5v5",
     iconUrl: fiveV5Icon,
+    tournamentContent: true,
   },
 ];
 
@@ -44,6 +52,7 @@ export const menuConfig: TabItem[] = [
     shortLabel: "Live",
     path: "/live",
     iconUrl: liveIcon,
+    tournamentContent: true,
   },
   {
     id: "challenge",
@@ -51,6 +60,7 @@ export const menuConfig: TabItem[] = [
     shortLabel: "Challenge",
     path: "/challenge",
     iconUrl: challengeIcon,
+    tournamentContent: true,
   },
   {
     id: "threevthree",
@@ -58,6 +68,7 @@ export const menuConfig: TabItem[] = [
     shortLabel: "3v3",
     path: "/tournament/3v3",
     iconUrl: threeV3Icon,
+    tournamentContent: true,
   },
 ];
 
