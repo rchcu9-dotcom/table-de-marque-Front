@@ -1,11 +1,18 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Live page player error fallback UX", () => {
-  test("affiche indisponibilite + retry, puis retry recharge le player", async ({ page }) => {
-    let statusCalls = 0;
-
+test.describe("Live page fallback UX", () => {
+  // La page /live n'affiche jamais de lecteur ni de message d'erreur quand
+  // aucun live n'est actif ou que la détection échoue — comportement
+  // volontaire ("fallback silencieux"), largement couvert par les tests
+  // unitaires src/pages/__tests__/LivePage.test.tsx (ex. "applique un
+  // fallback silencieux quand /live/status est en erreur"). Ce spec en
+  // vérifie l'équivalent en navigateur réel : ni data-testid `live-iframe`,
+  // ni `live-error` ne doivent apparaître, seuls les blocs YouTube/Facebook
+  // restent visibles.
+  test("n'affiche ni lecteur ni message d'erreur quand aucun live n'est actif (fallback silencieux)", async ({
+    page,
+  }) => {
     await page.route("**/live/status", async (route) => {
-      statusCalls += 1;
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -20,43 +27,21 @@ test.describe("Live page player error fallback UX", () => {
 
     await page.goto("http://localhost:4174/live");
 
-    const iframe = page.getByTestId("live-iframe");
-    await expect(iframe).toBeVisible();
+    await expect(page.getByTestId("youtube-channel-link")).toBeVisible();
+    await expect(page.getByTestId("live-iframe")).toHaveCount(0);
+    await expect(page.getByTestId("live-badge")).toHaveCount(0);
+    await expect(page.getByTestId("live-error")).toHaveCount(0);
+  });
 
-    await page.evaluate(() => {
-      const player = document.querySelector("[data-testid='live-iframe']") as
-        | HTMLIFrameElement
-        | null;
-      if (!player) {
-        throw new Error("live iframe not found");
-      }
-
-      const reactPropsKey = Object.keys(player).find((key) =>
-        key.startsWith("__reactProps"),
-      );
-      const reactProps = reactPropsKey
-        ? (player as unknown as Record<string, { onError?: (evt: Event) => void }>)[
-            reactPropsKey
-          ]
-        : null;
-
-      if (reactProps?.onError) {
-        reactProps.onError(new Event("error"));
-        return;
-      }
-
-      player.dispatchEvent(new Event("error"));
+  test("n'affiche ni lecteur ni message d'erreur quand /live/status echoue", async ({ page }) => {
+    await page.route("**/live/status", async (route) => {
+      await route.fulfill({ status: 500 });
     });
 
-    await expect(page.getByTestId("live-error")).toBeVisible();
-    await expect(page.getByText(/Video indisponible, reessayez plus tard\./i)).toBeVisible();
+    await page.goto("http://localhost:4174/live");
 
-    const retry = page.getByTestId("live-retry");
-    await expect(retry).toBeVisible();
-    await retry.click();
-
-    await expect(page.getByTestId("live-iframe")).toBeVisible();
+    await expect(page.getByTestId("youtube-channel-link")).toBeVisible();
+    await expect(page.getByTestId("live-iframe")).toHaveCount(0);
     await expect(page.getByTestId("live-error")).toHaveCount(0);
-    expect(statusCalls).toBeGreaterThanOrEqual(2);
   });
 });

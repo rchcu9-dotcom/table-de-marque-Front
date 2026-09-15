@@ -42,6 +42,13 @@ const MATCHES = [
 test.describe("Match list", () => {
   test.beforeEach(async ({ page }) => {
     await page.route("**/matches", async (route) => {
+      // Le glob **/matches matche aussi la navigation document vers /matches
+      // (route front) une fois qu'on visite cette URL directement — ne mocker
+      // que l'appel API, laisser passer la vraie page (même garde que
+      // tests/e2e/match-detail.spec.ts et table-de-marque.spec.ts).
+      if (route.request().resourceType() === "document") {
+        return route.continue();
+      }
       return route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -51,12 +58,17 @@ test.describe("Match list", () => {
   });
 
   test("affiche momentum et planning avec bons liserets et filtres", async ({ page }) => {
-    await page.goto("http://localhost:4174/");
+    // Le momentum + planning combinés vivent sur /matches (MatchListPage), pas sur
+    // "/" qui affiche désormais le hero HomePage ou la page Présentation selon
+    // l'étape de l'édition (cf. router/index.tsx).
+    await page.goto("http://localhost:4174/matches");
 
     await expect(page.getByTestId("momentum-list")).toBeVisible();
     await expect(page.getByTestId("planning-list")).toBeVisible();
 
-    const momentumItems = page.getByTestId(/momentum-match-/);
+    // ^...$ pour exclure `momentum-match-track` (le conteneur de scroll rendu
+    // par HorizontalMatchSlider), qui matcherait aussi un /momentum-match-/ trop large.
+    const momentumItems = page.getByTestId(/^momentum-match-\d+$/);
     await expect(momentumItems).toHaveCount(3);
     // Ordre attendu : date croissante -> id1 (finished), id2 (ongoing), id3 (planned)
     const ids = await momentumItems.evaluateAll((nodes) =>

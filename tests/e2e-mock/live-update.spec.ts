@@ -15,7 +15,12 @@ test.describe("SSE live update with mock backend", () => {
   });
 
   test("met à jour le score sans reload", async ({ page }) => {
-    await page.goto("/");
+    // La page "/" affiche désormais le hero momentum (HomePage), qui ne rend
+    // pas de data-testid `match-line-N` — ce test vérifie la mise à jour SSE
+    // sur la liste des matchs (/matches), où cette testid existe réellement.
+    // MatchStreamListener est monté globalement (main.tsx), l'écoute SSE
+    // fonctionne donc sur n'importe quelle route.
+    await page.goto("/matches");
 
     // attendre que le fetch initial soit revenu
     await page.waitForResponse(/\/matches$/);
