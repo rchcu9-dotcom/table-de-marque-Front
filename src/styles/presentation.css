@@ -1,0 +1,458 @@
+/*
+ * Portage du design de docs/mockups/presentation-scroll-mockup.html.
+ * Tout est porté en CSS plutôt qu'en utilitaires Tailwind : la maquette repose sur
+ * des clamp(), des dégradés superposés et des keyframes qu'approximer en classes
+ * utilitaires faisait perdre le rendu exact (c'était l'écart constaté sur la
+ * première intégration). Tout est scopé sous .presentation-root.
+ *
+ * Le chrome (barre du haut, barre du bas mobile) n'est pas redupliqué ici : il
+ * vient de LayoutRoot/TopBar/Tabs, que .presentation-root remplit via fullBleed.
+ */
+
+.presentation-root {
+  --ice-shadow: #070c16;
+  --rink-navy: #0e1c3a;
+  --rink-navy-2: #132852;
+  --rink-blue: #3f79d6;
+  --center-red: #d63a4c;
+  --ice: #eef3f8;
+  --ice-dim: #c3cede;
+  --steel: #7c8aa3;
+  --steel-200: rgba(238, 243, 248, 0.14);
+  --font-display: "Teko", "Arial Narrow", sans-serif;
+  --font-body: "Work Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  position: relative;
+  height: 100%;
+  background: var(--ice-shadow);
+  color: var(--ice);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ================= scroller ================= */
+.presentation-scroller {
+  height: 100%;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+}
+.presentation-scroller > section {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+@media (prefers-reduced-motion: reduce) {
+  .presentation-scroller {
+    scroll-snap-type: none;
+  }
+}
+
+/* ================= rail (pastilles de chapitre, à droite) ================= */
+.presentation-rail {
+  position: absolute;
+  right: clamp(16px, 3vw, 40px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.presentation-rail button {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ice-dim);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  transition:
+    background 0.25s,
+    border-color 0.25s,
+    transform 0.25s;
+}
+.presentation-rail button:hover {
+  border-color: var(--ice);
+  transform: scale(1.15);
+}
+.presentation-rail button[aria-current="true"] {
+  background: var(--center-red);
+  border-color: var(--center-red);
+}
+.presentation-rail button:focus-visible {
+  outline: 2px solid var(--rink-blue);
+  outline-offset: 3px;
+}
+@media (max-width: 720px) {
+  .presentation-rail {
+    display: none;
+  }
+}
+
+/* ================= panneaux plein écran ================= */
+.presentation-panel {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.presentation-bg-stack {
+  position: absolute;
+  inset: 0;
+}
+.presentation-bg-layer {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transition: opacity 1.1s ease;
+}
+.presentation-bg-layer.is-active {
+  opacity: 1;
+}
+.presentation-bg-stack::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(7, 12, 22, 0.15) 0%,
+      rgba(7, 12, 22, 0.25) 42%,
+      rgba(7, 12, 22, 0.94) 100%
+    ),
+    linear-gradient(90deg, rgba(7, 12, 22, 0.75) 0%, rgba(7, 12, 22, 0.15) 55%);
+}
+
+.presentation-panel .presentation-content {
+  position: relative;
+  z-index: 2;
+  padding: 0 clamp(20px, 6vw, 72px) clamp(64px, 9vh, 110px);
+  max-width: 760px;
+  width: 100%;
+}
+
+.presentation-chapter-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--steel);
+  margin: 0 0 10px;
+}
+
+/* ================= barres de progression ================= */
+.presentation-progress {
+  display: flex;
+  gap: 5px;
+  margin: 0 0 20px;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.presentation-seg {
+  flex: 1;
+  max-width: 44px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(238, 243, 248, 0.22);
+  overflow: hidden;
+  cursor: pointer;
+  border: 0;
+  padding: 0;
+}
+.presentation-seg.is-current {
+  background: rgba(238, 243, 248, 0.32);
+}
+.presentation-seg i {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: var(--ice);
+  border-radius: 2px;
+}
+.presentation-seg:focus-visible {
+  outline: 2px solid var(--rink-blue);
+  outline-offset: 3px;
+}
+
+/* ================= sous-écrans ================= */
+.presentation-subthemes {
+  display: grid;
+}
+.presentation-subtheme {
+  grid-area: 1/1;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s ease;
+}
+.presentation-subtheme.is-active {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+}
+
+.presentation-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--center-red);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+}
+.presentation-eyebrow::before {
+  content: "";
+  width: 22px;
+  height: 2px;
+  background: var(--center-red);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.presentation-headline {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(40px, 7vw, 88px);
+  line-height: 0.94;
+  margin: 0 0 14px;
+  text-wrap: balance;
+  color: var(--ice);
+}
+
+.presentation-lede {
+  font-size: clamp(15px, 1.5vw, 18px);
+  line-height: 1.55;
+  color: var(--ice-dim);
+  max-width: 58ch;
+  margin: 0 0 20px;
+}
+
+.presentation-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ice);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  min-height: 44px;
+}
+.presentation-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.presentation-fact b {
+  font-size: 20px;
+  color: var(--ice);
+}
+.presentation-fact small {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--steel);
+  font-size: 10.5px;
+}
+
+.presentation-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 20px;
+  margin-top: 18px;
+}
+.presentation-cta {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ice);
+  border: 1px solid var(--rink-blue);
+  background: transparent;
+  padding: 11px 22px;
+  border-radius: 2px;
+  text-decoration: none;
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+.presentation-cta:hover {
+  background: var(--rink-blue);
+  border-color: var(--rink-blue);
+  color: var(--ice);
+}
+.presentation-maps-link {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  letter-spacing: 0.06em;
+  color: var(--ice-dim);
+  text-decoration: none;
+  border-bottom: 1px solid var(--steel-200);
+  padding-bottom: 2px;
+}
+.presentation-maps-link:hover {
+  color: var(--ice);
+  border-color: var(--ice);
+}
+
+/* ================= bouton suivant (point d'engagement) ================= */
+.presentation-next-btn {
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  z-index: 3;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 2px solid var(--rink-blue);
+  background: rgba(7, 12, 22, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    border-color 0.25s,
+    transform 0.2s,
+    background 0.25s;
+}
+.presentation-next-btn::after {
+  content: "";
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(238, 243, 248, 0.35);
+  position: absolute;
+}
+.presentation-next-btn svg {
+  position: relative;
+  z-index: 1;
+}
+.presentation-next-btn:hover {
+  border-color: var(--center-red);
+  transform: translateX(-50%) translateY(4px);
+  background: rgba(7, 12, 22, 0.7);
+}
+.presentation-next-btn:focus-visible {
+  outline: 2px solid var(--ice);
+  outline-offset: 4px;
+}
+.presentation-next-btn .presentation-pulse {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 1px solid var(--rink-blue);
+  opacity: 0;
+  animation: presentation-pulse 2.6s ease-out infinite;
+}
+@keyframes presentation-pulse {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .presentation-next-btn .presentation-pulse {
+    animation: none;
+    display: none;
+  }
+}
+
+/* ================= outro ================= */
+.presentation-panel.presentation-outro {
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(63, 121, 214, 0.18), transparent 55%),
+    linear-gradient(160deg, var(--rink-navy) 0%, var(--ice-shadow) 70%);
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.presentation-outro .presentation-content {
+  max-width: 640px;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.presentation-rink-mark {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid var(--center-red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 22px;
+}
+.presentation-rink-mark span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--center-red);
+}
+.presentation-outro .presentation-headline {
+  font-size: clamp(38px, 6vw, 64px);
+}
+.presentation-outro .presentation-lede {
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+/* ================= sélecteur de langue ================= */
+.presentation-lang {
+  position: absolute;
+  top: 14px;
+  right: clamp(16px, 3vw, 40px);
+  z-index: 40;
+  display: flex;
+  gap: 2px;
+  border: 1px solid var(--steel-200);
+  border-radius: 999px;
+  padding: 3px;
+  background: rgba(7, 12, 22, 0.6);
+  backdrop-filter: blur(6px);
+}
+.presentation-lang button {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--steel);
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  padding: 4px 11px;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+.presentation-lang button[aria-pressed="true"] {
+  background: var(--center-red);
+  color: var(--ice);
+}
+.presentation-lang button:hover {
+  color: var(--ice);
+}
+@media (max-width: 720px) {
+  .presentation-lang {
+    right: 12px;
+    top: 10px;
+  }
+}
