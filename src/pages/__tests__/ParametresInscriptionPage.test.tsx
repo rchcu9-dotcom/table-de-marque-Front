@@ -161,11 +161,11 @@ describe("ParametresInscriptionPage", () => {
     });
     renderPage();
 
-    expect(screen.queryByLabelText("Message de bienvenue")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Message d'accueil/)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /Messages du parcours d'inscription/ }));
 
-    expect(screen.getByLabelText("Message de bienvenue")).toHaveValue("Bienvenue !");
+    expect(screen.getByLabelText(/^Message d'accueil/)).toHaveValue("Bienvenue !");
   });
 
   it("bloque l'enregistrement et affiche un message explicite pour un quota négatif, sans appel réseau", () => {
