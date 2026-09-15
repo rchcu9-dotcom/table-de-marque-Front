@@ -3,6 +3,20 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { getApiBaseUrl } from "../api/env";
 import type { Match } from "../api/match";
+import type { MatchLiveEtat } from "../api/tableDeMarque";
+import { matchLiveQueryKey } from "../hooks/useMatchLive";
+
+type MatchLiveStreamPayload = {
+  type: "match-live";
+  numMatch: number;
+  etat: MatchLiveEtat;
+  tempsEcouleSecondes: number;
+  chronoEnCours: boolean;
+  chronoDerniereMajAt: string | null;
+  score1: number;
+  score2: number;
+  timestamp: number;
+};
 
 type StreamPayload =
   | {
@@ -11,6 +25,7 @@ type StreamPayload =
       diff: { changed: boolean; added: string[]; updated: string[]; removed: string[] };
       timestamp: number;
     }
+  | MatchLiveStreamPayload
   | { type: string };
 
 type MatchStreamListenerProps = {
@@ -62,6 +77,27 @@ export function MatchStreamListener({ onOpen, onError }: MatchStreamListenerProp
       source.onmessage = async (event) => {
         try {
           const parsed: StreamPayload = JSON.parse(event.data);
+
+          if (parsed.type === "match-live" && "numMatch" in parsed) {
+            queryClient.setQueryData(matchLiveQueryKey(parsed.numMatch), (prev: unknown) => {
+              if (!prev || typeof prev !== "object") return prev;
+              const detail = prev as { matchLive: unknown; buts: unknown; penalites: unknown };
+              return {
+                ...detail,
+                matchLive: {
+                  ...(typeof detail.matchLive === "object" && detail.matchLive !== null ? detail.matchLive : {}),
+                  etat: parsed.etat,
+                  tempsEcouleSecondes: parsed.tempsEcouleSecondes,
+                  chronoEnCours: parsed.chronoEnCours,
+                  chronoDerniereMajAt: parsed.chronoDerniereMajAt,
+                  score1Cache: parsed.score1,
+                  score2Cache: parsed.score2,
+                },
+              };
+            });
+            return;
+          }
+
           if (parsed.type !== "matches" || !("matches" in parsed)) return;
 
           const matches = parsed.matches ?? [];
