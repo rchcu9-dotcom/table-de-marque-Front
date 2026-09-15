@@ -7,10 +7,10 @@ import App from './App';
 import './styles/global.css';
 import { MatchStreamListener } from './providers/MatchStreamListener';
 import { ChallengeStreamListener } from './providers/ChallengeStreamListener';
-import { SelectedTeamProvider } from './providers/SelectedTeamProvider';
+import { SelectedTeamProvider, SelectedTeamAuthSync } from './providers/SelectedTeamProvider';
 import { queryClient } from './queryClient';
 import { setupQueryPersistence } from './queryPersist';
-import { AuthProvider } from './contexts/AuthContext';
+import { AuthProvider } from './auth/AuthContext';
 
 setupQueryPersistence();
 
@@ -26,6 +26,7 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
         <MatchStreamListener />
         <ChallengeStreamListener />
         <AuthProvider>
+          <SelectedTeamAuthSync />
           <BrowserRouter>
             <App />
           </BrowserRouter>

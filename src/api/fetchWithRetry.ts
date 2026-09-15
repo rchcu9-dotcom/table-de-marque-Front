@@ -10,6 +10,20 @@ function isRetryableStatus(status: number): boolean {
   return status >= 500;
 }
 
+async function extractErrorMessage(response: Response): Promise<string> {
+  try {
+    const data: unknown = await response.clone().json();
+    if (data && typeof data === 'object' && 'message' in data) {
+      const message = (data as { message: unknown }).message;
+      if (typeof message === 'string') return message;
+      if (Array.isArray(message)) return message.join(', ');
+    }
+  } catch {
+    // Response body is not JSON (or already consumed) — fall back below.
+  }
+  return response.statusText;
+}
+
 export async function fetchWithRetry(
   url: string,
   options: RequestInit = {},
@@ -34,10 +48,11 @@ export async function fetchWithRetry(
       clearTimeout(timeoutId);
 
       if (!response.ok) {
+        const message = await extractErrorMessage(response);
         if (isRetryableStatus(response.status) && attempt < retries) {
-          lastError = new ServerError(response.status, response.statusText);
+          lastError = new ServerError(response.status, message);
         } else {
-          throw new ServerError(response.status, response.statusText);
+          throw new ServerError(response.status, message);
         }
       } else {
         return response;

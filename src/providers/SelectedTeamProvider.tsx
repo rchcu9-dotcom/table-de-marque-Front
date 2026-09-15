@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "../auth/AuthContext";
 
 type SelectedTeam = {
   id: string;
@@ -75,4 +76,35 @@ export function useSelectedTeam() {
     throw new Error("useSelectedTeam must be used within SelectedTeamProvider");
   }
   return ctx;
+}
+
+/**
+ * L'équipe suivie (localStorage, cf. STORAGE_KEY ci-dessus) est un réglage de confort
+ * local au navigateur, jamais lié à un compte — sans ce composant elle survit à une
+ * déconnexion/reconnexion et peut donc afficher, après connexion, l'équipe qu'un AUTRE
+ * compte a suivie sur ce même navigateur (bug confirmé en usage réel : connecté en
+ * `4test@yahoo.fr`, sans candidature, l'app affichait encore "Loups de Lyon" suivi par
+ * une session précédente). À monter une seule fois, dans l'arbre de <AuthProvider>
+ * (nécessaire pour useAuth) ET de <SelectedTeamProvider> (nécessaire pour
+ * useSelectedTeam) — cf. main.tsx.
+ */
+export function SelectedTeamAuthSync() {
+  const { user } = useAuth();
+  const { selectedTeam, setSelectedTeam } = useSelectedTeam();
+  const uid = user?.uid ?? null;
+  const previousUidRef = useRef(uid);
+
+  useEffect(() => {
+    if (previousUidRef.current === uid) return;
+    previousUidRef.current = uid;
+    if (selectedTeam) {
+      setSelectedTeam(null);
+    }
+    // selectedTeam volontairement absent des deps : on ne veut réagir qu'aux changements
+    // d'identité (uid), pas aux changements de selectedTeam lui-même (qui inclurait le
+    // setSelectedTeam(null) qu'on vient de déclencher, sans effet ici mais plus fragile).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid]);
+
+  return null;
 }

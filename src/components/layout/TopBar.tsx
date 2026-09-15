@@ -2,8 +2,12 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import Tabs from "../navigation/Tabs";
 import { menuConfig } from "../navigation/tabsConfig";
+import type { TabItem } from "../navigation/tabsConfig";
 import { useSelectedTeam } from "../../providers/SelectedTeamProvider";
 import { useTeams } from "../../hooks/useTeams";
+import { useInscriptionSession } from "../../hooks/useInscriptionSession";
+import { getInscriptionMenuItems, getTournamentTabItems, isTournamentBuilt } from "../../utils/inscriptionMenus";
+import AuthButton from "./AuthButton";
 
 type Props = {
   children?: React.ReactNode;
@@ -20,6 +24,12 @@ export default function TopBar({ children }: Props) {
   const selectorBtnRef = React.useRef<HTMLElement | null>(null);
   const { selectedTeam, setSelectedTeam, toggleMuted } = useSelectedTeam();
   const { data: teams } = useTeams();
+  const { role, etape, hasDossierAccess, edition } = useInscriptionSession();
+  const nomTournoi = edition?.nom ?? "Tournoi RCHC U11 2026";
+  const allMenuItems = [
+    ...getTournamentTabItems(menuConfig, role, etape),
+    ...getInscriptionMenuItems(role, etape, hasDossierAccess),
+  ];
   const uniqueTeams = React.useMemo(() => {
     const map = new Map<string, { id: string; name: string; logoUrl?: string | null }>();
     (teams ?? []).forEach((t) => {
@@ -47,6 +57,11 @@ export default function TopBar({ children }: Props) {
       right: Math.max(8, window.innerWidth - rect.right - 4),
     });
   }, []);
+
+  React.useEffect(() => {
+    if (!edition?.nom) return;
+    document.title = edition.nom;
+  }, [edition?.nom]);
 
   React.useEffect(() => {
     if (!selectorOpen) return;
@@ -91,7 +106,7 @@ export default function TopBar({ children }: Props) {
             </span>
           </button>
           <div className="text-sm md:text-base font-semibold text-white truncate">
-            Tournoi RCHC U11 2026
+            {nomTournoi}
           </div>
         </div>
         <div className="flex items-center gap-3 min-w-0">
@@ -116,61 +131,65 @@ export default function TopBar({ children }: Props) {
             </span>
             <span className="text-xs font-semibold">Plus</span>
           </button>
-          <div className="flex items-center gap-2" ref={(node) => { selectorBtnRef.current = node; }}>
-            {selectedTeam ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedTeam(null);
-                  setSelectorOpen(false);
-                }}
-                onDoubleClick={(e) => {
-                  e.stopPropagation();
-                  toggleMuted();
-                }}
-                className="h-10 w-10 rounded-full overflow-hidden border border-slate-700 bg-slate-800/70 hover:border-amber-400 transition relative"
-                title={`Annuler la sélection : ${selectedTeam.name}`}
-              >
-                {selectedTeam.logoUrl ? (
-                  <img
-                    src={selectedTeam.logoUrl}
-                    alt={selectedTeam.name}
-                    className={`h-full w-full object-cover ${selectedTeam.muted ? "grayscale opacity-70" : ""}`}
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="h-full w-full flex items-center justify-center text-xs font-semibold text-white">
-                    {selectedTeam.name.slice(0, 2).toUpperCase()}
-                  </div>
-                )}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectorOpen((v) => !v);
-                  updateSelectorPos();
-                }}
-                className="text-xs text-slate-300 hover:text-white px-2 py-1 rounded hover:bg-slate-800/70 transition"
-                title="Sélectionner une équipe"
-              >
-                Mon équipe
-              </button>
-            )}
-          </div>
+          {isTournamentBuilt(etape) ? (
+            <div className="flex items-center gap-2" ref={(node) => { selectorBtnRef.current = node; }}>
+              {selectedTeam ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedTeam(null);
+                    setSelectorOpen(false);
+                  }}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    toggleMuted();
+                  }}
+                  className="h-10 w-10 rounded-full overflow-hidden border border-slate-700 bg-slate-800/70 hover:border-amber-400 transition relative"
+                  title={`Ne plus suivre : ${selectedTeam.name}`}
+                >
+                  {selectedTeam.logoUrl ? (
+                    <img
+                      src={selectedTeam.logoUrl}
+                      alt={selectedTeam.name}
+                      className={`h-full w-full object-cover ${selectedTeam.muted ? "grayscale opacity-70" : ""}`}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center text-xs font-semibold text-white">
+                      {selectedTeam.name.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectorOpen((v) => !v);
+                    updateSelectorPos();
+                  }}
+                  className="text-xs text-slate-300 hover:text-white px-2 py-1 rounded hover:bg-slate-800/70 transition"
+                  title="Suivre une équipe"
+                >
+                  Suivre une équipe
+                </button>
+              )}
+            </div>
+          ) : null}
+          <AuthButton />
         </div>
       </div>
       {open ? (
         <MobileMenu
           top={menuPos.top}
           left={menuPos.left}
+          items={allMenuItems}
           onSelect={(path) => {
             setOpen(false);
             navigate(path);
           }}
         />
       ) : null}
-      {selectorOpen ? (
+      {isTournamentBuilt(etape) && selectorOpen ? (
         <TeamSelectorDropdown
           top={selectorPos.top}
           right={selectorPos.right}
@@ -183,12 +202,12 @@ export default function TopBar({ children }: Props) {
   );
 }
 
-function MobileMenu({ onSelect, top, left }: { onSelect: (path: string) => void; top: number; left: number }) {
+function MobileMenu({ onSelect, top, left, items }: { onSelect: (path: string) => void; top: number; left: number; items: TabItem[] }) {
   const [menuWidth, setMenuWidth] = React.useState<number>(360);
 
   React.useEffect(() => {
     const compute = () => {
-      const maxLabel = menuConfig.reduce((acc, t) => Math.max(acc, t.label.length), 0);
+      const maxLabel = items.reduce((acc, t) => Math.max(acc, t.label.length), 0);
       const estimated = maxLabel * 12 + 48; // char width estimate + padding
       const clamped = Math.max(220, Math.min(estimated, Math.floor(window.innerWidth * 0.95)));
       setMenuWidth(clamped);
@@ -196,7 +215,7 @@ function MobileMenu({ onSelect, top, left }: { onSelect: (path: string) => void;
     compute();
     window.addEventListener("resize", compute);
     return () => window.removeEventListener("resize", compute);
-  }, []);
+  }, [items]);
 
   return (
     <div className="fixed z-[999]" style={{ top: `${top}px`, left: `${left}px` }}>
@@ -205,7 +224,7 @@ function MobileMenu({ onSelect, top, left }: { onSelect: (path: string) => void;
         style={{ width: `${menuWidth}px` }}
       >
         <nav className="flex flex-col gap-2 pt-2">
-          {menuConfig.map((tab) => (
+          {items.map((tab) => (
             <button
               key={tab.id}
               type="button"
@@ -245,7 +264,7 @@ function TeamSelectorDropdown({ teams, onSelect, selectedId, top, right }: TeamS
   return (
     <div className="fixed z-[998]" style={{ top: `${top}px`, right: `${right}px` }}>
       <div className="border border-slate-800 bg-slate-950/95 backdrop-blur px-3 py-2 shadow-lg rounded-lg max-h-[70vh] overflow-auto min-w-[220px]">
-        <div className="text-xs font-semibold text-slate-300 mb-2 px-1">Choisir une équipe</div>
+        <div className="text-xs font-semibold text-slate-300 mb-2 px-1">Quelle équipe suivre ?</div>
         <div className="grid grid-cols-4 gap-2">
           <button
             type="button"
