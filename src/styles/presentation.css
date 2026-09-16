@@ -15,6 +15,7 @@
   --rink-navy-2: #132852;
   --rink-blue: #3f79d6;
   --center-red: #d63a4c;
+  --nav-accent-green: #22c55e;
   --ice: #eef3f8;
   --ice-dim: #c3cede;
   --steel: #7c8aa3;
@@ -76,8 +77,8 @@
   transform: scale(1.15);
 }
 .presentation-rail button[aria-current="true"] {
-  background: var(--center-red);
-  border-color: var(--center-red);
+  background: var(--nav-accent-green);
+  border-color: var(--nav-accent-green);
 }
 .presentation-rail button:focus-visible {
   outline: 2px solid var(--rink-blue);
@@ -340,7 +341,7 @@
   z-index: 1;
 }
 .presentation-next-btn:hover {
-  border-color: var(--center-red);
+  border-color: var(--nav-accent-green);
   transform: translateX(-50%) translateY(4px);
   background: rgba(7, 12, 22, 0.7);
 }
@@ -444,7 +445,7 @@
     color 0.2s;
 }
 .presentation-lang button[aria-pressed="true"] {
-  background: var(--center-red);
+  background: var(--nav-accent-green);
   color: var(--ice);
 }
 .presentation-lang button:hover {
