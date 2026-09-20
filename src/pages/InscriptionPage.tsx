@@ -33,8 +33,8 @@ import DossierPanel from './inscription/DossierPanel';
 import {
   RecapitulatifPaiementCarte,
   TotauxPaiementGlobaux,
-  STATUTS_AVEC_RECAPITULATIF_PAIEMENT,
 } from './inscription/RecapitulatifPaiement';
+import { STATUTS_AVEC_RECAPITULATIF_PAIEMENT } from '../utils/statutsRecapitulatifPaiement';
 import { LIBELLES_MODE_PAIEMENT_REPAS } from '../utils/modePaiementRepas';
 import { CommentaireOrganisateur } from './inscription/CommentaireOrganisateur';
 import { TriageStatutSwitch } from './inscription/TriageStatutSwitch';

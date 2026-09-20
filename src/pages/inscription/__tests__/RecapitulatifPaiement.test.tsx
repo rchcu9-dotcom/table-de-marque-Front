@@ -4,10 +4,10 @@ import { render, screen, fireEvent } from "@testing-library/react";
 
 import {
   RecapitulatifPaiementCarte,
-  STATUTS_AVEC_RECAPITULATIF_PAIEMENT,
   TotauxPaiementGlobaux,
 } from "../RecapitulatifPaiement";
 import { formatFraisInscription } from "../../../utils/msgPaiementAttendu";
+import { STATUTS_AVEC_RECAPITULATIF_PAIEMENT } from "../../../utils/statutsRecapitulatifPaiement";
 import type { CandidatureOrganisateur, Edition } from "../../../api/types/inscription.types";
 
 // Intl.NumberFormat insère une espace insécable (U+00A0) avant « € » ; on

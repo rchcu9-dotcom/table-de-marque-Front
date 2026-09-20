@@ -3,7 +3,6 @@ import type {
   DetailPaiementRepas,
   Edition,
   PaiementInscription,
-  StatutInscription,
 } from '../../api/types/inscription.types';
 import { formatFraisInscription } from '../../utils/msgPaiementAttendu';
 import { LIBELLES_MODE_PAIEMENT_REPAS } from '../../utils/modePaiementRepas';
@@ -20,14 +19,6 @@ function libelleDetailPaiementRepas(detail: Partial<DetailPaiementRepas>): strin
   }
   return parts.length > 0 ? `Payé ${parts.join(' ')}` : null;
 }
-
-export const STATUTS_AVEC_RECAPITULATIF_PAIEMENT: StatutInscription[] = [
-  'RESERVEE',
-  'PAIEMENT_ATTENDU',
-  'VALIDEE',
-  'DOSSIER_EN_COURS',
-  'DOSSIER_COMPLET',
-];
 
 function montantRepas(nbJoueurs: number, prixRepas: number): number {
   return nbJoueurs * prixRepas * NB_JOURS_REPAS;
