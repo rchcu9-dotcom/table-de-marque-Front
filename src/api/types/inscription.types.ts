@@ -13,7 +13,6 @@ export type Edition = {
   etape: EditionEtape;
   dateDebut: string;
   dateFinDebut: string;
-  dateFinFin: string;
   fraisInscription: number;
   prixRepas: number;
   nbPlacesMax: number;
@@ -37,6 +36,8 @@ export type Edition = {
   imageUrl?: string;
   imageDossierUrl?: string;
   imageRibUrl?: string;
+  hasImageRib: boolean;
+  imageRibUpdatedAt?: string;
   affichagePlanningPublic: boolean;
   anneesAge: number[];
 };
@@ -46,7 +47,6 @@ export type EquipeRef = {
   nom: string;
   logoUrl?: string;
   active: boolean;
-  candidatureEnCours: boolean;
 };
 
 export type ProfilRole = 'RESPONSABLE_EQUIPE' | 'ORGANISATEUR' | 'TABLE_DE_MARQUE';
@@ -74,13 +74,27 @@ export type InscriptionEquipe = {
   userId?: number;
 };
 
-export type MaCandidature = {
+export type PaiementInscription = {
+  nbJoueurs: number;
+  fraisInscriptionPaye: boolean;
+  repasPaiementRecu: boolean;
+};
+
+export type MaCandidature = ({
   id: number;
   equipeNom: string;
   equipeLogoUrl: string | null;
   statut: StatutInscription;
   createdAt: string;
-} | null;
+} & PaiementInscription) | null;
+
+export type ModePaiementRepas = 'VIREMENT' | 'CHEQUE' | 'AUTRE';
+
+/** Détail du règlement des repas, saisi par l'organisateur (jamais exposé au responsable). */
+export type DetailPaiementRepas = {
+  repasDatePaiement: string | null;
+  repasModePaiement: ModePaiementRepas | null;
+};
 
 export type CandidatureOrganisateur = {
   id: number;
@@ -90,7 +104,9 @@ export type CandidatureOrganisateur = {
   utilisateurDisplayName: string | null;
   statut: StatutInscription;
   createdAt: string;
-};
+  commentaireOrganisateur: string | null;
+} & PaiementInscription &
+  DetailPaiementRepas;
 
 export type JoueurDossier = {
   id: number;

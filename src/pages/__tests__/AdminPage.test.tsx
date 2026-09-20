@@ -8,7 +8,6 @@ import AdminPage from "../AdminPage";
 
 const mockNavigate = vi.fn();
 const mockDemarrerTournoi = vi.fn();
-const mockUpdateEditionEtape = vi.fn();
 const mockInvalidateQueries = vi.fn();
 const mockFetchEquipesToutes = vi.fn();
 const mockActiverEquipe = vi.fn();
@@ -37,7 +36,6 @@ vi.mock("../../hooks/useEditionEnPreparation", () => ({
 
 vi.mock("../../api/inscription", () => ({
   demarrerTournoi: (...args: unknown[]) => mockDemarrerTournoi(...args),
-  updateEditionEtape: (...args: unknown[]) => mockUpdateEditionEtape(...args),
   fetchEquipesReferentielToutes: (...args: unknown[]) => mockFetchEquipesToutes(...args),
   activerEquipeReferentiel: (...args: unknown[]) => mockActiverEquipe(...args),
   desactiverEquipeReferentiel: (...args: unknown[]) => mockDesactiverEquipe(...args),
@@ -86,7 +84,6 @@ function renderPage() {
 beforeEach(() => {
   mockNavigate.mockClear();
   mockDemarrerTournoi.mockClear();
-  mockUpdateEditionEtape.mockClear();
   mockInvalidateQueries.mockClear();
   mockFetchEquipesToutes.mockReset().mockResolvedValue([]);
   mockActiverEquipe.mockReset().mockResolvedValue({ id: 1, nom: "Les Sharks", active: true });
@@ -160,11 +157,14 @@ describe("AdminPage — liens", () => {
 
     const liens = screen.getAllByRole("link").map((lien) => lien.getAttribute("href"));
 
+    // Le lien « Gérer dans Paramètres d'inscription » de l'encart d'état pointe
+    // vers la même page que le lien de navigation.
     expect(liens).toEqual([
       "/admin/parametres-inscription",
       "/admin/parametres-sportifs?edition=demarree",
       "/admin/planning/simulation",
       "/admin/presentation-tournoi",
+      "/admin/parametres-inscription",
     ]);
   });
 
@@ -256,46 +256,52 @@ describe("AdminPage — action Lancer le tournoi", () => {
   });
 });
 
-describe("AdminPage — action Ouvrir les inscriptions (CREEE)", () => {
-  it("affiche le bouton uniquement quand etape === CREEE", () => {
-    mockSession.etape = "CREEE";
+describe("AdminPage — état des inscriptions (lecture seule, le switch vit dans Paramètres d'inscription)", () => {
+  it.each([
+    ["CREEE", "Les inscriptions ne sont pas encore ouvertes."],
+    ["INSCRIPTIONS_OUVERTES", "Les inscriptions sont ouvertes."],
+    ["CLOTUREE", "Les inscriptions sont fermées."],
+  ])("affiche l'encart d'état (etape=%s) avec le lien « Gérer dans Paramètres d'inscription »", (etape, texte) => {
+    mockSession.etape = etape;
     renderPage();
 
-    expect(screen.getByRole("button", { name: "Ouvrir les inscriptions" })).toBeInTheDocument();
+    expect(screen.getByText(texte)).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Gérer dans Paramètres d'inscription" }),
+    ).toHaveAttribute("href", "/admin/parametres-inscription");
   });
 
-  it("masque le bouton en dehors de CREEE", () => {
-    mockSession.etape = "INSCRIPTIONS_OUVERTES";
+  it("n'affiche pas d'encart à TOURNOI_DEMARRE (texte existant conservé)", () => {
+    mockSession.etape = "TOURNOI_DEMARRE";
     renderPage();
 
-    expect(screen.queryByRole("button", { name: "Ouvrir les inscriptions" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Gérer dans Paramètres d'inscription" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(/Le tournoi est démarré/)).toBeInTheDocument();
   });
 
-  it("appelle updateEditionEtape(editionId, 'INSCRIPTIONS_OUVERTES', token) directement, sans modale", async () => {
-    mockSession.etape = "CREEE";
-    mockUpdateEditionEtape.mockResolvedValue({ id: 1, etape: "INSCRIPTIONS_OUVERTES" });
+  it.each(["CREEE", "INSCRIPTIONS_OUVERTES", "CLOTUREE"])(
+    "n'affiche plus de bouton Ouvrir / Clôturer les inscriptions (etape=%s)",
+    (etape) => {
+      mockSession.etape = etape;
+      renderPage();
+
+      expect(
+        screen.queryByRole("button", { name: "Ouvrir les inscriptions" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Clôturer les inscriptions" }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+    },
+  );
+
+  it("conserve le bouton « Lancer le tournoi » à CLOTUREE", () => {
+    mockSession.etape = "CLOTUREE";
     renderPage();
 
-    fireEvent.click(screen.getByRole("button", { name: "Ouvrir les inscriptions" }));
-
-    await waitFor(() => {
-      expect(mockUpdateEditionEtape).toHaveBeenCalledWith(1, "INSCRIPTIONS_OUVERTES", "fake-token");
-    });
-    expect(mockInvalidateQueries).toHaveBeenCalledWith({
-      queryKey: ["inscription", "edition-courante"],
-    });
-  });
-
-  it("affiche un message d'erreur quand l'ouverture échoue", async () => {
-    mockSession.etape = "CREEE";
-    mockUpdateEditionEtape.mockRejectedValue(new Error("400"));
-    renderPage();
-
-    fireEvent.click(screen.getByRole("button", { name: "Ouvrir les inscriptions" }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Impossible d'ouvrir les inscriptions.")).toBeInTheDocument();
-    });
+    expect(screen.getByRole("button", { name: "Lancer le tournoi" })).toBeInTheDocument();
   });
 });
 
@@ -328,51 +334,6 @@ describe("AdminPage — équipes désactivées (modération a posteriori)", () =
 
     await waitFor(() => {
       expect(mockActiverEquipe).toHaveBeenCalledWith(2, "fake-token");
-    });
-  });
-});
-
-describe("AdminPage — action Clôturer les inscriptions (INSCRIPTIONS_OUVERTES)", () => {
-  it("affiche le bouton uniquement quand etape === INSCRIPTIONS_OUVERTES", () => {
-    mockSession.etape = "INSCRIPTIONS_OUVERTES";
-    renderPage();
-
-    expect(screen.getByRole("button", { name: "Clôturer les inscriptions" })).toBeInTheDocument();
-  });
-
-  it("masque le bouton en dehors de INSCRIPTIONS_OUVERTES", () => {
-    mockSession.etape = "CLOTUREE";
-    renderPage();
-
-    expect(screen.queryByRole("button", { name: "Clôturer les inscriptions" })).not.toBeInTheDocument();
-  });
-
-  it("ouvre une modale de confirmation avant tout appel à updateEditionEtape", () => {
-    mockSession.etape = "INSCRIPTIONS_OUVERTES";
-    renderPage();
-
-    fireEvent.click(screen.getByRole("button", { name: "Clôturer les inscriptions" }));
-
-    expect(screen.getByText("Clôturer les inscriptions ?")).toBeInTheDocument();
-    expect(mockUpdateEditionEtape).not.toHaveBeenCalled();
-  });
-
-  it("confirme : appelle updateEditionEtape(editionId, 'CLOTUREE', token) et invalide le cache édition", async () => {
-    mockSession.etape = "INSCRIPTIONS_OUVERTES";
-    mockUpdateEditionEtape.mockResolvedValue({ id: 1, etape: "CLOTUREE" });
-    renderPage();
-
-    fireEvent.click(screen.getByRole("button", { name: "Clôturer les inscriptions" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirmer" }));
-
-    await waitFor(() => {
-      expect(mockUpdateEditionEtape).toHaveBeenCalledWith(1, "CLOTUREE", "fake-token");
-    });
-    expect(mockInvalidateQueries).toHaveBeenCalledWith({
-      queryKey: ["inscription", "edition-courante"],
-    });
-    await waitFor(() => {
-      expect(screen.queryByText("Clôturer les inscriptions ?")).not.toBeInTheDocument();
     });
   });
 });

@@ -16,6 +16,7 @@ vi.mock("../../hooks/useInscriptionSession", () => ({
 const mockUseEditionEnPreparation = vi.fn();
 vi.mock("../../hooks/useEditionEnPreparation", () => ({
   useEditionEnPreparation: () => mockUseEditionEnPreparation(),
+  EDITION_EN_PREPARATION_QUERY_KEY: ["inscription", "edition-en-preparation"],
 }));
 
 vi.mock("../../api/inscription", async (importOriginal) => {
@@ -25,6 +26,8 @@ vi.mock("../../api/inscription", async (importOriginal) => {
     updateEdition: vi.fn(),
     ajouterAnneeAge: vi.fn(),
     retirerAnneeAge: vi.fn(),
+    ouvrirInscriptions: vi.fn(),
+    cloturerInscriptions: vi.fn(),
   };
 });
 
@@ -38,7 +41,6 @@ const EDITION_MOCK: Edition = {
   etape: "CREEE",
   dateDebut: "2026-04-01T00:00:00",
   dateFinDebut: "2026-05-01T23:59:59",
-  dateFinFin: "2026-05-10T23:59:59",
   fraisInscription: 120,
   prixRepas: 12,
   nbPlacesMax: 16,
@@ -48,6 +50,7 @@ const EDITION_MOCK: Edition = {
   imageDossierUrl: "https://example.com/dossier.png",
   imageRibUrl: "https://example.com/rib.pdf",
   msgBienvenue: "Bienvenue !",
+  hasImageRib: false,
   affichagePlanningPublic: false,
   anneesAge: [2014, 2015],
 };
@@ -108,15 +111,60 @@ describe("ParametresInscriptionPage", () => {
     expect(screen.getByLabelText("Catégorie")).toHaveValue("U11");
     expect(screen.getByLabelText("Début du tournoi")).toHaveValue("2026-04-01");
     expect(screen.getByLabelText("Fin du tournoi")).toHaveValue("2026-05-01");
-    expect(screen.getByLabelText("Fin des inscriptions")).toHaveValue("2026-05-10");
+    expect(screen.queryByLabelText("Fin des inscriptions")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Frais d'inscription (€)")).toHaveValue(120);
     expect(screen.getByLabelText("Prix du repas (€)")).toHaveValue(12);
     expect(screen.getByLabelText("Nombre de places max")).toHaveValue(16);
     expect(screen.getByLabelText("Email de contact")).toHaveValue("contact@rchc.fr");
-    expect(screen.getByLabelText("URL RIB")).toHaveValue("https://example.com/rib.pdf");
+    // Le champ texte "URL RIB" a été remplacé par ImageRibUploadField (upload
+    // binaire) — cf. lcran-qui-affiche-le-paiement-attendu-sur-le-parcours-dinscr.
+    // hasImageRib=false ici, donc repli sur l'affichage de l'ancienne URL en lecture
+    // seule plutôt qu'un champ texte éditable.
+    expect(
+      screen.getByRole("link", { name: "https://example.com/rib.pdf" }),
+    ).toHaveAttribute("href", "https://example.com/rib.pdf");
   });
 
-  it("masque le bandeau d'avertissement quand l'édition est encore au stade CREEE", () => {
+  it("affiche l'aperçu de l'image RIB uploadée (ImageRibUploadField) quand hasImageRib est vrai", () => {
+    mockUseInscriptionSession.mockReturnValue({
+      role: "ORGANISATEUR",
+      token: "test-token",
+      edition: {
+        ...EDITION_MOCK,
+        hasImageRib: true,
+        imageRibUpdatedAt: "2026-09-16T00:00:00.000Z",
+      },
+      isLoading: false,
+    });
+    renderPage();
+
+    expect(screen.getByAltText("Aperçu du RIB")).toHaveAttribute(
+      "src",
+      expect.stringContaining("/inscription/editions/1/image-rib?v="),
+    );
+  });
+
+  it.each([
+    "CREEE",
+    "CREATION_NOUVEAU_TOURNOI",
+    "INSCRIPTIONS_OUVERTES",
+    "CLOTUREE",
+    "TOURNOI_DEMARRE",
+  ] as const)(
+    "n'affiche plus jamais le bandeau « n'est plus au stade créée » (etape=%s) : modifier les paramètres inscriptions ouvertes est le cas normal",
+    (etape) => {
+      mockUseInscriptionSession.mockReturnValue({
+        role: "ORGANISATEUR",
+        token: "test-token",
+        edition: { ...EDITION_MOCK, etape },
+        isLoading: false,
+      });
+      renderPage();
+      expect(screen.queryByText(/n'est plus au stade/)).not.toBeInTheDocument();
+    },
+  );
+
+  it("intitule la section des dates « Dates du tournoi »", () => {
     mockUseInscriptionSession.mockReturnValue({
       role: "ORGANISATEUR",
       token: "test-token",
@@ -124,32 +172,8 @@ describe("ParametresInscriptionPage", () => {
       isLoading: false,
     });
     renderPage();
-    expect(screen.queryByText(/n'est plus au stade/)).not.toBeInTheDocument();
-  });
-
-  it("affiche un bandeau d'avertissement non bloquant quand l'édition n'est plus CREEE", () => {
-    mockUseInscriptionSession.mockReturnValue({
-      role: "ORGANISATEUR",
-      token: "test-token",
-      edition: { ...EDITION_MOCK, etape: "INSCRIPTIONS_OUVERTES" },
-      isLoading: false,
-    });
-    renderPage();
-    expect(screen.getByText(/n'est plus au stade/)).toBeInTheDocument();
-  });
-
-  it("masque le bandeau d'avertissement quand une édition en préparation existe, même si son etape n'est pas CREEE (faux-positif permanent sinon)", () => {
-    mockUseInscriptionSession.mockReturnValue({
-      role: "ORGANISATEUR",
-      token: "test-token",
-      edition: EDITION_MOCK,
-      isLoading: false,
-    });
-    mockUseEditionEnPreparation.mockReturnValue({
-      data: { ...EDITION_MOCK, id: 2, etape: "CREATION_NOUVEAU_TOURNOI" },
-    });
-    renderPage();
-    expect(screen.queryByText(/n'est plus au stade/)).not.toBeInTheDocument();
+    expect(screen.getByText("Dates du tournoi")).toBeInTheDocument();
+    expect(screen.queryByText(/Fenêtre d'inscription/)).not.toBeInTheDocument();
   });
 
   it("replie les messages par défaut et les révèle au clic", () => {
@@ -242,25 +266,25 @@ describe("ParametresInscriptionPage", () => {
     expect(api.updateEdition).not.toHaveBeenCalled();
   });
 
-  // Contraintes croisées impliquant dateFinFin ("Fin des inscriptions") retirées — seule
-  // dateDebut ≤ dateFinDebut ("Fin du tournoi") reste vérifiée. Guard contre une régression
-  // vers l'ancien comportement bloquant.
-  it("n'bloque plus l'enregistrement quand la fin des inscriptions est antérieure au début du tournoi (contrainte retirée)", async () => {
+  it("n'envoie plus dateFinFin (ni etape) dans le PATCH, même si l'édition en porte encore une valeur historique", async () => {
     mockUseInscriptionSession.mockReturnValue({
       role: "ORGANISATEUR",
       token: "test-token",
-      edition: EDITION_MOCK,
+      edition: {
+        ...EDITION_MOCK,
+        dateFinFin: "2026-05-10T23:59:59",
+      } as Edition,
       isLoading: false,
     });
     (api.updateEdition as ReturnType<typeof vi.fn>).mockResolvedValue(EDITION_MOCK);
     renderPage();
 
-    fireEvent.change(screen.getByLabelText("Fin des inscriptions"), {
-      target: { value: "2026-03-01" },
-    });
     fireEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
 
     await waitFor(() => expect(api.updateEdition).toHaveBeenCalled());
+    const payload = (api.updateEdition as ReturnType<typeof vi.fn>).mock.calls[0][1];
+    expect(payload).not.toHaveProperty("dateFinFin");
+    expect(payload).not.toHaveProperty("etape");
   });
 
   it("enregistre le formulaire modifié et affiche un message de succès", async () => {
@@ -474,5 +498,79 @@ describe("ParametresInscriptionPage — années d'âge (docs/specs/ajoute-dans-l
     await waitFor(() =>
       expect(api.retirerAnneeAge).toHaveBeenCalledWith(1, 2014, "test-token"),
     );
+  });
+});
+
+describe("ParametresInscriptionPage — switch « Inscriptions ouvertes / fermées »", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseEditionEnPreparation.mockReturnValue({ data: null });
+  });
+
+  function givenEdition(etape: Edition["etape"], id = 1) {
+    mockUseInscriptionSession.mockReturnValue({
+      role: "ORGANISATEUR",
+      token: "test-token",
+      edition: { ...EDITION_MOCK, id, etape },
+      isLoading: false,
+    });
+  }
+
+  it("affiche le switch en tête de page, avant le formulaire", () => {
+    givenEdition("CREEE");
+    renderPage();
+
+    const toggle = screen.getByRole("switch");
+    const form = screen.getByLabelText("Nom du tournoi");
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+    expect(
+      toggle.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.getAllByRole("switch")).toHaveLength(1);
+  });
+
+  it("reflète l'état serveur de l'édition (INSCRIPTIONS_OUVERTES → ouvert)", () => {
+    givenEdition("INSCRIPTIONS_OUVERTES");
+    renderPage();
+
+    expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByText("Inscriptions ouvertes")).toBeInTheDocument();
+  });
+
+  it("cible l'édition en préparation (id 2) plutôt que l'édition active pour ouvrir", async () => {
+    givenEdition("TOURNOI_DEMARRE", 1);
+    mockUseEditionEnPreparation.mockReturnValue({
+      data: { ...EDITION_MOCK, id: 2, etape: "CREATION_NOUVEAU_TOURNOI" },
+    });
+    (api.ouvrirInscriptions as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...EDITION_MOCK,
+      id: 2,
+      etape: "INSCRIPTIONS_OUVERTES",
+    });
+    renderPage();
+
+    const toggle = screen.getByRole("switch");
+    expect(toggle).not.toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(toggle);
+
+    await waitFor(() =>
+      expect(api.ouvrirInscriptions).toHaveBeenCalledWith(2, "test-token"),
+    );
+  });
+
+  it("est désactivé à TOURNOI_DEMARRE : aucun appel possible", () => {
+    givenEdition("TOURNOI_DEMARRE");
+    renderPage();
+
+    const toggle = screen.getByRole("switch");
+    expect(toggle).toHaveAttribute("aria-disabled", "true");
+    fireEvent.click(toggle);
+    expect(api.ouvrirInscriptions).not.toHaveBeenCalled();
+    expect(api.cloturerInscriptions).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(
+        "Le tournoi a démarré, les inscriptions ne peuvent plus être rouvertes",
+      ),
+    ).toBeInTheDocument();
   });
 });

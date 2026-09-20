@@ -1,7 +1,7 @@
 import type { UpdateEditionPayload } from "../../api/inscription";
 import type { EditionValidationError } from "../../utils/editionValidation";
 
-type DateField = "dateDebut" | "dateFinDebut" | "dateFinFin";
+type DateField = "dateDebut" | "dateFinDebut";
 
 type Props = {
   values: Pick<UpdateEditionPayload, DateField>;
@@ -21,7 +21,7 @@ export default function EditionDatesForm({ values, errors, onChange }: Props) {
   return (
     <fieldset className="space-y-3">
       <legend className="text-slate-200 font-medium text-sm mb-2">
-        Fenêtre d'inscription & dates clés
+        Dates du tournoi
       </legend>
       <div className="grid grid-cols-2 gap-3">
         <label className="text-xs text-slate-400 space-y-1">
@@ -47,20 +47,6 @@ export default function EditionDatesForm({ values, errors, onChange }: Props) {
           />
           {errorFor(errors, "dateFinDebut") && (
             <span className="block text-red-400">{errorFor(errors, "dateFinDebut")}</span>
-          )}
-        </label>
-        <label className="text-xs text-slate-400 space-y-1">
-          Fin des inscriptions
-          <input
-            type="date"
-            value={toDateInputValue(values.dateFinFin)}
-            onChange={(e) =>
-              onChange("dateFinFin", e.target.value ? `${e.target.value}T23:59:59` : undefined)
-            }
-            className="w-full px-2 py-1 rounded bg-slate-800 border border-slate-600 text-slate-100 text-sm"
-          />
-          {errorFor(errors, "dateFinFin") && (
-            <span className="block text-red-400">{errorFor(errors, "dateFinFin")}</span>
           )}
         </label>
       </div>

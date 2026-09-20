@@ -1,7 +1,7 @@
 import type { UpdateEditionPayload } from "../../api/inscription";
 
 type ContactField = "contactEmail" | "contactPhone";
-type ImageField = "imageUrl" | "imageDossierUrl" | "imageRibUrl";
+type ImageField = "imageUrl" | "imageDossierUrl";
 type Field = ContactField | ImageField;
 
 type Props = {
@@ -58,15 +58,6 @@ export default function EditionContactImagesForm({ values, onChange }: Props) {
               type="text"
               value={toInputValue(values.imageDossierUrl)}
               onChange={(e) => onChange("imageDossierUrl", e.target.value)}
-              className="w-full px-2 py-1 rounded bg-slate-800 border border-slate-600 text-slate-100 text-sm"
-            />
-          </label>
-          <label className="text-xs text-slate-400 space-y-1">
-            URL RIB
-            <input
-              type="text"
-              value={toInputValue(values.imageRibUrl)}
-              onChange={(e) => onChange("imageRibUrl", e.target.value)}
               className="w-full px-2 py-1 rounded bg-slate-800 border border-slate-600 text-slate-100 text-sm"
             />
           </label>

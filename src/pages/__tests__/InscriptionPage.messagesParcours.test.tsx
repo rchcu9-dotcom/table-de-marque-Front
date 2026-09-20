@@ -1,9 +1,11 @@
 // Tests — câblage des messages du parcours d'inscription (edition.msg*) sur les moments réels
 // où ils s'affichent, suite au diagnostic confirmé en session : msgEquipeRefusee vide affichait
 // un texte VIDE (pas le repli — `??` ne se déclenche pas sur une chaîne vide, seulement sur
-// null/undefined) ; msgInscriptionEnCours et msgInscriptionValidee étaient remplis par
-// l'organisateur mais jamais lus nulle part (DOSSIER_COMPLET et "candidature déjà en cours"
-// affichaient un texte figé) ; msgAjoutEquipe idem pour la modale "Ajouter une équipe".
+// null/undefined) ; msgInscriptionValidee était rempli par l'organisateur mais jamais lu nulle
+// part (DOSSIER_COMPLET affichait un texte figé) ; msgAjoutEquipe idem pour la modale "Ajouter
+// une équipe". Le champ msgInscriptionEnCours reste configurable en base/admin mais n'a plus
+// aucun point d'affichage depuis le retrait du badge/blocage candidatureEnCours (cf. feature
+// "Supprimer de la liste des équipes... l'état de la demande") — plus rien à tester ici pour lui.
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -73,7 +75,6 @@ function baseEdition(overrides: Record<string, unknown> = {}) {
     etape: "INSCRIPTIONS_OUVERTES",
     dateDebut: "2026-05-23T00:00:00",
     dateFinDebut: "2026-05-01T23:59:59",
-    dateFinFin: "2026-05-10T23:59:59",
     fraisInscription: 120,
     prixRepas: 12,
     nbPlacesMax: 16,
@@ -108,7 +109,6 @@ beforeEach(async () => {
 const FALLBACK_REFUS =
   "Nous ne sommes malheureusement pas en mesure de confirmer l'inscription de ton équipe";
 const FALLBACK_DOSSIER_COMPLET = "Le dossier de ton équipe a été validé par l'organisateur.";
-const FALLBACK_DEJA_EN_COURS = "Rapproche-toi du club ou du porteur de";
 
 describe("InscriptionPage — statut REFUSEE", () => {
   it("affiche le message de repli (jamais un texte vide) quand msgEquipeRefusee est une chaîne vide en base", async () => {
@@ -119,6 +119,9 @@ describe("InscriptionPage — statut REFUSEE", () => {
       equipeLogoUrl: null,
       statut: "REFUSEE",
       createdAt: "2026-05-01T00:00:00.000Z",
+      nbJoueurs: 0,
+      fraisInscriptionPaye: false,
+      repasPaiementRecu: false,
     });
 
     const { Wrapper } = createWrapper();
@@ -137,6 +140,9 @@ describe("InscriptionPage — statut REFUSEE", () => {
       equipeLogoUrl: null,
       statut: "REFUSEE",
       createdAt: "2026-05-01T00:00:00.000Z",
+      nbJoueurs: 0,
+      fraisInscriptionPaye: false,
+      repasPaiementRecu: false,
     });
 
     const { Wrapper } = createWrapper();
@@ -158,6 +164,9 @@ describe("InscriptionPage — statut DOSSIER_COMPLET", () => {
       equipeLogoUrl: null,
       statut: "DOSSIER_COMPLET",
       createdAt: "2026-05-01T00:00:00.000Z",
+      nbJoueurs: 0,
+      fraisInscriptionPaye: false,
+      repasPaiementRecu: false,
     });
 
     const { Wrapper } = createWrapper();
@@ -175,6 +184,9 @@ describe("InscriptionPage — statut DOSSIER_COMPLET", () => {
       equipeLogoUrl: null,
       statut: "DOSSIER_COMPLET",
       createdAt: "2026-05-01T00:00:00.000Z",
+      nbJoueurs: 0,
+      fraisInscriptionPaye: false,
+      repasPaiementRecu: false,
     });
 
     const { Wrapper } = createWrapper();
@@ -184,11 +196,13 @@ describe("InscriptionPage — statut DOSSIER_COMPLET", () => {
   });
 });
 
-describe("InscriptionPage — équipe déjà en cours d'inscription (étape 2)", () => {
-  it("affiche msgInscriptionEnCours quand renseigné, au lieu du texte figé", async () => {
-    mockFetchEditionCourante.mockResolvedValue(
-      baseEdition({ msgInscriptionEnCours: "Patience, on revient vers toi vite." }),
-    );
+// Non-régression (AC3) : la liste déroulante et l'étape 2 ne doivent plus jamais
+// distinguer une équipe déjà candidate — même si l'objet reçu de l'API contenait
+// encore un champ candidatureEnCours (ceinture-bretelles si ce champ réapparaissait
+// un jour côté back), aucun badge, style ou blocage ne doit être visible.
+describe("InscriptionPage — aucune fuite d'état de candidature dans le parcours (AC3)", () => {
+  it("n'affiche aucun badge/style distinctif dans la liste déroulante pour une équipe avec candidatureEnCours: true", async () => {
+    mockFetchEditionCourante.mockResolvedValue(baseEdition());
     mockFetchMaCandidature.mockResolvedValue(null);
     mockFetchEquipesReferentiel.mockResolvedValue([
       { id: 1, nom: "Les Coqs de Courbevoie", logoUrl: undefined, active: true, candidatureEnCours: true },
@@ -199,14 +213,14 @@ describe("InscriptionPage — équipe déjà en cours d'inscription (étape 2)",
 
     const toggle = await screen.findByRole("button", { name: /Choisir une équipe/ });
     fireEvent.click(toggle);
-    fireEvent.click(await screen.findByRole("button", { name: /Les Coqs de Courbevoie/ }));
 
-    await screen.findByText("Patience, on revient vers toi vite.");
-    expect(screen.queryByText(new RegExp(FALLBACK_DEJA_EN_COURS))).not.toBeInTheDocument();
+    const item = await screen.findByRole("button", { name: "Les Coqs de Courbevoie" });
+    expect(screen.queryByText("Déjà en cours d'inscription")).not.toBeInTheDocument();
+    expect(item.querySelector(".italic")).not.toBeInTheDocument();
   });
 
-  it("retombe sur le texte de repli quand msgInscriptionEnCours est vide", async () => {
-    mockFetchEditionCourante.mockResolvedValue(baseEdition({ msgInscriptionEnCours: "" }));
+  it("affiche systématiquement le bouton « Lancer la demande » après sélection, sans message de blocage, même si candidatureEnCours: true", async () => {
+    mockFetchEditionCourante.mockResolvedValue(baseEdition());
     mockFetchMaCandidature.mockResolvedValue(null);
     mockFetchEquipesReferentiel.mockResolvedValue([
       { id: 1, nom: "Les Coqs de Courbevoie", logoUrl: undefined, active: true, candidatureEnCours: true },
@@ -217,9 +231,11 @@ describe("InscriptionPage — équipe déjà en cours d'inscription (étape 2)",
 
     const toggle = await screen.findByRole("button", { name: /Choisir une équipe/ });
     fireEvent.click(toggle);
-    fireEvent.click(await screen.findByRole("button", { name: /Les Coqs de Courbevoie/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "Les Coqs de Courbevoie" }));
 
-    await screen.findByText(new RegExp(FALLBACK_DEJA_EN_COURS), { exact: false });
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Lancer la demande" })).toBeEnabled(),
+    );
   });
 });
 

@@ -1,16 +1,11 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useEditionEnPreparation,
   EDITION_EN_PREPARATION_QUERY_KEY,
 } from "../../hooks/useEditionEnPreparation";
-import { EDITION_QUERY_KEY } from "../../hooks/useInscriptionSession";
-import {
-  exportTaDump,
-  createEditionEnPreparation,
-  updateEditionEtape,
-} from "../../api/inscription";
+import { exportTaDump, createEditionEnPreparation } from "../../api/inscription";
 import PhaseCycleFrise from "./PhaseCycleFrise";
 
 type EtapeDump = "idle" | "dumping" | "dump-ok" | "dump-error";
@@ -42,6 +37,7 @@ export default function NouvelleSaisonPanel({
   editionActiveId: number;
 }) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { data: editionEnPreparation, isLoading: chargementPreparation } =
     useEditionEnPreparation(token);
 
@@ -53,9 +49,6 @@ export default function NouvelleSaisonPanel({
   const [annee, setAnnee] = useState(() => new Date().getFullYear() + 1);
   const [creation, setCreation] = useState(false);
   const [erreurCreation, setErreurCreation] = useState<string | null>(null);
-
-  const [ouverture, setOuverture] = useState(false);
-  const [erreurOuverture, setErreurOuverture] = useState<string | null>(null);
 
   if (chargementPreparation) {
     return null;
@@ -81,27 +74,12 @@ export default function NouvelleSaisonPanel({
     try {
       await createEditionEnPreparation({ nom, categorie, annee }, token);
       await queryClient.invalidateQueries({ queryKey: EDITION_EN_PREPARATION_QUERY_KEY });
+      // L'ouverture des inscriptions se pilote via le switch de « Paramètres d'inscription ».
+      navigate("/admin/parametres-inscription");
     } catch {
       setErreurCreation("Impossible de créer la nouvelle édition.");
     } finally {
       setCreation(false);
-    }
-  };
-
-  const handleOuvrirInscriptions = async () => {
-    if (!editionEnPreparation) return;
-    setOuverture(true);
-    setErreurOuverture(null);
-    try {
-      await updateEditionEtape(editionEnPreparation.id, "INSCRIPTIONS_OUVERTES", token);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: EDITION_EN_PREPARATION_QUERY_KEY }),
-        queryClient.invalidateQueries({ queryKey: EDITION_QUERY_KEY }),
-      ]);
-    } catch {
-      setErreurOuverture("Impossible d'ouvrir les inscriptions.");
-    } finally {
-      setOuverture(false);
     }
   };
 
@@ -127,16 +105,6 @@ export default function NouvelleSaisonPanel({
         >
           Paramètres sportifs
         </Link>
-
-        <button
-          type="button"
-          onClick={() => void handleOuvrirInscriptions()}
-          disabled={ouverture}
-          className="bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 rounded-lg px-4 py-3 text-sm font-semibold text-slate-950 transition"
-        >
-          {ouverture ? "Ouverture…" : "Ouvrir les inscriptions"}
-        </button>
-        {erreurOuverture && <p className="text-sm text-red-400">{erreurOuverture}</p>}
       </div>
     );
   }

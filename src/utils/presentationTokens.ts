@@ -12,7 +12,7 @@ function formatDates(edition: Edition | null): string {
   if (!edition) return "";
   try {
     const debut = DATE_FORMAT.format(new Date(edition.dateDebut));
-    const fin = DATE_FORMAT.format(new Date(edition.dateFinFin));
+    const fin = DATE_FORMAT.format(new Date(edition.dateFinDebut));
     return debut === fin ? debut : `${debut} - ${fin}`;
   } catch {
     return "";

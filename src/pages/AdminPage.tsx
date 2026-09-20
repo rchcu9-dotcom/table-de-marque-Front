@@ -6,7 +6,7 @@ import {
   useInscriptionSession,
   EDITION_QUERY_KEY,
 } from '../hooks/useInscriptionSession';
-import { demarrerTournoi, updateEditionEtape } from '../api/inscription';
+import { demarrerTournoi } from '../api/inscription';
 import {
   useEquipesReferentielToutes,
   useActiverEquipeReferentiel,
@@ -14,6 +14,7 @@ import {
 import { useEditionEnPreparation } from '../hooks/useEditionEnPreparation';
 import NouvelleSaisonPanel from '../components/admin/NouvelleSaisonPanel';
 import PhaseCycleFrise from '../components/admin/PhaseCycleFrise';
+import ConfirmModal from '../components/admin/ConfirmModal';
 
 function EquipesDesactiveesPanel({ token }: { token: string }) {
   const { data: equipes, isLoading, isError } = useEquipesReferentielToutes(token);
@@ -59,51 +60,6 @@ function EquipesDesactiveesPanel({ token }: { token: string }) {
   );
 }
 
-interface ConfirmModalProps {
-  title: string;
-  message: string;
-  confirmingLabel: string;
-  onClose: () => void;
-  onConfirm: () => void;
-  submitting: boolean;
-}
-
-function ConfirmModal({
-  title,
-  message,
-  confirmingLabel,
-  onClose,
-  onConfirm,
-  submitting,
-}: ConfirmModalProps) {
-  return (
-    <div className="fixed inset-0 z-[999] bg-black/60 flex items-center justify-center px-4">
-      <div className="bg-slate-900 border border-slate-700 rounded-lg p-6 max-w-sm w-full flex flex-col gap-4">
-        <h2 className="text-lg font-semibold text-white">{title}</h2>
-        <p className="text-sm text-slate-300">{message}</p>
-        <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={submitting}
-            className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:bg-slate-800 transition"
-          >
-            Annuler
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            disabled={submitting}
-            className="px-4 py-2 rounded-lg text-sm font-semibold bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-50 transition"
-          >
-            {submitting ? confirmingLabel : 'Confirmer'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function AdminPage() {
   const { token } = useAuth();
   const { role, edition, etape, isLoading } = useInscriptionSession();
@@ -118,15 +74,6 @@ export default function AdminPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Clôturer les inscriptions (INSCRIPTIONS_OUVERTES -> CLOTUREE)
-  const [showConfirmCloture, setShowConfirmCloture] = useState(false);
-  const [submittingCloture, setSubmittingCloture] = useState(false);
-  const [errorCloture, setErrorCloture] = useState<string | null>(null);
-
-  // Ouvrir les inscriptions (CREEE -> INSCRIPTIONS_OUVERTES)
-  const [submittingOuverture, setSubmittingOuverture] = useState(false);
-  const [errorOuverture, setErrorOuverture] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && role !== 'ORGANISATEUR') {
@@ -150,35 +97,6 @@ export default function AdminPage() {
       setError('Impossible de démarrer le tournoi.');
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleOuvrirInscriptions = async () => {
-    if (!edition || !token) return;
-    setSubmittingOuverture(true);
-    setErrorOuverture(null);
-    try {
-      await updateEditionEtape(edition.id, 'INSCRIPTIONS_OUVERTES', token);
-      await queryClient.invalidateQueries({ queryKey: EDITION_QUERY_KEY });
-    } catch {
-      setErrorOuverture("Impossible d'ouvrir les inscriptions.");
-    } finally {
-      setSubmittingOuverture(false);
-    }
-  };
-
-  const handleConfirmCloture = async () => {
-    if (!edition || !token) return;
-    setSubmittingCloture(true);
-    setErrorCloture(null);
-    try {
-      await updateEditionEtape(edition.id, 'CLOTUREE', token);
-      await queryClient.invalidateQueries({ queryKey: EDITION_QUERY_KEY });
-      setShowConfirmCloture(false);
-    } catch {
-      setErrorCloture('Impossible de clôturer les inscriptions.');
-    } finally {
-      setSubmittingCloture(false);
     }
   };
 
@@ -233,28 +151,23 @@ export default function AdminPage() {
           Phase de l'édition — {etape ?? '…'}
         </h2>
 
-        {etape === 'CREEE' && (
-          <button
-            type="button"
-            onClick={() => void handleOuvrirInscriptions()}
-            disabled={submittingOuverture}
-            className="bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 rounded-lg px-4 py-3 text-sm font-semibold text-slate-950 transition"
-          >
-            {submittingOuverture ? 'Ouverture…' : 'Ouvrir les inscriptions'}
-          </button>
+        {etape && etape !== 'TOURNOI_DEMARRE' && (
+          <div className="flex flex-col gap-1">
+            <p className="text-sm text-slate-300">
+              {etape === 'INSCRIPTIONS_OUVERTES'
+                ? 'Les inscriptions sont ouvertes.'
+                : etape === 'CLOTUREE'
+                  ? 'Les inscriptions sont fermées.'
+                  : "Les inscriptions ne sont pas encore ouvertes."}
+            </p>
+            <Link
+              to="/admin/parametres-inscription"
+              className="text-sm text-emerald-400 hover:text-emerald-300 underline"
+            >
+              Gérer dans Paramètres d'inscription
+            </Link>
+          </div>
         )}
-        {errorOuverture && <p className="text-sm text-red-400">{errorOuverture}</p>}
-
-        {etape === 'INSCRIPTIONS_OUVERTES' && (
-          <button
-            type="button"
-            onClick={() => setShowConfirmCloture(true)}
-            className="bg-orange-500 hover:bg-orange-400 rounded-lg px-4 py-3 text-sm font-semibold text-slate-950 transition"
-          >
-            Clôturer les inscriptions
-          </button>
-        )}
-        {errorCloture && <p className="text-sm text-red-400">{errorCloture}</p>}
 
         {etape === 'CLOTUREE' && (
           <button
@@ -277,17 +190,6 @@ export default function AdminPage() {
 
       {etape === 'TOURNOI_DEMARRE' && edition && token && (
         <NouvelleSaisonPanel token={token} editionActiveId={edition.id} />
-      )}
-
-      {showConfirmCloture && (
-        <ConfirmModal
-          title="Clôturer les inscriptions ?"
-          message="Plus aucune nouvelle équipe ne pourra candidater, et les référents dont le dossier n'est pas complet perdront l'accès à l'inscription. Cette action peut être suivie du lancement du tournoi."
-          confirmingLabel="Clôture…"
-          onClose={() => setShowConfirmCloture(false)}
-          onConfirm={() => void handleConfirmCloture()}
-          submitting={submittingCloture}
-        />
       )}
 
       {showConfirm && (

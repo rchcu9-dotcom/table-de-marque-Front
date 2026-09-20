@@ -12,13 +12,13 @@ import {
   fetchMaCandidature,
   soumettreCanditature,
   fetchToutesCandidatures,
-  accepterCandidature,
-  promouvoCandidature,
-  mettreListeAttente,
-  refuserCandidature,
+  changerStatutTriage,
   validerPaiement,
   validerDossier,
   rouvrirDossier,
+  marquerPaiementRepas,
+  definirCommentaireOrganisateur,
+  buildImageRibSrc,
 } from '../api/inscription';
 import type {
   Edition,
@@ -26,9 +26,18 @@ import type {
   EquipeRef,
   MaCandidature,
   CandidatureOrganisateur,
+  ModePaiementRepas,
   StatutInscription,
 } from '../api/types/inscription.types';
 import DossierPanel from './inscription/DossierPanel';
+import {
+  RecapitulatifPaiementCarte,
+  TotauxPaiementGlobaux,
+  STATUTS_AVEC_RECAPITULATIF_PAIEMENT,
+} from './inscription/RecapitulatifPaiement';
+import { LIBELLES_MODE_PAIEMENT_REPAS } from '../utils/modePaiementRepas';
+import { CommentaireOrganisateur } from './inscription/CommentaireOrganisateur';
+import { TriageStatutSwitch } from './inscription/TriageStatutSwitch';
 import { interpolerMsgPaiementAttendu } from '../utils/msgPaiementAttendu';
 import { msgOr } from '../utils/msgOr';
 import { isImageUrl } from '../utils/isImageUrl';
@@ -258,6 +267,107 @@ function ValiderPaiementModal({
   );
 }
 
+// ─── Modal paiement des repas ─────────────────────────────────────────────
+
+interface ValiderPaiementRepasModalProps {
+  equipeNom: string;
+  onClose: () => void;
+  /** Rejette en cas d'échec : la modale reste ouverte et affiche l'erreur. */
+  onConfirm: (datePaiement: string, mode: ModePaiementRepas) => Promise<void>;
+}
+
+function ValiderPaiementRepasModal({
+  equipeNom,
+  onClose,
+  onConfirm,
+}: ValiderPaiementRepasModalProps) {
+  const [datePaiement, setDatePaiement] = useState('');
+  const [mode, setMode] = useState<ModePaiementRepas>('VIREMENT');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!datePaiement) {
+      setError('La date de paiement est obligatoire.');
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    try {
+      await onConfirm(datePaiement, mode);
+      onClose();
+    } catch {
+      setError('Erreur lors de la validation. Réessaie.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const champ =
+    'w-full border border-slate-600 rounded px-3 py-2 text-sm bg-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-400';
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
+      <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-xl w-full max-w-md p-6">
+        <h2 className="text-lg font-bold mb-1 text-slate-100">Valider le paiement des repas</h2>
+        <p className="text-sm text-slate-400 mb-4">{equipeNom}</p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1 text-slate-200" htmlFor="date-paiement-repas">
+              Date du paiement
+            </label>
+            <input
+              id="date-paiement-repas"
+              type="date"
+              className={champ}
+              value={datePaiement}
+              onChange={(e) => setDatePaiement(e.target.value)}
+              disabled={submitting}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1 text-slate-200" htmlFor="mode-paiement-repas">
+              Type de paiement
+            </label>
+            <select
+              id="mode-paiement-repas"
+              className={champ}
+              value={mode}
+              onChange={(e) => setMode(e.target.value as ModePaiementRepas)}
+              disabled={submitting}
+            >
+              {(Object.keys(LIBELLES_MODE_PAIEMENT_REPAS) as ModePaiementRepas[]).map((m) => (
+                <option key={m} value={m}>
+                  {LIBELLES_MODE_PAIEMENT_REPAS[m]}
+                </option>
+              ))}
+            </select>
+          </div>
+          {error && <ErrorBanner message={error} />}
+          <div className="flex gap-3 justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={submitting}
+              className="px-4 py-2 rounded border border-slate-600 text-sm text-slate-200 hover:bg-slate-700 transition"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={submitting || !datePaiement}
+              className="px-4 py-2 rounded bg-green-600 text-white text-sm font-medium hover:bg-green-500 disabled:opacity-50 transition"
+            >
+              {submitting ? 'Validation...' : 'Valider'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ─── Dropdown équipe searchable ───────────────────────────────────────────
 
 interface EquipeDropdownProps {
@@ -337,14 +447,7 @@ function EquipeDropdown({ equipes, selected, onSelect }: EquipeDropdownProps) {
               {equipe.logoUrl && (
                 <img src={equipe.logoUrl} alt="" className="w-6 h-6 object-contain rounded-full" />
               )}
-              <span className={equipe.candidatureEnCours ? 'text-slate-400 italic' : ''}>
-                {equipe.nom}
-              </span>
-              {equipe.candidatureEnCours && (
-                <span className="ml-auto text-xs text-orange-300 shrink-0">
-                  Déjà en cours d'inscription
-                </span>
-              )}
+              <span>{equipe.nom}</span>
             </button>
           ))}
         </div>
@@ -434,6 +537,10 @@ function VueOrganisateur({ edition, token, etape }: VueOrganisateurProps) {
     id: number;
     equipeNom: string;
   } | null>(null);
+  const [repasModal, setRepasModal] = useState<{
+    id: number;
+    equipeNom: string;
+  } | null>(null);
 
   const loadCandidatures = useCallback(async () => {
     setLoading(true);
@@ -474,6 +581,15 @@ function VueOrganisateur({ edition, token, etape }: VueOrganisateurProps) {
     'VALIDEE',
     'DOSSIER_EN_COURS',
     'DOSSIER_COMPLET',
+  ];
+  // Miroir de STATUTS_TRIAGE (back: changer-statut-triage.usecase.ts) — statuts de
+  // triage initial pour lesquels le switch réversible Accepté/Liste d'attente/Refusé
+  // s'affiche.
+  const STATUTS_TRIAGE: StatutInscription[] = [
+    'CANDIDATE',
+    'PAIEMENT_ATTENDU',
+    'LISTE_ATTENTE',
+    'REFUSEE',
   ];
   const nbReservees = candidatures.filter((c) =>
     STATUTS_ACTIFS.includes(c.statut),
@@ -539,33 +655,16 @@ function VueOrganisateur({ edition, token, etape }: VueOrganisateurProps) {
               </div>
 
               {/* Actions */}
-              {c.statut === 'CANDIDATE' && (
-                <div className="flex gap-2 mt-3 flex-wrap">
-                  <button
-                    onClick={() =>
-                      void handleAction(() => accepterCandidature(c.id, token))
-                    }
-                    className="px-3 py-1.5 rounded bg-green-600 text-white text-xs font-medium hover:bg-green-500 transition"
-                  >
-                    Accepter
-                  </button>
-                  <button
-                    onClick={() =>
-                      void handleAction(() => mettreListeAttente(c.id, token))
-                    }
-                    className="px-3 py-1.5 rounded bg-orange-500 text-white text-xs font-medium hover:bg-orange-400 transition"
-                  >
-                    Liste d'attente
-                  </button>
-                  <button
-                    onClick={() =>
-                      void handleAction(() => refuserCandidature(c.id, token))
-                    }
-                    className="px-3 py-1.5 rounded bg-red-600 text-white text-xs font-medium hover:bg-red-500 transition"
-                  >
-                    Refuser
-                  </button>
-                </div>
+              {STATUTS_TRIAGE.includes(c.statut) && (
+                <TriageStatutSwitch
+                  candidature={c}
+                  peutAccepter={c.statut === 'PAIEMENT_ATTENDU' || nbReservees < maxPlaces}
+                  onChangerStatut={(candidatureId, statut) =>
+                    void handleAction(() =>
+                      changerStatutTriage(candidatureId, statut, token),
+                    )
+                  }
+                />
               )}
 
               {c.statut === 'PAIEMENT_ATTENDU' && (
@@ -578,21 +677,6 @@ function VueOrganisateur({ edition, token, etape }: VueOrganisateurProps) {
                   >
                     Valider paiement
                   </button>
-                </div>
-              )}
-
-              {c.statut === 'LISTE_ATTENTE' && (
-                <div className="flex gap-2 mt-3">
-                  {nbReservees < maxPlaces && (
-                    <button
-                      onClick={() =>
-                        void handleAction(() => promouvoCandidature(c.id, token))
-                      }
-                      className="px-3 py-1.5 rounded bg-green-600 text-white text-xs font-medium hover:bg-green-500 transition"
-                    >
-                      Promouvoir
-                    </button>
-                  )}
                 </div>
               )}
 
@@ -621,9 +705,51 @@ function VueOrganisateur({ edition, token, etape }: VueOrganisateurProps) {
                   </button>
                 </div>
               )}
+
+              {STATUTS_ACTIFS.includes(c.statut) && (
+                <RecapitulatifPaiementCarte
+                  candidature={c}
+                  edition={edition}
+                  onTogglePaiementRepas={(candidatureId, paye) =>
+                    paye
+                      ? setRepasModal({ id: candidatureId, equipeNom: c.equipeNom })
+                      : void handleAction(() =>
+                          marquerPaiementRepas(candidatureId, { paye: false }, token),
+                        )
+                  }
+                />
+              )}
+
+              <CommentaireOrganisateur
+                candidatureId={c.id}
+                commentaire={c.commentaireOrganisateur}
+                onSave={(candidatureId, commentaire) =>
+                  void handleAction(() =>
+                    definirCommentaireOrganisateur(candidatureId, commentaire, token),
+                  )
+                }
+              />
             </div>
           ))}
         </div>
+      )}
+
+      {candidatures.length > 0 && (
+        <TotauxPaiementGlobaux
+          candidatures={candidatures.filter((c) => STATUTS_ACTIFS.includes(c.statut))}
+          edition={edition}
+        />
+      )}
+
+      {repasModal && (
+        <ValiderPaiementRepasModal
+          equipeNom={repasModal.equipeNom}
+          onClose={() => setRepasModal(null)}
+          onConfirm={async (datePaiement, mode) => {
+            await marquerPaiementRepas(repasModal.id, { paye: true, datePaiement, mode }, token);
+            void loadCandidatures();
+          }}
+        />
       )}
 
       {paiementModal && (
@@ -696,6 +822,16 @@ function VueResponsable({
     };
   }, [token]);
 
+  // Rechargement silencieux (sans Spinner ni erreur) : le nombre de joueurs du
+  // dossier, donc le montant repas du récapitulatif, a pu changer dans DossierPanel.
+  const rechargerCandidature = useCallback(async () => {
+    try {
+      setCandidature(await fetchMaCandidature(token));
+    } catch {
+      // on garde les données déjà affichées
+    }
+  }, [token]);
+
   async function handleSoumettre() {
     if (!selectedEquipe) return;
     setSubmitting(true);
@@ -708,6 +844,9 @@ function VueResponsable({
         equipeLogoUrl: selectedEquipe.logoUrl ?? null,
         statut: result.statut as MaCandidature extends null ? never : NonNullable<MaCandidature>['statut'],
         createdAt: result.createdAt,
+        nbJoueurs: 0,
+        fraisInscriptionPaye: false,
+        repasPaiementRecu: false,
       });
       // La demande est lancée : candidature (serveur) devient la source de
       // vérité, la sélection persistée localement n'a plus lieu d'être (CA3).
@@ -788,24 +927,32 @@ function VueResponsable({
               {edition?.msgChequeInfo2 && (
                 <p className="text-slate-300">{edition.msgChequeInfo2}</p>
               )}
-              {edition?.imageRibUrl && (
-                <div className="space-y-1">
-                  {isImageUrl(edition.imageRibUrl) && (
-                    <img
-                      src={edition.imageRibUrl}
-                      alt="RIB du tournoi"
-                      className="max-w-xs rounded border border-slate-700"
-                    />
-                  )}
-                  <a
-                    href={edition.imageRibUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-400 hover:text-blue-300 hover:underline transition block"
-                  >
-                    Voir le RIB{isImageUrl(edition.imageRibUrl) ? ' en grand' : ''}
-                  </a>
-                </div>
+              {edition?.hasImageRib ? (
+                <img
+                  src={buildImageRibSrc(edition.id, edition.imageRibUpdatedAt)}
+                  alt="RIB du tournoi"
+                  className="max-w-xs rounded border border-slate-700"
+                />
+              ) : (
+                edition?.imageRibUrl && (
+                  <div className="space-y-1">
+                    {isImageUrl(edition.imageRibUrl) && (
+                      <img
+                        src={edition.imageRibUrl}
+                        alt="RIB du tournoi"
+                        className="max-w-xs rounded border border-slate-700"
+                      />
+                    )}
+                    <a
+                      href={edition.imageRibUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300 hover:underline transition block"
+                    >
+                      Voir le RIB{isImageUrl(edition.imageRibUrl) ? ' en grand' : ''}
+                    </a>
+                  </div>
+                )
               )}
             </div>
           )}
@@ -874,6 +1021,10 @@ function VueResponsable({
               )}
             </p>
           )}
+
+          {STATUTS_AVEC_RECAPITULATIF_PAIEMENT.includes(candidature.statut) && (
+            <RecapitulatifPaiementCarte candidature={candidature} edition={edition} />
+          )}
         </div>
 
         {showDossier &&
@@ -884,7 +1035,10 @@ function VueResponsable({
             <DossierPanel
               token={token}
               readOnly={candidature.statut === 'DOSSIER_COMPLET'}
-              onClose={() => setShowDossier(false)}
+              onClose={() => {
+                setShowDossier(false);
+                void rechargerCandidature();
+              }}
             />
           )}
       </div>
@@ -979,24 +1133,14 @@ function VueResponsable({
               Cette équipe vient d'être ajoutée et attend la validation de l'organisateur avant de pouvoir être inscrite.
             </p>
           )}
-          {selectedEquipe?.candidatureEnCours && (
-            <p className="text-sm text-orange-300 italic whitespace-pre-line">
-              {msgOr(
-                edition?.msgInscriptionEnCours,
-                "L'inscription de cette équipe a déjà été demandée. Rapproche-toi du club ou du porteur de l'équipe, ou contacte-nous (rubrique Contact ci-dessous) si tu penses qu'il s'agit d'une erreur.",
-              )}
-            </p>
-          )}
           {selectedEquipe ? (
-            selectedEquipe.candidatureEnCours ? null : (
-              <button
-                onClick={() => void handleSoumettre()}
-                disabled={submitting || !selectedEquipe.active}
-                className="w-full bg-blue-600 text-white rounded-lg py-2 font-medium hover:bg-blue-500 disabled:opacity-50 transition"
-              >
-                {submitting ? 'Envoi...' : 'Lancer la demande'}
-              </button>
-            )
+            <button
+              onClick={() => void handleSoumettre()}
+              disabled={submitting || !selectedEquipe.active}
+              className="w-full bg-blue-600 text-white rounded-lg py-2 font-medium hover:bg-blue-500 disabled:opacity-50 transition"
+            >
+              {submitting ? 'Envoi...' : 'Lancer la demande'}
+            </button>
           ) : (
             <p className="text-sm text-slate-500 italic">
               Sélectionne d'abord ton équipe à l'étape 1.

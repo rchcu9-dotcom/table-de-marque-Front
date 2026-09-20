@@ -7,7 +7,6 @@ describe("validateEditionForm", () => {
     const payload: UpdateEditionPayload = {
       dateDebut: "2026-04-01T00:00:00",
       dateFinDebut: "2026-05-01T23:59:59",
-      dateFinFin: "2026-05-10T23:59:59",
       fraisInscription: 120,
       prixRepas: 12,
       nbPlacesMax: 16,
@@ -56,31 +55,21 @@ describe("validateEditionForm", () => {
     expect(errors[0].field).toBe("dateFinDebut");
   });
 
-  // Contraintes croisées impliquant dateFinFin retirées (décision : ne garder que
-  // dateDebut ≤ dateFinDebut) — cf. docs/specs. Les deux cas ci-dessous vérifient que ce
-  // retrait est bien effectif, pas une régression vers l'ancien comportement.
-  it("n'signale plus dateFinFin antérieure à dateFinDebut (contrainte retirée)", () => {
-    const errors = validateEditionForm({
-      dateFinDebut: "2026-05-10T23:59:59",
-      dateFinFin: "2026-05-05T23:59:59",
-    });
-    expect(errors).toEqual([]);
-  });
-
-  it("n'signale plus dateFinFin antérieure à dateDebut (contrainte retirée)", () => {
-    const errors = validateEditionForm({
-      dateDebut: "2026-05-23T00:00:00",
-      dateFinFin: "2026-05-01T23:59:59",
-    });
-    expect(errors).toEqual([]);
-  });
-
   it("accepte des dates égales (fenêtre d'un seul jour)", () => {
     expect(
       validateEditionForm({
         dateDebut: "2026-05-23T00:00:00",
         dateFinDebut: "2026-05-23T00:00:00",
-        dateFinFin: "2026-05-23T00:00:00",
+      }),
+    ).toEqual([]);
+  });
+
+  it("ne connaît plus dateFinFin : un payload historique qui la porte encore ne produit aucune erreur", () => {
+    expect(
+      validateEditionForm({
+        dateDebut: "2026-05-23T00:00:00",
+        dateFinDebut: "2026-05-24T23:59:59",
+        ...({ dateFinFin: "2026-01-01T00:00:00" } as object),
       }),
     ).toEqual([]);
   });

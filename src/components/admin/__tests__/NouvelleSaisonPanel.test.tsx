@@ -18,12 +18,16 @@ vi.mock("../../../hooks/useInscriptionSession", () => ({
 
 const mockExportTaDump = vi.fn();
 const mockCreateEditionEnPreparation = vi.fn();
-const mockUpdateEditionEtape = vi.fn();
+const mockNavigate = vi.fn();
 vi.mock("../../../api/inscription", () => ({
   exportTaDump: (...args: unknown[]) => mockExportTaDump(...args),
   createEditionEnPreparation: (...args: unknown[]) => mockCreateEditionEnPreparation(...args),
-  updateEditionEtape: (...args: unknown[]) => mockUpdateEditionEtape(...args),
 }));
+
+vi.mock("react-router-dom", async (orig) => {
+  const mod = await orig<typeof import("react-router-dom")>();
+  return { ...mod, useNavigate: () => mockNavigate };
+});
 
 let mockInvalidateQueries: ReturnType<typeof vi.spyOn>;
 
@@ -156,6 +160,19 @@ describe("NouvelleSaisonPanel — création de la nouvelle édition (spec §5.2)
     );
   });
 
+  it("redirige vers /admin/parametres-inscription (où se trouve le switch) après création réussie", async () => {
+    await atteindreFormulaireCreation();
+    mockCreateEditionEnPreparation.mockResolvedValue({ id: 2 });
+
+    fireEvent.change(screen.getByLabelText("Nom"), { target: { value: "RCHC U11" } });
+    fireEvent.change(screen.getByLabelText("Catégorie"), { target: { value: "U11" } });
+    fireEvent.click(screen.getByRole("button", { name: "Créer la nouvelle édition" }));
+
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith("/admin/parametres-inscription"),
+    );
+  });
+
   it("affiche un message d'erreur et garde le formulaire affiché quand la création échoue (pas besoin de refaire le dump)", async () => {
     await atteindreFormulaireCreation();
     mockCreateEditionEnPreparation.mockRejectedValue(new Error("409"));
@@ -169,6 +186,7 @@ describe("NouvelleSaisonPanel — création de la nouvelle édition (spec §5.2)
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Créer la nouvelle édition" })).toBeInTheDocument();
     expect(mockExportTaDump).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
 
@@ -217,33 +235,12 @@ describe("NouvelleSaisonPanel — bloc édition en préparation (spec §5.3-5.4)
     expect(liens).toEqual(["/admin/parametres-inscription", "/admin/parametres-sportifs"]);
   });
 
-  it("ouvre les inscriptions : PATCH etape=INSCRIPTIONS_OUVERTES sur l'édition en préparation et invalide les deux caches", async () => {
-    mockUpdateEditionEtape.mockResolvedValue({ id: 2, etape: "INSCRIPTIONS_OUVERTES" });
+  it("n'affiche plus de bouton « Ouvrir les inscriptions » : l'ouverture se pilote via le switch de Paramètres d'inscription", () => {
     renderPanel();
-
-    fireEvent.click(screen.getByRole("button", { name: "Ouvrir les inscriptions" }));
-
-    await waitFor(() =>
-      expect(mockUpdateEditionEtape).toHaveBeenCalledWith(2, "INSCRIPTIONS_OUVERTES", "fake-token"),
-    );
-    await waitFor(() => {
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["inscription", "edition-en-preparation"],
-      });
-      expect(mockInvalidateQueries).toHaveBeenCalledWith({
-        queryKey: ["inscription", "edition-courante"],
-      });
-    });
-  });
-
-  it("affiche un message d'erreur explicite quand l'ouverture des inscriptions échoue", async () => {
-    mockUpdateEditionEtape.mockRejectedValue(new Error("500"));
-    renderPanel();
-
-    fireEvent.click(screen.getByRole("button", { name: "Ouvrir les inscriptions" }));
 
     expect(
-      await screen.findByText("Impossible d'ouvrir les inscriptions."),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /Ouvrir les inscriptions/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
   });
 });

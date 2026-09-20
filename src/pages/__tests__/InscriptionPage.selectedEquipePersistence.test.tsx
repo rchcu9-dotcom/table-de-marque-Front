@@ -70,7 +70,6 @@ function baseEdition(overrides: Record<string, unknown> = {}) {
     etape: "INSCRIPTIONS_OUVERTES",
     dateDebut: "2026-05-23T00:00:00",
     dateFinDebut: "2026-05-01T23:59:59",
-    dateFinFin: "2026-05-10T23:59:59",
     fraisInscription: 120,
     prixRepas: 12,
     nbPlacesMax: 16,

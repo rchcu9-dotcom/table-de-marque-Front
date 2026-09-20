@@ -3,11 +3,11 @@ import { fetchWithRetry } from './fetchWithRetry';
 import type { PosteJoueur } from '../utils/posteJoueur';
 import type {
   Edition,
-  EditionEtape,
   EquipeRef,
   ProfilInscription,
   MaCandidature,
   CandidatureOrganisateur,
+  ModePaiementRepas,
   DossierComplet,
   JoueurDossier,
   CoachDossier,
@@ -42,16 +42,13 @@ export type UpdateEditionPayload = Partial<{
   nom: string;
   categorie: string;
   annee: number;
-  etape: EditionEtape;
   dateDebut: string;
   dateFinDebut: string;
-  dateFinFin: string;
   fraisInscription: number;
   prixRepas: number;
   nbPlacesMax: number;
   imageUrl: string | null;
   imageDossierUrl: string | null;
-  imageRibUrl: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
   msgBienvenue: string | null;
@@ -88,16 +85,84 @@ export async function updateEdition(
 }
 
 /**
- * Restreint ici à la seule transition d'étape suivante (voir AdminPage) — le
- * passage à TOURNOI_DEMARRE reste refusé par le backend, seul
- * demarrerTournoi() peut l'atteindre.
+ * Switch « Inscriptions ouvertes / fermées » : transitions d'étape dédiées
+ * (409 si la transition n'est pas autorisée). Le PATCH générique n'accepte
+ * plus `etape` ; TOURNOI_DEMARRE reste réservé à demarrerTournoi().
  */
-export async function updateEditionEtape(
+export async function ouvrirInscriptions(
   editionId: number,
-  etape: EditionEtape,
   token: string,
 ): Promise<Edition> {
-  return updateEdition(editionId, { etape }, token);
+  const res = await fetchWithRetry(
+    inscriptionUrl(`/editions/${editionId}/ouvrir-inscriptions`),
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+  return res.json() as Promise<Edition>;
+}
+
+export async function cloturerInscriptions(
+  editionId: number,
+  token: string,
+): Promise<Edition> {
+  const res = await fetchWithRetry(
+    inscriptionUrl(`/editions/${editionId}/cloturer-inscriptions`),
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+  return res.json() as Promise<Edition>;
+}
+
+// ── Image RIB (upload binaire, remplace le champ URL collée) ───────────────
+
+export async function uploadImageRib(
+  editionId: number,
+  file: File,
+  token: string,
+): Promise<Edition> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetchWithRetry(
+    inscriptionUrl(`/editions/${editionId}/image-rib`),
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    },
+  );
+  return res.json() as Promise<Edition>;
+}
+
+export async function deleteImageRib(
+  editionId: number,
+  token: string,
+): Promise<Edition> {
+  const res = await fetchWithRetry(
+    inscriptionUrl(`/editions/${editionId}/image-rib`),
+    {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+  return res.json() as Promise<Edition>;
+}
+
+/**
+ * URL de récupération du binaire RIB, avec cache-busting basé sur
+ * imageRibUpdatedAt (évite qu'un navigateur affiche une image RIB périmée
+ * après un nouvel upload sur la même édition).
+ */
+export function buildImageRibSrc(
+  editionId: number,
+  imageRibUpdatedAt?: string,
+): string {
+  return inscriptionUrl(
+    `/editions/${editionId}/image-rib?v=${encodeURIComponent(imageRibUpdatedAt ?? '')}`,
+  );
 }
 
 // ── Années d'âge (paramètres d'inscription) ─────────────────────────────────
@@ -313,46 +378,20 @@ export async function fetchToutesCandidatures(token: string): Promise<Candidatur
   return res.json() as Promise<CandidatureOrganisateur[]>;
 }
 
-export async function accepterCandidature(
-  id: number,
-  token: string,
-): Promise<{ id: number; statut: string }> {
-  const res = await fetchWithRetry(inscriptionUrl(`/candidatures/${id}/accepter`), {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return res.json() as Promise<{ id: number; statut: string }>;
-}
+export type StatutTriageCible = 'PAIEMENT_ATTENDU' | 'LISTE_ATTENTE' | 'REFUSEE';
 
-export async function promouvoCandidature(
+export async function changerStatutTriage(
   id: number,
+  statut: StatutTriageCible,
   token: string,
 ): Promise<{ id: number; statut: string }> {
-  const res = await fetchWithRetry(inscriptionUrl(`/candidatures/${id}/promouvoir`), {
+  const res = await fetchWithRetry(inscriptionUrl(`/candidatures/${id}/statut-triage`), {
     method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return res.json() as Promise<{ id: number; statut: string }>;
-}
-
-export async function mettreListeAttente(
-  id: number,
-  token: string,
-): Promise<{ id: number; statut: string }> {
-  const res = await fetchWithRetry(inscriptionUrl(`/candidatures/${id}/liste-attente`), {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return res.json() as Promise<{ id: number; statut: string }>;
-}
-
-export async function refuserCandidature(
-  id: number,
-  token: string,
-): Promise<{ id: number; statut: string }> {
-  const res = await fetchWithRetry(inscriptionUrl(`/candidatures/${id}/refuser`), {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ statut }),
   });
   return res.json() as Promise<{ id: number; statut: string }>;
 }
@@ -373,6 +412,52 @@ export async function validerPaiement(
     body: JSON.stringify({ dateVirement }),
   });
   return res.json() as Promise<{ id: number; equipeNom: string; statut: string; dateVirementInscription: string }>;
+}
+
+/** `{ paye: false }` annule le paiement ; `paye: true` exige la date (AAAA-MM-JJ) et le mode. */
+export type PaiementRepasPayload =
+  | { paye: false }
+  | { paye: true; datePaiement: string; mode: ModePaiementRepas };
+
+export type PaiementRepasResult = {
+  id: number;
+  equipeNom: string;
+  repasPaiementRecu: boolean;
+  dateReceptionRepas: string | null;
+  datePaiementRepas: string | null;
+  repasModePaiement: ModePaiementRepas | null;
+};
+
+export async function marquerPaiementRepas(
+  id: number,
+  payload: PaiementRepasPayload,
+  token: string,
+): Promise<PaiementRepasResult> {
+  const res = await fetchWithRetry(inscriptionUrl(`/candidatures/${id}/repas-paiement`), {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  return res.json() as Promise<PaiementRepasResult>;
+}
+
+export async function definirCommentaireOrganisateur(
+  id: number,
+  commentaire: string,
+  token: string,
+): Promise<{ id: number; commentaireOrganisateur: string | null }> {
+  const res = await fetchWithRetry(inscriptionUrl(`/candidatures/${id}/commentaire-organisateur`), {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ commentaire }),
+  });
+  return res.json() as Promise<{ id: number; commentaireOrganisateur: string | null }>;
 }
 
 export async function validerDossier(

@@ -7,9 +7,11 @@ import type { Edition } from "../api/types/inscription.types";
 import { validateEditionForm, type EditionValidationError } from "../utils/editionValidation";
 import EditionIdentiteForm from "../components/admin/EditionIdentiteForm";
 import EditionDatesForm from "../components/admin/EditionDatesForm";
+import InscriptionsSwitch from "../components/admin/InscriptionsSwitch";
 import EditionTarifsForm from "../components/admin/EditionTarifsForm";
 import EditionAnneesAgeForm from "../components/admin/EditionAnneesAgeForm";
 import EditionContactImagesForm from "../components/admin/EditionContactImagesForm";
+import ImageRibUploadField from "../components/admin/ImageRibUploadField";
 import EditionMessagesAccordion from "../components/admin/EditionMessagesAccordion";
 import Spinner from "../components/ds/Spinner";
 import Breadcrumbs from "../components/navigation/Breadcrumbs";
@@ -21,7 +23,6 @@ function buildPayloadFromEdition(edition: Edition): UpdateEditionPayload {
     categorie: edition.categorie,
     dateDebut: edition.dateDebut,
     dateFinDebut: edition.dateFinDebut,
-    dateFinFin: edition.dateFinFin,
     fraisInscription: edition.fraisInscription,
     prixRepas: edition.prixRepas,
     nbPlacesMax: edition.nbPlacesMax,
@@ -29,7 +30,6 @@ function buildPayloadFromEdition(edition: Edition): UpdateEditionPayload {
     contactPhone: edition.contactPhone ?? "",
     imageUrl: edition.imageUrl ?? "",
     imageDossierUrl: edition.imageDossierUrl ?? "",
-    imageRibUrl: edition.imageRibUrl ?? "",
     msgBienvenue: edition.msgBienvenue ?? "",
     msgFaisonsConnaissance: edition.msgFaisonsConnaissance ?? "",
     msgSelectionEquipe: edition.msgSelectionEquipe ?? "",
@@ -55,10 +55,6 @@ export default function ParametresInscriptionPage() {
   // ces paramètres ciblent l'édition en préparation, jamais l'édition
   // sortante toujours affichée au public.
   const edition = editionEnPreparation ?? editionActive;
-  // Une édition en préparation naît directement à CREATION_NOUVEAU_TOURNOI (jamais CREEE) et
-  // ne peut par construction avoir de candidature soumise avant INSCRIPTIONS_OUVERTES — le
-  // warning ci-dessous (pensé pour l'édition active) serait donc un faux-positif permanent ici.
-  const isPreparation = !!editionEnPreparation;
   const updateEdition = useUpdateEdition(edition?.id ?? 0, token ?? "");
 
   const [form, setForm] = useState<UpdateEditionPayload | null>(null);
@@ -136,15 +132,9 @@ export default function ParametresInscriptionPage() {
           <span>Chargement…</span>
         </div>
       ) : (
+        <>
+        <InscriptionsSwitch edition={edition} token={token ?? ""} />
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
-          {!isPreparation && edition.etape !== "CREEE" && (
-            <div className="text-amber-300 text-sm px-3 py-2 rounded bg-amber-900/30 border border-amber-700">
-              L'édition n'est plus au stade "créée" ({edition.etape}) : modifier ces paramètres
-              peut créer des incohérences avec des candidatures déjà soumises. Vérifiez l'impact
-              avant d'enregistrer.
-            </div>
-          )}
-
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
             <EditionIdentiteForm values={form} errors={errors} onChange={handleChange} />
           </div>
@@ -167,6 +157,16 @@ export default function ParametresInscriptionPage() {
 
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
             <EditionContactImagesForm values={form} onChange={handleChange} />
+          </div>
+
+          <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
+            <ImageRibUploadField
+              editionId={edition.id}
+              token={token ?? ""}
+              hasImageRib={edition.hasImageRib}
+              imageRibUpdatedAt={edition.imageRibUpdatedAt}
+              imageRibUrlFallback={edition.imageRibUrl ?? null}
+            />
           </div>
 
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
@@ -193,6 +193,7 @@ export default function ParametresInscriptionPage() {
             {updateEdition.isPending ? "Enregistrement…" : "Enregistrer"}
           </button>
         </form>
+        </>
       )}
     </div>
   );

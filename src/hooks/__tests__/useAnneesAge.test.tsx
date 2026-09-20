@@ -28,10 +28,10 @@ const EDITION_MOCK: Edition = {
   etape: "CREEE",
   dateDebut: "2026-05-23T00:00:00.000Z",
   dateFinDebut: "2026-05-01T23:59:59.000Z",
-  dateFinFin: "2026-05-10T23:59:59.000Z",
   fraisInscription: 120,
   prixRepas: 12,
   nbPlacesMax: 16,
+  hasImageRib: false,
   affichagePlanningPublic: false,
   anneesAge: [2014, 2015],
 };

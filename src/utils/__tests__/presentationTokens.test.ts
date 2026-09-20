@@ -18,11 +18,11 @@ const EDITION: Edition = {
   annee: 2026,
   etape: "INSCRIPTIONS_OUVERTES",
   dateDebut: "2026-05-09T12:00:00.000Z",
-  dateFinDebut: "2026-05-09T12:00:00.000Z",
-  dateFinFin: "2026-05-10T12:00:00.000Z",
+  dateFinDebut: "2026-05-10T12:00:00.000Z",
   fraisInscription: 350,
   prixRepas: 12,
   nbPlacesMax: 16,
+  hasImageRib: false,
   affichagePlanningPublic: true,
   anneesAge: [2015, 2016],
 };
@@ -54,8 +54,21 @@ describe("buildPresentationTokens", () => {
     expect(tokens.dates).toBe("9 mai - 10 mai");
   });
 
+  it("uses dateFinDebut (fin du tournoi) as the range end and ignores any legacy dateFinFin", () => {
+    const edition = {
+      ...EDITION,
+      dateDebut: "2026-05-23T12:00:00.000Z",
+      dateFinDebut: "2026-05-24T12:00:00.000Z",
+      dateFinFin: "2026-01-01T12:00:00.000Z",
+    } as Edition;
+
+    const tokens = buildPresentationTokens(edition, STATIC_INFO);
+
+    expect(tokens.dates).toBe("23 mai - 24 mai");
+  });
+
   it("formats a single date without a range when start and end are the same day", () => {
-    const sameDay: Edition = { ...EDITION, dateDebut: "2026-05-09T12:00:00.000Z", dateFinFin: "2026-05-09T12:00:00.000Z" };
+    const sameDay: Edition = { ...EDITION, dateDebut: "2026-05-09T12:00:00.000Z", dateFinDebut: "2026-05-09T12:00:00.000Z" };
 
     const tokens = buildPresentationTokens(sameDay, STATIC_INFO);
 
