@@ -5,7 +5,7 @@ import PresentationNextButton from "../PresentationNextButton";
 describe("PresentationNextButton", () => {
   it("calls onClick when clicked", () => {
     const onClick = vi.fn();
-    render(<PresentationNextButton onClick={onClick} label="Écran suivant" />);
+    render(<PresentationNextButton onClick={onClick} label="Chapitre suivant" />);
 
     fireEvent.click(screen.getByTestId("presentation-next-button"));
 
@@ -13,15 +13,15 @@ describe("PresentationNextButton", () => {
   });
 
   it("exposes its label to assistive tech without showing text (it is a faceoff dot)", () => {
-    render(<PresentationNextButton onClick={vi.fn()} label="Écran suivant" />);
+    render(<PresentationNextButton onClick={vi.fn()} label="Chapitre suivant" />);
 
-    const button = screen.getByRole("button", { name: "Écran suivant" });
+    const button = screen.getByRole("button", { name: "Chapitre suivant" });
     expect(button).toHaveTextContent("");
   });
 
   it("uses the localised label it is given", () => {
-    render(<PresentationNextButton onClick={vi.fn()} label="Next screen" />);
+    render(<PresentationNextButton onClick={vi.fn()} label="Next chapter" />);
 
-    expect(screen.getByRole("button", { name: "Next screen" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next chapter" })).toBeInTheDocument();
   });
 });

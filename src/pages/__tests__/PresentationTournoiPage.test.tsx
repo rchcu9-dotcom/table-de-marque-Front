@@ -219,6 +219,114 @@ describe("PresentationTournoiPage", () => {
     expect(scrollIntoViewMock).toHaveBeenCalled();
   });
 
+  describe("navigation chapitres / sous-écrans", () => {
+    const twoMultiScreenChapters = (): PresentationGroupe[] => [
+      groupesFixture[0],
+      {
+        ...groupesFixture[1],
+        articles: [
+          groupesFixture[1].articles[0],
+          { ...groupesFixture[1].articles[0], titre: "Photos", titreEn: "Photos" },
+        ],
+      },
+    ];
+
+    // IntersectionObserver piloté à la main, indexé par l'id du panneau observé.
+    function stubIntersectionObserver() {
+      const callbacks = new Map<string, IntersectionObserverCallback>();
+      class FakeIntersectionObserver {
+        constructor(private callback: IntersectionObserverCallback) {}
+        observe = (el: Element) => callbacks.set(el.id, this.callback);
+        disconnect = vi.fn();
+        unobserve = vi.fn();
+      }
+      vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
+      return (id: string, isIntersecting: boolean) =>
+        act(() => {
+          callbacks.get(id)!([{ isIntersecting } as IntersectionObserverEntry], {} as IntersectionObserver);
+        });
+    }
+
+    function isShown(titre: string) {
+      return screen.getByTestId(`presentation-subtheme-${titre}`).getAttribute("aria-hidden") === "false";
+    }
+
+    it("the explicit pause is global: pausing from one chapter pauses every chapter (CA16)", () => {
+      mockUsePresentation = () => ({ data: twoMultiScreenChapters(), isLoading: false, isError: false });
+      renderPage();
+
+      const [first, second] = screen.getAllByTestId("presentation-autoplay-toggle");
+      expect(first).toHaveAttribute("aria-pressed", "false");
+      expect(second).toHaveAttribute("aria-pressed", "false");
+
+      fireEvent.click(first);
+      expect(first).toHaveAttribute("aria-pressed", "true");
+      expect(second).toHaveAttribute("aria-pressed", "true");
+
+      fireEvent.click(second);
+      expect(first).toHaveAttribute("aria-pressed", "false");
+      expect(second).toHaveAttribute("aria-pressed", "false");
+    });
+
+    it("←/→ only drive the active chapter (CA11)", () => {
+      const setVisible = stubIntersectionObserver();
+      mockUsePresentation = () => ({ data: twoMultiScreenChapters(), isLoading: false, isError: false });
+      renderPage();
+
+      setVisible("presentation-panneau-0", true);
+      fireEvent.keyDown(document, { key: "ArrowRight" });
+      expect(isShown("Inscription")).toBe(true);
+      expect(isShown("Chaîne YouTube")).toBe(true);
+
+      setVisible("presentation-panneau-0", false);
+      setVisible("presentation-panneau-1", true);
+      fireEvent.keyDown(document, { key: "ArrowRight" });
+      expect(isShown("Photos")).toBe(true);
+      expect(isShown("Inscription")).toBe(true);
+    });
+
+    it("←/→ are ignored when the outro panel is active (CA12)", () => {
+      const setVisible = stubIntersectionObserver();
+      mockUsePresentation = () => ({ data: twoMultiScreenChapters(), isLoading: false, isError: false });
+      renderPage();
+
+      setVisible("presentation-panneau-2", true);
+      const event = new KeyboardEvent("keydown", { key: "ArrowRight", cancelable: true });
+      document.dispatchEvent(event);
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(isShown("Résumé")).toBe(true);
+      expect(isShown("Chaîne YouTube")).toBe(true);
+    });
+
+    it("↓ on the last chapter scrolls to the outro panel (CA3)", () => {
+      mockUsePresentation = () => ({ data: twoMultiScreenChapters(), isLoading: false, isError: false });
+      const scrollIntoViewMock = vi.fn();
+      (Element.prototype as unknown as { scrollIntoView: () => void }).scrollIntoView = scrollIntoViewMock;
+      renderPage();
+
+      const lastChapter = screen.getByTestId("presentation-chapter-Médias");
+      fireEvent.click(within(lastChapter).getByTestId("presentation-next-button"));
+
+      expect(scrollIntoViewMock).toHaveBeenCalledTimes(1);
+      expect(scrollIntoViewMock.mock.contexts[0]).toBe(screen.getByTestId("presentation-outro"));
+      expect(within(screen.getByTestId("presentation-outro")).queryByTestId("presentation-next-button")).toBeNull();
+    });
+
+    it("↓ on the first chapter scrolls to the second one, whatever the active subscreen (CA1)", () => {
+      mockUsePresentation = () => ({ data: twoMultiScreenChapters(), isLoading: false, isError: false });
+      const scrollIntoViewMock = vi.fn();
+      (Element.prototype as unknown as { scrollIntoView: () => void }).scrollIntoView = scrollIntoViewMock;
+      renderPage();
+
+      const firstChapter = screen.getByTestId("presentation-chapter-Présentation");
+      fireEvent.click(within(firstChapter).getByTestId("presentation-next-button"));
+
+      expect(scrollIntoViewMock.mock.contexts[0]).toBe(screen.getByTestId("presentation-chapter-Médias"));
+      expect(isShown("Résumé")).toBe(true);
+    });
+  });
+
   it("switches the active subtheme text to English via the language toggle", () => {
     mockUsePresentation = () => ({ data: groupesFixture, isLoading: false, isError: false });
 

@@ -7,6 +7,7 @@ import {
 } from "../../utils/presentationContent";
 import { parseFaits } from "../../utils/presentationFaits";
 import { resolveTokens, type PresentationTokens } from "../../utils/presentationTokens";
+import { getSubthemeHeadline } from "../../utils/presentationSubtheme";
 import PresentationMapsLink from "./PresentationMapsLink";
 
 type Props = {
@@ -28,9 +29,7 @@ export default function PresentationSubtheme({ article, tokens, lang, isActive }
   // (une simple étiquette, ex. « Informations ») et `description` (souvent
   // plusieurs paragraphes). Repli sur ces derniers tant qu'un article n'a pas
   // encore été complété, pour ne jamais afficher un écran sans texte.
-  const titreAccroche = resolve(article.titreAccroche, article.titreAccrocheEn);
-  const titre = resolve(article.titre, article.titreEn);
-  const headline = titreAccroche || titre;
+  const headline = getSubthemeHeadline(article, lang, tokens);
 
   const descriptionCourte = resolve(article.descriptionCourte, article.descriptionCourteEn);
   const description = resolve(article.description, article.descriptionEn);

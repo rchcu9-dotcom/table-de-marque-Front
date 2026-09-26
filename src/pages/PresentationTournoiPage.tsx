@@ -15,6 +15,8 @@ export default function PresentationTournoiPage() {
   const { edition } = useInscriptionSession();
   const [lang, setLang] = React.useState<ContentLang>("fr");
   const [activePanel, setActivePanel] = React.useState(0);
+  // Pause explicite de l'avance automatique (WCAG 2.2.2) : vaut pour tous les chapitres.
+  const [isUserPaused, setIsUserPaused] = React.useState(false);
   const visibleMapRef = React.useRef<Record<number, boolean>>({});
 
   const tokens = React.useMemo(
@@ -86,6 +88,9 @@ export default function PresentationTournoiPage() {
             lang={lang}
             onNextPanel={() => scrollToPanel(Math.min(index + 1, outroIndex))}
             onVisibleChange={handleVisibleChange}
+            isActive={activePanel === index}
+            isUserPaused={isUserPaused}
+            onUserPausedChange={setIsUserPaused}
           />
         ))}
 
