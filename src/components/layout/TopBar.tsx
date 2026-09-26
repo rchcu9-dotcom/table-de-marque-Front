@@ -6,7 +6,7 @@ import type { TabItem } from "../navigation/tabsConfig";
 import { useSelectedTeam } from "../../providers/SelectedTeamProvider";
 import { useTeams } from "../../hooks/useTeams";
 import { useInscriptionSession } from "../../hooks/useInscriptionSession";
-import { getInscriptionMenuItems, getTournamentTabItems, isTournamentBuilt } from "../../utils/inscriptionMenus";
+import { getTournamentTabItems, isTournamentBuilt } from "../../utils/inscriptionMenus";
 import AuthButton from "./AuthButton";
 
 type Props = {
@@ -24,12 +24,12 @@ export default function TopBar({ children }: Props) {
   const selectorBtnRef = React.useRef<HTMLElement | null>(null);
   const { selectedTeam, setSelectedTeam, toggleMuted } = useSelectedTeam();
   const { data: teams } = useTeams();
-  const { role, etape, hasDossierAccess, edition } = useInscriptionSession();
+  const { role, etape, edition } = useInscriptionSession();
   const nomTournoi = edition?.nom ?? "Tournoi RCHC U11 2026";
-  const allMenuItems = [
-    ...getTournamentTabItems(menuConfig, role, etape),
-    ...getInscriptionMenuItems(role, etape, hasDossierAccess),
-  ];
+  // Le hamburger ne porte que menuConfig : les items d'inscription (Inscription, Admin, Table)
+  // et tabsConfig sont déjà dans la barre visible (Tabs), pas de doublon.
+  const allMenuItems = getTournamentTabItems(menuConfig, role, etape);
+  const hasMenuItems = allMenuItems.length > 0;
   const uniqueTeams = React.useMemo(() => {
     const map = new Map<string, { id: string; name: string; logoUrl?: string | null }>();
     (teams ?? []).forEach((t) => {
@@ -89,22 +89,25 @@ export default function TopBar({ children }: Props) {
     <header className="h-14 md:h-16 border-b border-slate-800 flex items-center px-3 md:px-4 bg-slate-950/80 backdrop-blur relative">
       <div className="flex items-center justify-between w-full gap-4 max-w-6xl mx-auto">
         <div className="flex items-center gap-3 min-w-0">
-          <button
-            type="button"
-            aria-label="Ouvrir le menu"
-            className="md:hidden rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2 text-slate-100 hover:bg-slate-800 flex items-center gap-2"
-            onClick={() => {
-              setOpen((v) => !v);
-              updateMenuPos(menuBtnRefMobile);
-            }}
-            ref={menuBtnRefMobile}
-          >
-            <span className="flex flex-col gap-1">
-              <span className="block w-5 h-0.5 bg-slate-100" />
-              <span className="block w-5 h-0.5 bg-slate-100" />
-              <span className="block w-5 h-0.5 bg-slate-100" />
-            </span>
-          </button>
+          {hasMenuItems ? (
+            <button
+              type="button"
+              aria-label="Ouvrir le menu"
+              className="md:hidden rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2 text-slate-100 hover:bg-slate-800 flex items-center gap-2"
+              onClick={() => {
+                setOpen((v) => !v);
+                updateMenuPos(menuBtnRefMobile);
+              }}
+              ref={menuBtnRefMobile}
+            >
+              <span className="flex flex-col gap-1">
+                <span className="block w-5 h-0.5 bg-slate-100" />
+                <span className="block w-5 h-0.5 bg-slate-100" />
+                <span className="block w-5 h-0.5 bg-slate-100" />
+              </span>
+              <span className="text-xs font-semibold">Plus</span>
+            </button>
+          ) : null}
           <div className="text-sm md:text-base font-semibold text-white truncate">
             {nomTournoi}
           </div>
@@ -114,23 +117,25 @@ export default function TopBar({ children }: Props) {
           <div className="hidden md:flex">
             <Tabs variant="top" />
           </div>
-          <button
-            type="button"
-            aria-label="Ouvrir le menu"
-            className="hidden md:flex rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2 text-slate-100 hover:bg-slate-800 items-center gap-2"
-            onClick={() => {
-              setOpen((v) => !v);
-              updateMenuPos(menuBtnRefDesktop);
-            }}
-            ref={menuBtnRefDesktop}
-          >
-            <span className="flex flex-col gap-1">
-              <span className="block w-5 h-0.5 bg-slate-100" />
-              <span className="block w-5 h-0.5 bg-slate-100" />
-              <span className="block w-5 h-0.5 bg-slate-100" />
-            </span>
-            <span className="text-xs font-semibold">Plus</span>
-          </button>
+          {hasMenuItems ? (
+            <button
+              type="button"
+              aria-label="Ouvrir le menu"
+              className="hidden md:flex rounded-lg border border-slate-700 bg-slate-900/80 px-3 py-2 text-slate-100 hover:bg-slate-800 items-center gap-2"
+              onClick={() => {
+                setOpen((v) => !v);
+                updateMenuPos(menuBtnRefDesktop);
+              }}
+              ref={menuBtnRefDesktop}
+            >
+              <span className="flex flex-col gap-1">
+                <span className="block w-5 h-0.5 bg-slate-100" />
+                <span className="block w-5 h-0.5 bg-slate-100" />
+                <span className="block w-5 h-0.5 bg-slate-100" />
+              </span>
+              <span className="text-xs font-semibold">Plus</span>
+            </button>
+          ) : null}
           {isTournamentBuilt(etape) ? (
             <div className="flex items-center gap-2" ref={(node) => { selectorBtnRef.current = node; }}>
               {selectedTeam ? (
@@ -178,7 +183,7 @@ export default function TopBar({ children }: Props) {
           <AuthButton />
         </div>
       </div>
-      {open ? (
+      {open && hasMenuItems ? (
         <MobileMenu
           top={menuPos.top}
           left={menuPos.left}

@@ -394,7 +394,7 @@
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  border: 2px solid var(--center-red);
+  border: 2px solid var(--nav-accent-green);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -404,7 +404,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--center-red);
+  background: var(--nav-accent-green);
 }
 .presentation-outro .presentation-headline {
   font-size: clamp(38px, 6vw, 64px);

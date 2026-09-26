@@ -1,6 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 import TopBar from "../TopBar";
@@ -199,6 +199,124 @@ describe("TopBar — masquage du bouton Suivre une équipe avant clôture", () =
 
     expect(screen.queryByText("Quelle équipe suivre ?")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Suivre une équipe" })).not.toBeInTheDocument();
+  });
+});
+
+describe("TopBar — composition barre visible / hamburger", () => {
+  const HAMBURGER_LABEL = "Ouvrir le menu";
+
+  /** Libellés (aria-label) des boutons de la barre visible (Tabs variant top). */
+  function visibleBarLabels(): string[] {
+    const bar = screen.getAllByRole("navigation")[0];
+    return within(bar)
+      .getAllByRole("button")
+      .map((b) => b.getAttribute("aria-label") ?? "");
+  }
+
+  /** Ouvre le hamburger et renvoie les libellés de ses items (dernier <nav>). */
+  function hamburgerLabels(): string[] {
+    fireEvent.click(screen.getAllByRole("button", { name: HAMBURGER_LABEL })[0]);
+    const navs = screen.getAllByRole("navigation");
+    const menu = navs[navs.length - 1];
+    return within(menu)
+      .getAllByRole("button")
+      .map((b) => b.textContent ?? "");
+  }
+
+  it("tournoi construit : le hamburger contient exactement Live, Challenge, Tournoi 3v3", () => {
+    mockEtape = "CLOTUREE";
+    mockRole = "ORGANISATEUR";
+    renderTopBar();
+
+    const menu = hamburgerLabels();
+    expect(menu.map((l) => l.trim())).toEqual([
+      expect.stringContaining("Live"),
+      expect.stringContaining("Challenge"),
+      expect.stringContaining("Tournoi 3v3"),
+    ]);
+  });
+
+  it("tournoi construit : la barre visible porte Accueil, Planning, Tournoi 5v5, Inscription, Admin", () => {
+    mockEtape = "CLOTUREE";
+    mockRole = "ORGANISATEUR";
+    renderTopBar();
+
+    expect(visibleBarLabels()).toEqual([
+      "Accueil",
+      "Planning",
+      "Tournoi 5v5",
+      "Inscription",
+      "Admin",
+    ]);
+  });
+
+  it.each<[ProfilRole | null, EditionEtape]>([
+    [null, "CLOTUREE"],
+    ["ORGANISATEUR", "CLOTUREE"],
+    ["ORGANISATEUR", "TOURNOI_DEMARRE"],
+    ["TABLE_DE_MARQUE", "CLOTUREE"],
+    ["RESPONSABLE_EQUIPE", "CREEE"],
+  ])("aucun recoupement barre visible / hamburger (rôle=%s, étape=%s)", (role, etape) => {
+    mockRole = role;
+    mockEtape = etape;
+    renderTopBar();
+
+    const bar = visibleBarLabels();
+    if (screen.queryAllByRole("button", { name: HAMBURGER_LABEL }).length === 0) return;
+    const menu = hamburgerLabels();
+    for (const label of menu) {
+      expect(bar.some((b) => label.includes(b))).toBe(false);
+    }
+  });
+
+  it("« Inscription » n'apparaît qu'une seule fois, dans la barre visible, une fois le menu ouvert", () => {
+    mockEtape = "CLOTUREE";
+    mockRole = "ORGANISATEUR";
+    renderTopBar();
+
+    fireEvent.click(screen.getAllByRole("button", { name: HAMBURGER_LABEL })[0]);
+
+    expect(screen.getAllByText("Inscription")).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Inscription" })).toHaveLength(1);
+  });
+
+  it.each<[ProfilRole | null, EditionEtape]>([
+    ["ORGANISATEUR", "INSCRIPTIONS_OUVERTES"],
+    ["TABLE_DE_MARQUE", "INSCRIPTIONS_OUVERTES"],
+    ["RESPONSABLE_EQUIPE", "INSCRIPTIONS_OUVERTES"],
+    [null, "CREEE"],
+  ])("phase d'inscription (rôle=%s, étape=%s) : liste vide, aucun bouton hamburger", (role, etape) => {
+    mockRole = role;
+    mockEtape = etape;
+    renderTopBar();
+
+    expect(screen.queryByRole("button", { name: HAMBURGER_LABEL })).not.toBeInTheDocument();
+    expect(screen.queryByText("Plus")).not.toBeInTheDocument();
+  });
+
+  it("les deux boutons hamburger (mobile et desktop) portent le libellé « Plus »", () => {
+    mockEtape = "CLOTUREE";
+    renderTopBar();
+
+    const buttons = screen.getAllByRole("button", { name: HAMBURGER_LABEL });
+    expect(buttons).toHaveLength(2);
+    buttons.forEach((b) => expect(b).toHaveTextContent("Plus"));
+  });
+
+  it("ferme le menu résiduel quand la liste devient vide", () => {
+    mockEtape = "CLOTUREE";
+    const { rerender } = renderTopBar();
+    fireEvent.click(screen.getAllByRole("button", { name: HAMBURGER_LABEL })[0]);
+    expect(screen.getAllByRole("navigation")).toHaveLength(2);
+
+    mockEtape = "INSCRIPTIONS_OUVERTES";
+    rerender(
+      <MemoryRouter>
+        <TopBar />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getAllByRole("navigation")).toHaveLength(1);
   });
 });
 
