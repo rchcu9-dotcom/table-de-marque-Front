@@ -51,7 +51,8 @@
   "pnpm": {
     "overrides": {
       "vite": "npm:rolldown-vite@7.2.5",
-      "@tanstack/query-core": "5.90.16"
+      "@tanstack/query-core": "5.90.16",
+      "@grpc/grpc-js": "^1.13.6"
     }
   }
 }
