@@ -186,6 +186,9 @@ export async function startMockBack(
   ];
 
   const server = http.createServer(async (req, res) => {
+    // Pas de keep-alive : chaque test relance un faux back sur le même port, et un
+    // client (undici, Node 20) réutiliserait sinon un socket du serveur précédent.
+    res.shouldKeepAlive = false;
     // CORS
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS");
