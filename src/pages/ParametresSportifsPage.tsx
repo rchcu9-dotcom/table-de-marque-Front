@@ -28,6 +28,9 @@ import EditionJoursTable from "../components/planning/EditionJoursTable";
 import ActiviteCatalogueTable from "../components/planning/ActiviteCatalogueTable";
 import CreneauxActiviteTable from "../components/planning/CreneauxActiviteTable";
 import Spinner from "../components/ds/Spinner";
+import BandeauVerrou from "../components/admin/BandeauVerrou";
+import { useConflitVerrou } from "../hooks/useConflitVerrou";
+import { formuleSportiveModifiable, MESSAGE_FORMULE_FIGEE } from "../utils/editionRegles";
 import Breadcrumbs from "../components/navigation/Breadcrumbs";
 import { ACCUEIL_CRUMB, ADMIN_CRUMB } from "../components/navigation/breadcrumbItems";
 
@@ -42,13 +45,17 @@ export default function ParametresSportifsPage() {
   // pilote à la fois le ciblage et le readOnly : consulter l'édition démarrée hors de ce
   // contexte n'a pas de sens (elle est gelée), donc pas besoin d'un flag readOnly séparé.
   const consultationEditionDemarree = searchParams.get("edition") === "demarree";
-  const readOnly = consultationEditionDemarree;
   // Cycle annuel de l'édition (spec §3) : pendant CREATION_NOUVEAU_TOURNOI,
   // ces paramètres ciblent l'édition en préparation, jamais l'édition
   // sortante toujours affichée au public — sauf consultation explicite ci-dessus.
-  const editionId = consultationEditionDemarree
-    ? edition?.id
-    : (editionEnPreparation?.id ?? edition?.id);
+  const editionCible = consultationEditionDemarree
+    ? edition
+    : (editionEnPreparation ?? edition);
+  const editionId = editionCible?.id;
+  // Formule sportive figée au lancement du tournoi (règle appliquée aussi côté
+  // back, 409), indépendamment de ?edition=demarree qui ne fait que cibler.
+  const formuleFigee = !!editionCible && !formuleSportiveModifiable(editionCible.etape);
+  const readOnly = consultationEditionDemarree || formuleFigee;
 
   const {
     data: parametres,
@@ -69,6 +76,17 @@ export default function ParametresSportifsPage() {
   const createCreneau = useCreateCreneauActivite(editionId ?? 0, token ?? "");
   const updateCreneau = useUpdateCreneauActivite(editionId ?? 0, token ?? "");
   const deleteCreneau = useDeleteCreneauActivite(editionId ?? 0, token ?? "");
+  const conflit = useConflitVerrou([
+    updateParametres.error,
+    upsertJour.error,
+    deleteJour.error,
+    createActivite.error,
+    updateActivite.error,
+    deleteActivite.error,
+    createCreneau.error,
+    updateCreneau.error,
+    deleteCreneau.error,
+  ]);
 
   if (sessionLoading) {
     return (
@@ -91,11 +109,21 @@ export default function ParametresSportifsPage() {
       <Breadcrumbs items={[ACCUEIL_CRUMB, ADMIN_CRUMB, { label: "Paramètres sportifs" }]} />
       <h1 className="text-slate-100 text-xl font-bold">Paramètres sportifs</h1>
 
-      {readOnly && (
-        <div className="bg-blue-950/40 border border-blue-800 rounded-lg px-4 py-2 text-sm text-blue-300">
-          Consultation en lecture seule de l'édition démarrée — référence pour construire
-          la nouvelle édition.
-        </div>
+      {formuleFigee ? (
+        <BandeauVerrou message={MESSAGE_FORMULE_FIGEE} />
+      ) : (
+        readOnly && (
+          <div className="bg-blue-950/40 border border-blue-800 rounded-lg px-4 py-2 text-sm text-blue-300">
+            Consultation en lecture seule de l'édition démarrée — référence pour construire
+            la nouvelle édition.
+          </div>
+        )
+      )}
+
+      {conflit && !formuleFigee && (
+        <p role="alert" className="text-sm text-red-400">
+          {conflit.message}
+        </p>
       )}
 
       {parametresError ? (

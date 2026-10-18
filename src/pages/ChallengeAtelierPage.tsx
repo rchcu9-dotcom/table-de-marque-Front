@@ -10,6 +10,7 @@ import tirIcon from "../assets/icons/nav/tir.png";
 import agiliteIcon from "../assets/icons/nav/agilite.png";
 import Breadcrumbs from "../components/navigation/Breadcrumbs";
 import { ACCUEIL_CRUMB, CHALLENGE_CRUMB } from "../components/navigation/breadcrumbItems";
+import { preparerRecherche } from "../utils/recherche";
 
 const ATELIER_LABEL: Record<string, string> = {
   vitesse: "Atelier Vitesse",
@@ -54,13 +55,9 @@ export default function ChallengeAtelierPage() {
     const filtered = selectedTeam?.id
       ? started.filter((a) => (a.equipeId ?? "").toLowerCase() === selectedTeam.id.toLowerCase())
       : started;
-    const term = search.trim().toLowerCase();
-    if (!term) return filtered;
-    return filtered.filter((a) => {
-      const joueur = (a.joueurName ?? "").toLowerCase();
-      const equipe = (a.equipeName ?? "").toLowerCase();
-      return joueur.includes(term) || equipe.includes(term) || (a.equipeId ?? "").toLowerCase().includes(term);
-    });
+    const correspond = preparerRecherche(search);
+    if (!correspond) return filtered;
+    return filtered.filter((a) => correspond([a.joueurName, a.equipeId, a.equipeName]));
   }, [atelierType, data?.jour1, search, selectedTeam]);
 
   const sorted = React.useMemo(() => {

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { uploadImageRib, deleteImageRib } from '../api/inscription';
 import { EDITION_QUERY_KEY } from './useInscriptionSession';
+import { estConflitEtat } from './useChangerEtapeEdition';
 import { EDITION_EN_PREPARATION_QUERY_KEY } from './useEditionEnPreparation';
 
 /**
@@ -22,6 +23,10 @@ export function useUploadImageRib(editionId: number, token: string) {
   return useMutation({
     mutationFn: (file: File) => uploadImageRib(editionId, file, token),
     onSuccess: () => invalidateEditionQueries(queryClient),
+    // 409 : l'étape a changé entre-temps (paramètres figés) → resynchroniser.
+    onError: (e) => {
+      if (estConflitEtat(e)) invalidateEditionQueries(queryClient);
+    },
   });
 }
 
@@ -30,5 +35,9 @@ export function useDeleteImageRib(editionId: number, token: string) {
   return useMutation({
     mutationFn: () => deleteImageRib(editionId, token),
     onSuccess: () => invalidateEditionQueries(queryClient),
+    // 409 : l'étape a changé entre-temps (paramètres figés) → resynchroniser.
+    onError: (e) => {
+      if (estConflitEtat(e)) invalidateEditionQueries(queryClient);
+    },
   });
 }

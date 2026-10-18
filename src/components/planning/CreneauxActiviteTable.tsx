@@ -28,6 +28,25 @@ function combine(date: string, time: string): string {
   return new Date(`${date}T${time}:00`).toISOString();
 }
 
+/** Tri d'affichage : date croissante, puis heure de début, puis ordre de création (id). */
+function comparerCreneaux(a: CreneauActivite, b: CreneauActivite): number {
+  return (
+    toDateInput(a.date).localeCompare(toDateInput(b.date)) ||
+    toTimeInput(a.heureDebut).localeCompare(toTimeInput(b.heureDebut)) ||
+    a.id - b.id
+  );
+}
+
+/** Copie à l'identique (activité, date, heure, durée) ; le clone naît libre. */
+function payloadClone(creneau: CreneauActivite): UpsertCreneauActivitePayload {
+  return {
+    activiteId: creneau.activiteId,
+    date: toDateInput(creneau.date),
+    heureDebut: creneau.heureDebut,
+    dureeMin: creneau.dureeMin,
+  };
+}
+
 function CreneauForm({
   creneau,
   activitesCatalogue,
@@ -167,9 +186,7 @@ export default function CreneauxActiviteTable({
   readOnly = false,
 }: Props) {
   const [showAddForm, setShowAddForm] = useState(false);
-  const creneauxTries = [...creneaux].sort(
-    (a, b) => new Date(a.heureDebut).getTime() - new Date(b.heureDebut).getTime(),
-  );
+  const creneauxTries = [...creneaux].sort(comparerCreneaux);
 
   const handleCreate = (payload: UpsertCreneauActivitePayload, nbExemplaires: number) => {
     for (let i = 0; i < nbExemplaires; i++) onCreate(payload);
@@ -193,6 +210,16 @@ export default function CreneauxActiviteTable({
             <span className="text-xs text-emerald-400">
               Confirmé — {creneau.equipeLabel ?? `#${creneau.equipeId}`}
             </span>
+          )}
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={() => onCreate(payloadClone(creneau))}
+              disabled={isSaving}
+              className="text-blue-400 hover:text-blue-300 text-xs disabled:opacity-50"
+            >
+              Cloner
+            </button>
           )}
           {!readOnly && (
             <button

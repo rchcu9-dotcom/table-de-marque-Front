@@ -1,12 +1,7 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  useEditionEnPreparation,
-  EDITION_EN_PREPARATION_QUERY_KEY,
-} from "../../hooks/useEditionEnPreparation";
+import { EDITION_EN_PREPARATION_QUERY_KEY } from "../../hooks/useEditionEnPreparation";
 import { exportTaDump, createEditionEnPreparation } from "../../api/inscription";
-import PhaseCycleFrise from "./PhaseCycleFrise";
 
 type EtapeDump = "idle" | "dumping" | "dump-ok" | "dump-error";
 
@@ -24,8 +19,9 @@ function declencherTelechargement(blob: Blob, filename: string): void {
 /**
  * Cycle annuel de l'édition (docs/specs/title-cycle-annuel-de-ldition-dump-
  * obligatoire-prparation-de.md) : dump bloquant des tables TA_* puis
- * création de l'édition suivante, affichée ici tant que
- * `etape === 'TOURNOI_DEMARRE'` sur l'édition sortante. Le formulaire de
+ * création de l'édition suivante. Rendu par le bloc « Pilotage du tournoi »
+ * dans l'étape « Tournoi en cours », tant qu'aucune édition en préparation
+ * n'existe ; une fois créée, celle-ci apparaît dans sa propre carte. Le formulaire de
  * création (état `dump-ok`) reste affiché même après un échec de création
  * (l'organisateur réessaie sans refaire le dump, déjà réussi).
  */
@@ -37,9 +33,6 @@ export default function NouvelleSaisonPanel({
   editionActiveId: number;
 }) {
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const { data: editionEnPreparation, isLoading: chargementPreparation } =
-    useEditionEnPreparation(token);
 
   const [etapeDump, setEtapeDump] = useState<EtapeDump>("idle");
   const [erreurDump, setErreurDump] = useState<string | null>(null);
@@ -49,10 +42,6 @@ export default function NouvelleSaisonPanel({
   const [annee, setAnnee] = useState(() => new Date().getFullYear() + 1);
   const [creation, setCreation] = useState(false);
   const [erreurCreation, setErreurCreation] = useState<string | null>(null);
-
-  if (chargementPreparation) {
-    return null;
-  }
 
   const handleDump = async () => {
     setEtapeDump("dumping");
@@ -73,9 +62,9 @@ export default function NouvelleSaisonPanel({
     setErreurCreation(null);
     try {
       await createEditionEnPreparation({ nom, categorie, annee }, token);
+      // L'édition créée apparaît dans sa propre carte du bloc « Pilotage du
+      // tournoi », où « Ouvrir les inscriptions » est le bouton principal.
       await queryClient.invalidateQueries({ queryKey: EDITION_EN_PREPARATION_QUERY_KEY });
-      // L'ouverture des inscriptions se pilote via le switch de « Paramètres d'inscription ».
-      navigate("/admin/parametres-inscription");
     } catch {
       setErreurCreation("Impossible de créer la nouvelle édition.");
     } finally {
@@ -83,37 +72,11 @@ export default function NouvelleSaisonPanel({
     }
   };
 
-  if (editionEnPreparation) {
-    return (
-      <div className="border-t border-slate-800 pt-4 mt-2 flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wide">
-          Édition en préparation : {editionEnPreparation.nom} {editionEnPreparation.annee}
-        </h2>
-
-        <PhaseCycleFrise etape={editionEnPreparation.etape} size="compact" />
-
-        <Link
-          to="/admin/parametres-inscription"
-          className="bg-slate-800 hover:bg-slate-700 rounded-lg px-4 py-3 text-sm font-semibold text-white transition"
-        >
-          Paramètres d'inscription
-        </Link>
-
-        <Link
-          to="/admin/parametres-sportifs"
-          className="bg-slate-800 hover:bg-slate-700 rounded-lg px-4 py-3 text-sm font-semibold text-white transition"
-        >
-          Paramètres sportifs
-        </Link>
-      </div>
-    );
-  }
-
   return (
-    <div className="border-t border-slate-800 pt-4 mt-2 flex flex-col gap-3">
-      <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wide">
-        Préparer la saison suivante
-      </h2>
+    <div className="flex flex-col gap-3">
+      <p className="text-xs text-slate-400">
+        Sauvegarde des données du tournoi (téléchargement), puis création de l'édition suivante.
+      </p>
 
       {etapeDump !== "dump-ok" && (
         <button
@@ -126,7 +89,7 @@ export default function NouvelleSaisonPanel({
             ? "Téléchargement du dump…"
             : etapeDump === "dump-error"
               ? "Réessayer le dump"
-              : "Préparer la nouvelle saison"}
+              : "Préparer la saison suivante"}
         </button>
       )}
       {erreurDump && <p className="text-sm text-red-400">{erreurDump}</p>}

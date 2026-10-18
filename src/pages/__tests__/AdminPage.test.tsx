@@ -7,15 +7,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import AdminPage from "../AdminPage";
 
 const mockNavigate = vi.fn();
-const mockDemarrerTournoi = vi.fn();
-const mockInvalidateQueries = vi.fn();
 const mockFetchEquipesToutes = vi.fn();
 const mockActiverEquipe = vi.fn();
 const mockDesactiverEquipe = vi.fn();
 
+type EditionMock = { id: number; annee: number; etape: string };
+
 let mockSession: {
   role: string | null;
-  edition: { id: number } | null;
+  edition: EditionMock | null;
   etape: string | null;
   isLoading: boolean;
 };
@@ -35,32 +35,30 @@ vi.mock("../../hooks/useEditionEnPreparation", () => ({
 }));
 
 vi.mock("../../api/inscription", () => ({
-  demarrerTournoi: (...args: unknown[]) => mockDemarrerTournoi(...args),
   fetchEquipesReferentielToutes: (...args: unknown[]) => mockFetchEquipesToutes(...args),
   activerEquipeReferentiel: (...args: unknown[]) => mockActiverEquipe(...args),
   desactiverEquipeReferentiel: (...args: unknown[]) => mockDesactiverEquipe(...args),
+  // Importé par le panneau « Ajouter une équipe au référentiel », couvert dans
+  // AdminPage.equipeReferentiel.test.tsx.
+  createEquipeDemande: vi.fn(),
 }));
 
-// NouvelleSaisonPanel a sa propre suite de tests dédiée
-// (components/admin/__tests__/NouvelleSaisonPanel.test.tsx) : ici on vérifie
-// uniquement le câblage (rendu conditionnel + props transmises).
-vi.mock("../../components/admin/NouvelleSaisonPanel", () => ({
-  default: (props: { token: string; editionActiveId: number }) => (
+// PilotageTournoi a sa propre suite (components/admin/__tests__/PilotageTournoi.test.tsx) :
+// ici on vérifie uniquement le câblage (props transmises, position en haut de page).
+vi.mock("../../components/admin/PilotageTournoi", () => ({
+  default: (props: {
+    token: string;
+    editionActive: EditionMock | null;
+    editionEnPreparation: EditionMock | null;
+  }) => (
     <div
-      data-testid="nouvelle-saison-panel"
+      data-testid="pilotage"
       data-token={props.token}
-      data-edition-active-id={props.editionActiveId}
+      data-active={props.editionActive?.id ?? ""}
+      data-preparation={props.editionEnPreparation?.id ?? ""}
     />
   ),
 }));
-
-vi.mock("@tanstack/react-query", async (orig) => {
-  const mod = await orig<typeof import("@tanstack/react-query")>();
-  return {
-    ...mod,
-    useQueryClient: () => ({ invalidateQueries: mockInvalidateQueries }),
-  };
-});
 
 vi.mock("react-router-dom", async (orig) => {
   const mod = await orig();
@@ -81,16 +79,19 @@ function renderPage() {
   );
 }
 
+function givenEtape(etape: string) {
+  mockSession.etape = etape;
+  mockSession.edition = { id: 1, annee: 2026, etape };
+}
+
 beforeEach(() => {
   mockNavigate.mockClear();
-  mockDemarrerTournoi.mockClear();
-  mockInvalidateQueries.mockClear();
   mockFetchEquipesToutes.mockReset().mockResolvedValue([]);
   mockActiverEquipe.mockReset().mockResolvedValue({ id: 1, nom: "Les Sharks", active: true });
   mockDesactiverEquipe.mockReset().mockResolvedValue({ id: 1, nom: "Les Sharks", active: false });
   mockSession = {
     role: "ORGANISATEUR",
-    edition: { id: 1 },
+    edition: { id: 1, annee: 2026, etape: "CLOTUREE" },
     etape: "CLOTUREE",
     isLoading: false,
   };
@@ -121,187 +122,113 @@ describe("AdminPage — garde de rôle", () => {
   });
 });
 
-describe("AdminPage — frise du cycle des phases", () => {
-  it("affiche la frise avec la phase courante en clair", () => {
-    mockSession.etape = "CLOTUREE";
+describe("AdminPage — bloc Pilotage du tournoi", () => {
+  it("place le bloc Pilotage en haut, avant la section Outils", () => {
     renderPage();
 
-    expect(screen.getByText("Clôturée")).toBeInTheDocument();
-    expect(screen.getAllByRole("listitem")).toHaveLength(4);
-  });
-});
-
-describe("AdminPage — liens", () => {
-  it("expose les liens vers les pages admin existantes", () => {
-    renderPage();
-
-    // Paramètres sportifs : repurposé en consultation lecture seule de l'édition démarrée
-    // (cf. docs/specs — le lien "Paramètres sportifs" de NouvelleSaisonPanel, lui, continue
-    // de cibler /admin/parametres-sportifs sans paramètre, pour l'édition en préparation).
-    expect(screen.getByRole("link", { name: "Paramètres sportifs" })).toHaveAttribute(
-      "href",
-      "/admin/parametres-sportifs?edition=demarree",
-    );
-    expect(screen.getByRole("link", { name: "Paramètres d'inscription" })).toHaveAttribute(
-      "href",
-      "/admin/parametres-inscription",
-    );
-    expect(screen.getByRole("link", { name: "Simulation de planning" })).toHaveAttribute(
-      "href",
-      "/admin/planning/simulation",
-    );
+    const pilotage = screen.getByTestId("pilotage");
+    const outils = screen.getByRole("heading", { name: "Outils" });
+    expect(pilotage.compareDocumentPosition(outils) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("affiche Paramètres d'inscription avant Paramètres sportifs, puis Simulation de planning et Présentation du tournoi", () => {
-    renderPage();
-
-    const liens = screen.getAllByRole("link").map((lien) => lien.getAttribute("href"));
-
-    // Le lien « Gérer dans Paramètres d'inscription » de l'encart d'état pointe
-    // vers la même page que le lien de navigation.
-    expect(liens).toEqual([
-      "/admin/parametres-inscription",
-      "/admin/parametres-sportifs?edition=demarree",
-      "/admin/planning/simulation",
-      "/admin/presentation-tournoi",
-      "/admin/parametres-inscription",
-    ]);
-  });
-
-  it("désactive Paramètres d'inscription (pur doublon) quand une édition en préparation existe", () => {
-    mockUseEditionEnPreparation.mockReturnValue({ data: { id: 2, etape: "CREATION_NOUVEAU_TOURNOI" } });
-    renderPage();
-
-    expect(screen.queryByRole("link", { name: "Paramètres d'inscription" })).not.toBeInTheDocument();
-    const desactive = screen.getByText("Paramètres d'inscription");
-    expect(desactive.tagName).toBe("SPAN");
-    expect(desactive).toHaveAttribute("aria-disabled", "true");
-    // Paramètres sportifs reste cliquable — repurposé, pas désactivé
-    expect(screen.getByRole("link", { name: "Paramètres sportifs" })).toHaveAttribute(
-      "href",
-      "/admin/parametres-sportifs?edition=demarree",
-    );
-  });
-});
-
-describe("AdminPage — action Lancer le tournoi", () => {
-  it("affiche le bouton uniquement quand etape === CLOTUREE", () => {
-    mockSession.etape = "CLOTUREE";
-    renderPage();
-
-    expect(screen.getByRole("button", { name: "Lancer le tournoi" })).toBeInTheDocument();
-  });
-
-  it("masque le bouton en dehors de CLOTUREE (ex. INSCRIPTIONS_OUVERTES)", () => {
-    mockSession.etape = "INSCRIPTIONS_OUVERTES";
-    renderPage();
-
-    expect(screen.queryByRole("button", { name: "Lancer le tournoi" })).not.toBeInTheDocument();
-  });
-
-  it("masque le bouton une fois TOURNOI_DEMARRE atteint", () => {
-    mockSession.etape = "TOURNOI_DEMARRE";
-    renderPage();
-
-    expect(screen.queryByRole("button", { name: "Lancer le tournoi" })).not.toBeInTheDocument();
-  });
-
-  it("ouvre une modale de confirmation avant tout appel à demarrerTournoi", () => {
-    renderPage();
-
-    fireEvent.click(screen.getByRole("button", { name: "Lancer le tournoi" }));
-
-    expect(screen.getByText("Lancer le tournoi ?")).toBeInTheDocument();
-    expect(mockDemarrerTournoi).not.toHaveBeenCalled();
-  });
-
-  it("annule sans appeler demarrerTournoi", () => {
-    renderPage();
-
-    fireEvent.click(screen.getByRole("button", { name: "Lancer le tournoi" }));
-    fireEvent.click(screen.getByRole("button", { name: "Annuler" }));
-
-    expect(screen.queryByText("Lancer le tournoi ?")).not.toBeInTheDocument();
-    expect(mockDemarrerTournoi).not.toHaveBeenCalled();
-  });
-
-  it("confirme : appelle demarrerTournoi(editionId, token) et invalide le cache édition", async () => {
-    mockDemarrerTournoi.mockResolvedValue({ id: 1, etape: "TOURNOI_DEMARRE" });
-    renderPage();
-
-    fireEvent.click(screen.getByRole("button", { name: "Lancer le tournoi" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirmer" }));
-
-    await waitFor(() => {
-      expect(mockDemarrerTournoi).toHaveBeenCalledWith(1, "fake-token");
+  it("transmet le jeton, l'édition active et l'édition en préparation", () => {
+    mockUseEditionEnPreparation.mockReturnValue({
+      data: { id: 2, annee: 2027, etape: "CREATION_NOUVEAU_TOURNOI" },
     });
-    expect(mockInvalidateQueries).toHaveBeenCalledWith({
-      queryKey: ["inscription", "edition-courante"],
-    });
-    await waitFor(() => {
-      expect(screen.queryByText("Lancer le tournoi ?")).not.toBeInTheDocument();
-    });
-  });
-
-  it("affiche un message d'erreur quand demarrerTournoi échoue, et garde la modale ouverte", async () => {
-    mockDemarrerTournoi.mockRejectedValue(new Error("400"));
     renderPage();
 
-    fireEvent.click(screen.getByRole("button", { name: "Lancer le tournoi" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirmer" }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Impossible de démarrer le tournoi.")).toBeInTheDocument();
-    });
-  });
-});
-
-describe("AdminPage — état des inscriptions (lecture seule, le switch vit dans Paramètres d'inscription)", () => {
-  it.each([
-    ["CREEE", "Les inscriptions ne sont pas encore ouvertes."],
-    ["INSCRIPTIONS_OUVERTES", "Les inscriptions sont ouvertes."],
-    ["CLOTUREE", "Les inscriptions sont fermées."],
-  ])("affiche l'encart d'état (etape=%s) avec le lien « Gérer dans Paramètres d'inscription »", (etape, texte) => {
-    mockSession.etape = etape;
-    renderPage();
-
-    expect(screen.getByText(texte)).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Gérer dans Paramètres d'inscription" }),
-    ).toHaveAttribute("href", "/admin/parametres-inscription");
+    const pilotage = screen.getByTestId("pilotage");
+    expect(pilotage).toHaveAttribute("data-token", "fake-token");
+    expect(pilotage).toHaveAttribute("data-active", "1");
+    expect(pilotage).toHaveAttribute("data-preparation", "2");
   });
 
-  it("n'affiche pas d'encart à TOURNOI_DEMARRE (texte existant conservé)", () => {
-    mockSession.etape = "TOURNOI_DEMARRE";
+  it("n'affiche plus le code technique de l'étape ni le lien « Gérer dans Paramètres d'inscription »", () => {
     renderPage();
 
+    expect(screen.queryByText(/CLOTUREE/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Phase de l'édition/)).not.toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: "Gérer dans Paramètres d'inscription" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText(/Le tournoi est démarré/)).toBeInTheDocument();
+  });
+});
+
+describe("AdminPage — section Outils", () => {
+  it("liste les outils dans l'ordre, tous actifs (jamais désactivés)", () => {
+    mockUseEditionEnPreparation.mockReturnValue({
+      data: { id: 2, annee: 2027, etape: "CREATION_NOUVEAU_TOURNOI" },
+    });
+    renderPage();
+
+    const liens = screen.getAllByRole("link").map((l) => l.textContent);
+    expect(liens).toEqual([
+      "Paramètres d'inscription",
+      "Paramètres sportifs",
+      "Simulation de planning",
+      "Présentation du tournoi",
+      "Équipes du référentiel",
+    ].map((label, i) => (i === 0 ? `${label}Utile maintenant` : label)));
   });
 
-  it.each(["CREEE", "INSCRIPTIONS_OUVERTES", "CLOTUREE"])(
-    "n'affiche plus de bouton Ouvrir / Clôturer les inscriptions (etape=%s)",
+  it.each([
+    ["CREEE", "Paramètres d'inscription"],
+    ["INSCRIPTIONS_OUVERTES", "Paramètres sportifs"],
+    ["CLOTUREE", "Simulation de planning"],
+    ["TOURNOI_DEMARRE", "Présentation du tournoi"],
+  ])("met en avant l'outil utile à l'étape %s : %s", (etape, outil) => {
+    givenEtape(etape);
+    renderPage();
+
+    expect(screen.getAllByText("Utile maintenant")).toHaveLength(1);
+    expect(screen.getByRole("link", { name: new RegExp(`^${outil}`) })).toHaveTextContent(
+      "Utile maintenant",
+    );
+  });
+
+  it("met en avant l'outil de l'édition en préparation, pas celui de l'édition en cours", () => {
+    givenEtape("TOURNOI_DEMARRE");
+    mockUseEditionEnPreparation.mockReturnValue({
+      data: { id: 2, annee: 2027, etape: "CREATION_NOUVEAU_TOURNOI" },
+    });
+    renderPage();
+
+    expect(screen.getByRole("link", { name: /^Paramètres d'inscription/ })).toHaveTextContent(
+      "Utile maintenant",
+    );
+  });
+
+  // docs/specs/recommandations-finales-contexte-la-mise-en-place-de-la-colo.md — §1, CA1
+  it.each(["CREEE", "INSCRIPTIONS_OUVERTES", "CLOTUREE", "TOURNOI_DEMARRE"])(
+    "Équipes du référentiel : lien vers /admin/equipes, jamais « Utile maintenant » (étape %s)",
     (etape) => {
-      mockSession.etape = etape;
+      givenEtape(etape);
       renderPage();
 
-      expect(
-        screen.queryByRole("button", { name: "Ouvrir les inscriptions" }),
-      ).not.toBeInTheDocument();
-      expect(
-        screen.queryByRole("button", { name: "Clôturer les inscriptions" }),
-      ).not.toBeInTheDocument();
-      expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+      const lien = screen.getByRole("link", { name: "Équipes du référentiel" });
+      expect(lien).toHaveAttribute("href", "/admin/equipes");
+      expect(lien).not.toHaveTextContent("Utile maintenant");
     },
   );
 
-  it("conserve le bouton « Lancer le tournoi » à CLOTUREE", () => {
-    mockSession.etape = "CLOTUREE";
+  it("Paramètres sportifs : consultation de l'édition démarrée quand c'est elle qui est pilotée", () => {
+    givenEtape("TOURNOI_DEMARRE");
     renderPage();
 
-    expect(screen.getByRole("button", { name: "Lancer le tournoi" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /^Paramètres sportifs/ })).toHaveAttribute(
+      "href",
+      "/admin/parametres-sportifs?edition=demarree",
+    );
+  });
+
+  it("Paramètres sportifs : édition modifiable avant le lancement ou en préparation", () => {
+    givenEtape("CREEE");
+    renderPage();
+
+    expect(screen.getByRole("link", { name: /^Paramètres sportifs/ })).toHaveAttribute(
+      "href",
+      "/admin/parametres-sportifs",
+    );
   });
 });
 
@@ -336,27 +263,4 @@ describe("AdminPage — équipes désactivées (modération a posteriori)", () =
       expect(mockActiverEquipe).toHaveBeenCalledWith(2, "fake-token");
     });
   });
-});
-
-describe("AdminPage — cycle annuel de l'édition (NouvelleSaisonPanel, spec §5)", () => {
-  it("affiche NouvelleSaisonPanel avec editionActiveId + token quand etape === TOURNOI_DEMARRE", () => {
-    mockSession.etape = "TOURNOI_DEMARRE";
-    mockSession.edition = { id: 1 };
-    renderPage();
-
-    const panel = screen.getByTestId("nouvelle-saison-panel");
-    expect(panel).toBeInTheDocument();
-    expect(panel).toHaveAttribute("data-token", "fake-token");
-    expect(panel).toHaveAttribute("data-edition-active-id", "1");
-  });
-
-  it.each(["CREEE", "INSCRIPTIONS_OUVERTES", "CLOTUREE"])(
-    "masque NouvelleSaisonPanel en dehors de TOURNOI_DEMARRE (etape=%s)",
-    (etape) => {
-      mockSession.etape = etape;
-      renderPage();
-
-      expect(screen.queryByTestId("nouvelle-saison-panel")).not.toBeInTheDocument();
-    },
-  );
 });

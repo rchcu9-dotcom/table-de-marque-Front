@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import type { AuthUser } from '../auth/types';
@@ -30,6 +30,21 @@ import type {
   StatutInscription,
 } from '../api/types/inscription.types';
 import DossierPanel from './inscription/DossierPanel';
+import { DossierOrganisateurPanel } from './inscription/DossierOrganisateurPanel';
+import { CandidaturesToolbar } from './inscription/CandidaturesToolbar';
+import { EquipeNoms } from './inscription/EquipeNoms';
+import { filtrerEquipes } from './inscription/equipesRecherche';
+import { NOM_COMPLET_MAX, messageErreurCreationEquipe } from './inscription/equipeCreationErreur';
+import {
+  RECHERCHE_CANDIDATURES,
+  TRIS_CANDIDATURES,
+  URL_LISTE_CANDIDATURES,
+  statutCandidature,
+  type TriCandidatures,
+} from './inscription/candidaturesListe';
+import { STATUTS_AVEC_DOSSIER } from './inscription/statutConfig';
+import { StatutBadge } from './inscription/StatutBadge';
+import { useListControls } from '../hooks/useListControls';
 import {
   RecapitulatifPaiementCarte,
   TotauxPaiementGlobaux,
@@ -65,31 +80,6 @@ function ErrorBanner({ message }: { message: string }) {
   );
 }
 
-// ─── Badge statut ─────────────────────────────────────────────────────────
-
-const STATUT_CONFIG: Record<
-  StatutInscription,
-  { label: string; className: string }
-> = {
-  CANDIDATE:        { label: 'En attente',        className: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40' },
-  LISTE_ATTENTE:    { label: "Liste d'attente",   className: 'bg-orange-500/20 text-orange-300 border-orange-500/40' },
-  RESERVEE:         { label: 'Réservée',           className: 'bg-blue-500/20 text-blue-300 border-blue-500/40' },
-  PAIEMENT_ATTENDU: { label: 'Paiement attendu',  className: 'bg-purple-500/20 text-purple-300 border-purple-500/40' },
-  VALIDEE:          { label: 'Validée',            className: 'bg-green-500/20 text-green-300 border-green-500/40' },
-  DOSSIER_EN_COURS: { label: 'Dossier en cours',  className: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40' },
-  DOSSIER_COMPLET:  { label: 'Dossier complet',   className: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40' },
-  REFUSEE:          { label: 'Refusée',            className: 'bg-red-500/20 text-red-300 border-red-500/40' },
-};
-
-function StatutBadge({ statut }: { statut: StatutInscription }) {
-  const config = STATUT_CONFIG[statut] ?? { label: statut, className: 'bg-slate-700 text-slate-300 border-slate-600' };
-  return (
-    <span className={`inline-block px-2 py-0.5 rounded border text-xs font-medium ${config.className}`}>
-      {config.label}
-    </span>
-  );
-}
-
 // ─── Modal Ajouter une équipe ─────────────────────────────────────────────
 
 interface AddEquipeModalProps {
@@ -101,6 +91,7 @@ interface AddEquipeModalProps {
 
 function AddEquipeModal({ token, introMessage, onClose, onCreated }: AddEquipeModalProps) {
   const [nom, setNom] = useState('');
+  const [nomComplet, setNomComplet] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,11 +106,16 @@ function AddEquipeModal({ token, introMessage, onClose, onCreated }: AddEquipeMo
     setError(null);
     try {
       const logoUrl = logoFile ? URL.createObjectURL(logoFile) : undefined;
-      const equipe = await createEquipeDemande({ nom: nom.trim(), logoUrl }, token);
+      // Clé absente quand le champ est vide ; la normalisation reste au back.
+      const complet = nomComplet.trim();
+      const equipe = await createEquipeDemande(
+        { nom: nom.trim(), ...(complet ? { nomComplet: complet } : {}), logoUrl },
+        token,
+      );
       onCreated(equipe);
       onClose();
-    } catch {
-      setError('Erreur lors de la création. Réessaie.');
+    } catch (err) {
+      setError(messageErreurCreationEquipe(err));
     } finally {
       setSubmitting(false);
     }
@@ -135,15 +131,38 @@ function AddEquipeModal({ token, introMessage, onClose, onCreated }: AddEquipeMo
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div>
             <label className="block text-sm font-medium mb-1 text-slate-200" htmlFor="equipe-nom">
-              Nom de l'équipe
+              Nom court
             </label>
             <input
               id="equipe-nom"
               type="text"
               className="w-full border border-slate-600 rounded px-3 py-2 text-sm bg-slate-700 text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
-              placeholder="Ex: Les Sharks de San Jose"
+              placeholder="Ex: San Jose"
               value={nom}
               onChange={(e) => setNom(e.target.value)}
+              disabled={submitting}
+              aria-describedby="equipe-nom-aide"
+            />
+            <p id="equipe-nom-aide" className="text-xs text-slate-400 mt-1">
+              Le nom d'usage de l'équipe, en un ou deux mots. C'est lui qui apparaît sur le planning
+              et les scores.
+            </p>
+          </div>
+          <div>
+            <label
+              className="block text-sm font-medium mb-1 text-slate-200"
+              htmlFor="equipe-nom-complet"
+            >
+              Nom complet du club (optionnel)
+            </label>
+            <input
+              id="equipe-nom-complet"
+              type="text"
+              maxLength={NOM_COMPLET_MAX}
+              className="w-full border border-slate-600 rounded px-3 py-2 text-sm bg-slate-700 text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              placeholder="Ex: Les Sharks de San Jose"
+              value={nomComplet}
+              onChange={(e) => setNomComplet(e.target.value)}
               disabled={submitting}
             />
           </div>
@@ -381,10 +400,7 @@ function EquipeDropdown({ equipes, selected, onSelect }: EquipeDropdownProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  const actives = equipes.filter((e) => e.active);
-  const filtered = actives.filter((e) =>
-    e.nom.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = filtrerEquipes(equipes, search);
 
   useEffect(() => {
     function handleClick(ev: MouseEvent) {
@@ -408,7 +424,7 @@ function EquipeDropdown({ equipes, selected, onSelect }: EquipeDropdownProps) {
             {selected.logoUrl && (
               <img src={selected.logoUrl} alt="" className="w-6 h-6 object-contain rounded-full" />
             )}
-            <span className="flex-1 text-left">{selected.nom}</span>
+            <EquipeNoms nom={selected.nom} nomComplet={selected.nomComplet} className="flex-1" />
           </>
         ) : (
           <span className="flex-1 text-left text-slate-400">Choisir une équipe...</span>
@@ -447,7 +463,7 @@ function EquipeDropdown({ equipes, selected, onSelect }: EquipeDropdownProps) {
               {equipe.logoUrl && (
                 <img src={equipe.logoUrl} alt="" className="w-6 h-6 object-contain rounded-full" />
               )}
-              <span>{equipe.nom}</span>
+              <EquipeNoms nom={equipe.nom} nomComplet={equipe.nomComplet} />
             </button>
           ))}
         </div>
@@ -559,6 +575,54 @@ function VueOrganisateur({ edition, token, etape }: VueOrganisateurProps) {
     void loadCandidatures();
   }, [loadCandidatures]);
 
+  // Recherche / filtre / tri : état dans l'URL (?q=…&statut=…&tri=…). Les
+  // totaux (« Équipes réservées », TotauxPaiementGlobaux) restent calculés sur
+  // `candidatures`, jamais sur `listeControls.results`.
+  const listeControls = useListControls<CandidatureOrganisateur, TriCandidatures>({
+    items: candidatures,
+    searchKeys: RECHERCHE_CANDIDATURES,
+    sorters: TRIS_CANDIDATURES,
+    defaultSort: 'statut',
+    filterValue: statutCandidature,
+    url: URL_LISTE_CANDIDATURES,
+  });
+
+  // Panneau dossier adressé dans l'URL (?dossier=<id>) : F5 et retour arrière
+  // le rouvrent / le ferment. On l'ouvre en `push` pour que « retour » le
+  // ferme ; à la fermeture, on revient à l'entrée précédente si c'est nous qui
+  // l'avons poussée, sinon (lien direct, F5) on retire simplement le paramètre.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const dossierOuvertId = Number(searchParams.get('dossier')) || null;
+  const candidatureDossier =
+    dossierOuvertId !== null
+      ? candidatures.find(
+          (c) => c.id === dossierOuvertId && STATUTS_AVEC_DOSSIER.includes(c.statut),
+        ) ?? null
+      : null;
+
+  function ouvrirDossier(id: number) {
+    const next = new URLSearchParams(searchParams);
+    next.set('dossier', String(id));
+    setSearchParams(next, { state: { dossierPousse: true } });
+  }
+
+  const fermerDossier = useCallback(() => {
+    if ((location.state as { dossierPousse?: boolean } | null)?.dossierPousse) {
+      navigate(-1);
+      return;
+    }
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('dossier');
+        return next;
+      },
+      { replace: true },
+    );
+  }, [location.state, navigate, setSearchParams]);
+
   async function handleAction(
     action: () => Promise<unknown>,
   ) {
@@ -620,11 +684,24 @@ function VueOrganisateur({ edition, token, etape }: VueOrganisateurProps) {
 
       {actionError && <ErrorBanner message={actionError} />}
 
+      {candidatures.length > 0 && <CandidaturesToolbar controls={listeControls} />}
+
       {candidatures.length === 0 ? (
         <p className="text-sm text-slate-400 text-center py-4">Aucune candidature reçue.</p>
+      ) : listeControls.results.length === 0 ? (
+        <div className="text-center py-6 space-y-2">
+          <p className="text-sm text-slate-400">Aucune équipe ne correspond à ces filtres.</p>
+          <button
+            type="button"
+            onClick={listeControls.reset}
+            className="px-3 py-1.5 rounded border border-slate-600 text-xs text-slate-200 hover:bg-slate-700 transition"
+          >
+            Effacer les filtres
+          </button>
+        </div>
       ) : (
         <div className="space-y-3">
-          {candidatures.map((c) => (
+          {listeControls.results.map((c) => (
             <div
               key={c.id}
               className="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow-sm"
@@ -638,8 +715,12 @@ function VueOrganisateur({ edition, token, etape }: VueOrganisateurProps) {
                   />
                 )}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-slate-100 truncate">{c.equipeNom}</span>
+                  <div className="flex items-start gap-2 flex-wrap">
+                    <EquipeNoms
+                      nom={c.equipeNom}
+                      nomComplet={c.equipeNomComplet}
+                      className="font-semibold text-slate-100 min-w-0 max-w-full [&>span]:truncate"
+                    />
                     <StatutBadge statut={c.statut} />
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5 truncate">
@@ -654,7 +735,39 @@ function VueOrganisateur({ edition, token, etape }: VueOrganisateurProps) {
                 </div>
               </div>
 
-              {/* Actions */}
+              {/* Actions — « Voir le dossier » en premier dès VALIDEE */}
+              {STATUTS_AVEC_DOSSIER.includes(c.statut) && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <button
+                    type="button"
+                    onClick={() => ouvrirDossier(c.id)}
+                    className="px-3 py-1.5 rounded bg-blue-600 text-white text-xs font-medium hover:bg-blue-500 transition"
+                  >
+                    Voir le dossier
+                  </button>
+                  {c.statut === 'DOSSIER_EN_COURS' && (
+                    <button
+                      onClick={() =>
+                        void handleAction(() => validerDossier(c.id, token))
+                      }
+                      className="px-3 py-1.5 rounded bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-500 transition"
+                    >
+                      Valider le dossier
+                    </button>
+                  )}
+                  {c.statut === 'DOSSIER_COMPLET' && (
+                    <button
+                      onClick={() =>
+                        void handleAction(() => rouvrirDossier(c.id, token))
+                      }
+                      className="px-3 py-1.5 rounded bg-orange-500 text-white text-xs font-medium hover:bg-orange-400 transition"
+                    >
+                      Rouvrir le dossier
+                    </button>
+                  )}
+                </div>
+              )}
+
               {STATUTS_TRIAGE.includes(c.statut) && (
                 <TriageStatutSwitch
                   candidature={c}
@@ -676,32 +789,6 @@ function VueOrganisateur({ edition, token, etape }: VueOrganisateurProps) {
                     className="px-3 py-1.5 rounded bg-purple-600 text-white text-xs font-medium hover:bg-purple-500 transition"
                   >
                     Valider paiement
-                  </button>
-                </div>
-              )}
-
-              {c.statut === 'DOSSIER_EN_COURS' && (
-                <div className="flex gap-2 mt-3">
-                  <button
-                    onClick={() =>
-                      void handleAction(() => validerDossier(c.id, token))
-                    }
-                    className="px-3 py-1.5 rounded bg-emerald-600 text-white text-xs font-medium hover:bg-emerald-500 transition"
-                  >
-                    Valider le dossier
-                  </button>
-                </div>
-              )}
-
-              {c.statut === 'DOSSIER_COMPLET' && (
-                <div className="flex gap-2 mt-3">
-                  <button
-                    onClick={() =>
-                      void handleAction(() => rouvrirDossier(c.id, token))
-                    }
-                    className="px-3 py-1.5 rounded bg-orange-500 text-white text-xs font-medium hover:bg-orange-400 transition"
-                  >
-                    Rouvrir le dossier
                   </button>
                 </div>
               )}
@@ -738,6 +825,25 @@ function VueOrganisateur({ edition, token, etape }: VueOrganisateurProps) {
         <TotauxPaiementGlobaux
           candidatures={candidatures.filter((c) => STATUTS_ACTIFS.includes(c.statut))}
           edition={edition}
+        />
+      )}
+
+      {candidatureDossier && (
+        <DossierOrganisateurPanel
+          key={candidatureDossier.id}
+          candidature={candidatureDossier}
+          etape={etape}
+          token={token}
+          onClose={fermerDossier}
+          onChange={() => void loadCandidatures()}
+          onValider={async (id) => {
+            await validerDossier(id, token);
+            await loadCandidatures();
+          }}
+          onRouvrir={async (id) => {
+            await rouvrirDossier(id, token);
+            await loadCandidatures();
+          }}
         />
       )}
 

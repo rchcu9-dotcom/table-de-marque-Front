@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { buildImageRibSrc } from "../../api/inscription";
 import { useUploadImageRib, useDeleteImageRib } from "../../hooks/useImageRib";
+import { estConflitEtat } from "../../hooks/useChangerEtapeEdition";
 
 const ACCEPTED_MIME_TYPES = "image/png,image/jpeg,image/webp";
 
@@ -10,6 +11,8 @@ type Props = {
   hasImageRib: boolean;
   imageRibUpdatedAt?: string;
   imageRibUrlFallback: string | null;
+  /** Paramètres d'inscription figés : aperçu conservé, ni envoi ni suppression. */
+  readOnly?: boolean;
 };
 
 export default function ImageRibUploadField({
@@ -18,6 +21,7 @@ export default function ImageRibUploadField({
   hasImageRib,
   imageRibUpdatedAt,
   imageRibUrlFallback,
+  readOnly = false,
 }: Props) {
   const uploadImageRib = useUploadImageRib(editionId, token);
   const deleteImageRib = useDeleteImageRib(editionId, token);
@@ -29,7 +33,8 @@ export default function ImageRibUploadField({
     if (!file) return;
     setError(null);
     uploadImageRib.mutate(file, {
-      onError: () => setError("Échec de l'envoi de l'image. Réessaie."),
+      onError: (e) =>
+        setError(estConflitEtat(e) ? e.message : "Échec de l'envoi de l'image. Réessaie."),
     });
     if (inputRef.current) inputRef.current.value = "";
   }
@@ -37,7 +42,10 @@ export default function ImageRibUploadField({
   function handleDelete() {
     setError(null);
     deleteImageRib.mutate(undefined, {
-      onError: () => setError("Échec de la suppression de l'image. Réessaie."),
+      onError: (e) =>
+        setError(
+          estConflitEtat(e) ? e.message : "Échec de la suppression de l'image. Réessaie.",
+        ),
     });
   }
 
@@ -55,6 +63,7 @@ export default function ImageRibUploadField({
             alt="Aperçu du RIB"
             className="max-w-xs rounded border border-slate-600"
           />
+          {!readOnly && (
           <button
             type="button"
             onClick={handleDelete}
@@ -63,6 +72,7 @@ export default function ImageRibUploadField({
           >
             Supprimer
           </button>
+          )}
         </div>
       ) : (
         imageRibUrlFallback && (
@@ -80,6 +90,7 @@ export default function ImageRibUploadField({
         )
       )}
 
+      {!readOnly && (
       <label className="space-y-1 block">
         {hasImageRib ? "Remplacer l'image" : "Choisir une image"}
         <input
@@ -91,6 +102,7 @@ export default function ImageRibUploadField({
           className="w-full text-slate-300 text-sm block"
         />
       </label>
+      )}
 
       {error && <p className="text-red-400">{error}</p>}
     </fieldset>

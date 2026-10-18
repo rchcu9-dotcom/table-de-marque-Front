@@ -4,6 +4,7 @@ import type { PosteJoueur } from '../utils/posteJoueur';
 import type {
   Edition,
   EquipeRef,
+  ModificationEquipe,
   ProfilInscription,
   MaCandidature,
   CandidatureOrganisateur,
@@ -109,6 +110,24 @@ export async function cloturerInscriptions(
 ): Promise<Edition> {
   const res = await fetchWithRetry(
     inscriptionUrl(`/editions/${editionId}/cloturer-inscriptions`),
+    {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    },
+  );
+  return res.json() as Promise<Edition>;
+}
+
+/**
+ * INSCRIPTIONS_OUVERTES → Préparation (409 s'il existe une candidature ou si
+ * l'étape ne le permet pas). L'état exact restauré est choisi par le back.
+ */
+export async function revenirEnPreparation(
+  editionId: number,
+  token: string,
+): Promise<Edition> {
+  const res = await fetchWithRetry(
+    inscriptionUrl(`/editions/${editionId}/revenir-en-preparation`),
     {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
@@ -276,10 +295,11 @@ export async function fetchEquipesReferentiel(): Promise<EquipeRef[]> {
   return res.json() as Promise<EquipeRef[]>;
 }
 
-// ── Organisateur : équipes du référentiel en attente de validation ─────────
+// ── Organisateur : toutes les équipes du référentiel ───────────────────────
 // Les équipes ajoutées via "Ton équipe n'est pas présente ? Ajoute la !" sont
-// créées inactives (active: false) et invisibles de /equipes (liste publique
-// filtrée sur active=true) tant qu'un organisateur ne les a pas activées.
+// créées actives. Un organisateur peut en désactiver une après coup (doublon,
+// erreur de saisie) : elle disparaît alors de /equipes (liste publique filtrée
+// sur active=true) jusqu'à sa réactivation.
 
 export async function fetchEquipesReferentielToutes(token: string): Promise<EquipeRef[]> {
   const res = await fetchWithRetry(inscriptionUrl('/equipes/toutes'), {
@@ -304,8 +324,24 @@ export async function desactiverEquipeReferentiel(id: number, token: string): Pr
   return res.json() as Promise<EquipeRef>;
 }
 
+export async function modifierEquipeReferentiel(
+  id: number,
+  data: ModificationEquipe,
+  token: string,
+): Promise<EquipeRef> {
+  const res = await fetchWithRetry(inscriptionUrl(`/equipes/${id}`), {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  return res.json() as Promise<EquipeRef>;
+}
+
 export async function createEquipeDemande(
-  data: { nom: string; logoUrl?: string },
+  data: { nom: string; nomComplet?: string; logoUrl?: string },
   token: string,
 ): Promise<EquipeRef> {
   const res = await fetchWithRetry(inscriptionUrl('/equipes'), {
@@ -605,5 +641,108 @@ export async function accepterDroitsImage(
     },
     body: JSON.stringify({ accepte }),
   });
+  return res.json() as Promise<Dossier>;
+}
+
+// ── Organisateur : écriture sur le dossier d'une candidature ────────────────
+// Mêmes payloads que les routes référent ; la candidature est désignée par
+// l'URL. Autorisé jusqu'à DOSSIER_COMPLET inclus, refusé à TOURNOI_DEMARRE.
+
+function dossierCandidatureUrl(candidatureId: number, suffix: string): string {
+  return inscriptionUrl(`/dossier/candidature/${candidatureId}${suffix}`);
+}
+
+function jsonInit(method: string, token: string, body?: unknown): RequestInit {
+  return {
+    method,
+    headers: {
+      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      Authorization: `Bearer ${token}`,
+    },
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  };
+}
+
+export async function ajouterJoueurCandidature(
+  candidatureId: number,
+  data: JoueurDossierInput,
+  token: string,
+): Promise<JoueurDossier> {
+  const res = await fetchWithRetry(
+    dossierCandidatureUrl(candidatureId, '/joueurs'),
+    jsonInit('POST', token, data),
+  );
+  return res.json() as Promise<JoueurDossier>;
+}
+
+export async function modifierJoueurCandidature(
+  candidatureId: number,
+  joueurId: number,
+  data: Partial<JoueurDossierInput>,
+  token: string,
+): Promise<JoueurDossier> {
+  const res = await fetchWithRetry(
+    dossierCandidatureUrl(candidatureId, `/joueurs/${joueurId}`),
+    jsonInit('PATCH', token, data),
+  );
+  return res.json() as Promise<JoueurDossier>;
+}
+
+export async function supprimerJoueurCandidature(
+  candidatureId: number,
+  joueurId: number,
+  token: string,
+): Promise<void> {
+  await fetchWithRetry(
+    dossierCandidatureUrl(candidatureId, `/joueurs/${joueurId}`),
+    jsonInit('DELETE', token),
+  );
+}
+
+export async function ajouterCoachCandidature(
+  candidatureId: number,
+  data: CoachDossierInput,
+  token: string,
+): Promise<CoachDossier> {
+  const res = await fetchWithRetry(
+    dossierCandidatureUrl(candidatureId, '/coachs'),
+    jsonInit('POST', token, data),
+  );
+  return res.json() as Promise<CoachDossier>;
+}
+
+export async function modifierCoachCandidature(
+  candidatureId: number,
+  coachId: number,
+  data: Partial<CoachDossierInput>,
+  token: string,
+): Promise<CoachDossier> {
+  const res = await fetchWithRetry(
+    dossierCandidatureUrl(candidatureId, `/coachs/${coachId}`),
+    jsonInit('PATCH', token, data),
+  );
+  return res.json() as Promise<CoachDossier>;
+}
+
+export async function supprimerCoachCandidature(
+  candidatureId: number,
+  coachId: number,
+  token: string,
+): Promise<void> {
+  await fetchWithRetry(
+    dossierCandidatureUrl(candidatureId, `/coachs/${coachId}`),
+    jsonInit('DELETE', token),
+  );
+}
+
+export async function accepterDroitsImageCandidature(
+  candidatureId: number,
+  accepte: boolean,
+  token: string,
+): Promise<Dossier> {
+  const res = await fetchWithRetry(
+    dossierCandidatureUrl(candidatureId, '/droits-image'),
+    jsonInit('PATCH', token, { accepte }),
+  );
   return res.json() as Promise<Dossier>;
 }

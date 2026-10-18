@@ -1,20 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
-import {
-  useInscriptionSession,
-  EDITION_QUERY_KEY,
-} from '../hooks/useInscriptionSession';
-import { demarrerTournoi } from '../api/inscription';
+import { useInscriptionSession } from '../hooks/useInscriptionSession';
 import {
   useEquipesReferentielToutes,
   useActiverEquipeReferentiel,
 } from '../hooks/useEquipesReferentiel';
 import { useEditionEnPreparation } from '../hooks/useEditionEnPreparation';
-import NouvelleSaisonPanel from '../components/admin/NouvelleSaisonPanel';
-import PhaseCycleFrise from '../components/admin/PhaseCycleFrise';
-import ConfirmModal from '../components/admin/ConfirmModal';
+import AjouterEquipeReferentielPanel from '../components/admin/AjouterEquipeReferentielPanel';
+import { EquipeNoms } from './inscription/EquipeNoms';
+import PilotageTournoi from '../components/admin/PilotageTournoi';
+import { outilMisEnAvant, type OutilAdmin } from '../utils/editionTransitions';
 
 function EquipesDesactiveesPanel({ token }: { token: string }) {
   const { data: equipes, isLoading, isError } = useEquipesReferentielToutes(token);
@@ -44,7 +40,11 @@ function EquipesDesactiveesPanel({ token }: { token: string }) {
             {equipe.logoUrl && (
               <img src={equipe.logoUrl} alt="" className="w-8 h-8 object-contain rounded-full" />
             )}
-            <span className="flex-1 text-sm text-slate-100">{equipe.nom}</span>
+            <EquipeNoms
+              nom={equipe.nom}
+              nomComplet={equipe.nomComplet}
+              className="flex-1 text-sm text-slate-100"
+            />
             <button
               type="button"
               onClick={() => activer.mutate(equipe.id)}
@@ -60,20 +60,41 @@ function EquipesDesactiveesPanel({ token }: { token: string }) {
   );
 }
 
+function LienOutil({
+  to,
+  label,
+  misEnAvant,
+}: {
+  to: string;
+  label: string;
+  misEnAvant: boolean;
+}) {
+  return (
+    <Link
+      to={to}
+      className={`flex items-center justify-between gap-2 rounded-lg px-4 py-3 text-sm font-semibold text-white transition ${
+        misEnAvant
+          ? 'bg-slate-800 hover:bg-slate-700 ring-2 ring-emerald-500'
+          : 'bg-slate-800 hover:bg-slate-700'
+      }`}
+    >
+      {label}
+      {misEnAvant && (
+        <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[10px] font-semibold text-slate-950">
+          Utile maintenant
+        </span>
+      )}
+    </Link>
+  );
+}
+
 export default function AdminPage() {
   const { token } = useAuth();
-  const { role, edition, etape, isLoading } = useInscriptionSession();
+  const { role, edition, isLoading } = useInscriptionSession();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  // Dédupliqué avec l'appel de NouvelleSaisonPanel via le cache TanStack Query (même
-  // queryKey EDITION_EN_PREPARATION_QUERY_KEY) — un seul appel réseau même si les deux
-  // composants montent le hook.
+  // Dédupliqué avec les autres pages admin via le cache TanStack Query (même
+  // queryKey EDITION_EN_PREPARATION_QUERY_KEY).
   const { data: editionEnPreparation } = useEditionEnPreparation(token);
-
-  // Lancer le tournoi (CLOTUREE -> TOURNOI_DEMARRE, seule voie : demarrerTournoi)
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && role !== 'ORGANISATEUR') {
@@ -85,123 +106,54 @@ export default function AdminPage() {
     return null;
   }
 
-  const handleConfirm = async () => {
-    if (!edition || !token) return;
-    setSubmitting(true);
-    setError(null);
-    try {
-      await demarrerTournoi(edition.id, token);
-      await queryClient.invalidateQueries({ queryKey: EDITION_QUERY_KEY });
-      setShowConfirm(false);
-    } catch {
-      setError('Impossible de démarrer le tournoi.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
+  // Édition pilotée : celle en préparation si elle existe, sinon l'active.
+  // Les outils la ciblent (les pages de paramètres appliquent la même règle).
+  const editionPilotee = editionEnPreparation ?? edition;
+  const outil: OutilAdmin | null = editionPilotee ? outilMisEnAvant(editionPilotee.etape) : null;
+  const parametresSportifsUrl =
+    editionPilotee?.etape === 'TOURNOI_DEMARRE'
+      ? '/admin/parametres-sportifs?edition=demarree'
+      : '/admin/parametres-sportifs';
 
   return (
     <div className="max-w-md mx-auto px-4 py-12 flex flex-col gap-4">
       <h1 className="text-xl font-semibold text-white">Administration</h1>
 
-      <PhaseCycleFrise etape={etape} />
-
-      {editionEnPreparation ? (
-        <span
-          aria-disabled="true"
-          title="Édition en préparation en cours — utilisez le lien « Paramètres d'inscription » ci-dessous, qui cible cette édition."
-          className="bg-slate-800/50 rounded-lg px-4 py-3 text-sm font-semibold text-slate-500 cursor-not-allowed select-none"
-        >
-          Paramètres d'inscription
-        </span>
-      ) : (
-        <Link
-          to="/admin/parametres-inscription"
-          className="bg-slate-800 hover:bg-slate-700 rounded-lg px-4 py-3 text-sm font-semibold text-white transition"
-        >
-          Paramètres d'inscription
-        </Link>
-      )}
-
-      <Link
-        to="/admin/parametres-sportifs?edition=demarree"
-        className="bg-slate-800 hover:bg-slate-700 rounded-lg px-4 py-3 text-sm font-semibold text-white transition"
-      >
-        Paramètres sportifs
-      </Link>
-
-      <Link
-        to="/admin/planning/simulation"
-        className="bg-slate-800 hover:bg-slate-700 rounded-lg px-4 py-3 text-sm font-semibold text-white transition"
-      >
-        Simulation de planning
-      </Link>
-
-      <Link
-        to="/admin/presentation-tournoi"
-        className="bg-slate-800 hover:bg-slate-700 rounded-lg px-4 py-3 text-sm font-semibold text-white transition"
-      >
-        Présentation du tournoi
-      </Link>
-
-      {token && <EquipesDesactiveesPanel token={token} />}
-
-      <div className="border-t border-slate-800 pt-4 mt-2 flex flex-col gap-3">
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wide">
-          Phase de l'édition — {etape ?? '…'}
-        </h2>
-
-        {etape && etape !== 'TOURNOI_DEMARRE' && (
-          <div className="flex flex-col gap-1">
-            <p className="text-sm text-slate-300">
-              {etape === 'INSCRIPTIONS_OUVERTES'
-                ? 'Les inscriptions sont ouvertes.'
-                : etape === 'CLOTUREE'
-                  ? 'Les inscriptions sont fermées.'
-                  : "Les inscriptions ne sont pas encore ouvertes."}
-            </p>
-            <Link
-              to="/admin/parametres-inscription"
-              className="text-sm text-emerald-400 hover:text-emerald-300 underline"
-            >
-              Gérer dans Paramètres d'inscription
-            </Link>
-          </div>
-        )}
-
-        {etape === 'CLOTUREE' && (
-          <button
-            type="button"
-            onClick={() => setShowConfirm(true)}
-            className="bg-amber-500 hover:bg-amber-400 rounded-lg px-4 py-3 text-sm font-semibold text-slate-950 transition"
-          >
-            Lancer le tournoi
-          </button>
-        )}
-        {error && <p className="text-sm text-red-400">{error}</p>}
-
-        {etape === 'TOURNOI_DEMARRE' && (
-          <p className="text-sm text-slate-400">
-            Le tournoi est démarré : les dossiers sont gelés, aucune autre
-            transition n'est possible sur cette édition.
-          </p>
-        )}
-      </div>
-
-      {etape === 'TOURNOI_DEMARRE' && edition && token && (
-        <NouvelleSaisonPanel token={token} editionActiveId={edition.id} />
-      )}
-
-      {showConfirm && (
-        <ConfirmModal
-          title="Lancer le tournoi ?"
-          message="Cette action est irréversible : tous les dossiers d'inscription seront définitivement gelés (plus aucune modification possible)."
-          confirmingLabel="Lancement…"
-          onClose={() => setShowConfirm(false)}
-          onConfirm={() => void handleConfirm()}
-          submitting={submitting}
+      {token && (
+        <PilotageTournoi
+          token={token}
+          editionActive={edition}
+          editionEnPreparation={editionEnPreparation ?? null}
         />
       )}
+
+      <div className="border-t border-slate-800 pt-4 mt-2 flex flex-col gap-3">
+        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wide">Outils</h2>
+        <LienOutil
+          to="/admin/parametres-inscription"
+          label="Paramètres d'inscription"
+          misEnAvant={outil === 'PARAMETRES_INSCRIPTION'}
+        />
+        <LienOutil
+          to={parametresSportifsUrl}
+          label="Paramètres sportifs"
+          misEnAvant={outil === 'PARAMETRES_SPORTIFS'}
+        />
+        <LienOutil
+          to="/admin/planning/simulation"
+          label="Simulation de planning"
+          misEnAvant={outil === 'SIMULATION_PLANNING'}
+        />
+        <LienOutil
+          to="/admin/presentation-tournoi"
+          label="Présentation du tournoi"
+          misEnAvant={outil === 'PRESENTATION'}
+        />
+        <LienOutil to="/admin/equipes" label="Équipes du référentiel" misEnAvant={false} />
+      </div>
+
+      {token && <AjouterEquipeReferentielPanel token={token} />}
+      {token && <EquipesDesactiveesPanel token={token} />}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ajouterAnneeAge, retirerAnneeAge } from '../api/inscription';
 import { EDITION_QUERY_KEY } from './useInscriptionSession';
+import { estConflitEtat } from './useChangerEtapeEdition';
 import { EDITION_EN_PREPARATION_QUERY_KEY } from './useEditionEnPreparation';
 
 /**
@@ -19,6 +20,10 @@ export function useAjouterAnneeAge(editionId: number, token: string) {
   return useMutation({
     mutationFn: (annee: number) => ajouterAnneeAge(editionId, annee, token),
     onSuccess: () => invalidateEditions(queryClient),
+    // 409 : l'étape a changé entre-temps (paramètres figés) → resynchroniser.
+    onError: (e) => {
+      if (estConflitEtat(e)) invalidateEditions(queryClient);
+    },
   });
 }
 
@@ -27,5 +32,9 @@ export function useRetirerAnneeAge(editionId: number, token: string) {
   return useMutation({
     mutationFn: (annee: number) => retirerAnneeAge(editionId, annee, token),
     onSuccess: () => invalidateEditions(queryClient),
+    // 409 : l'étape a changé entre-temps (paramètres figés) → resynchroniser.
+    onError: (e) => {
+      if (estConflitEtat(e)) invalidateEditions(queryClient);
+    },
   });
 }

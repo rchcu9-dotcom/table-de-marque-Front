@@ -18,6 +18,9 @@ import {
 } from '../hooks/useFormatGraphe';
 import FormatGrapheCanvas from '../components/format/FormatGrapheCanvas';
 import Spinner from '../components/ds/Spinner';
+import BandeauVerrou from '../components/admin/BandeauVerrou';
+import { useConflitVerrou } from '../hooks/useConflitVerrou';
+import { formuleSportiveModifiable, MESSAGE_FORMULE_FIGEE } from '../utils/editionRegles';
 import Breadcrumbs from '../components/navigation/Breadcrumbs';
 import {
   ACCUEIL_CRUMB,
@@ -34,10 +37,13 @@ export default function FormatCompetitionBuilderPage() {
   // lecture seule de l'édition démarrée, atteinte depuis le lien "Constructeur graphique"
   // de FormatCompetitionForm quand ParametresSportifsPage est lui-même en lecture seule.
   const consultationEditionDemarree = searchParams.get('edition') === 'demarree';
-  const readOnly = consultationEditionDemarree;
-  const editionId = consultationEditionDemarree
-    ? edition?.id
-    : (editionEnPreparation?.id ?? edition?.id);
+  const editionCible = consultationEditionDemarree
+    ? edition
+    : (editionEnPreparation ?? edition);
+  const editionId = editionCible?.id;
+  // Formule sportive figée au lancement du tournoi (règle appliquée aussi côté back, 409).
+  const formuleFigee = !!editionCible && !formuleSportiveModifiable(editionCible.etape);
+  const readOnly = consultationEditionDemarree || formuleFigee;
 
   const {
     data: graphe,
@@ -59,6 +65,20 @@ export default function FormatCompetitionBuilderPage() {
   const marquerElimine = useMarquerElimine(mutationOpts.editionId, mutationOpts.token);
   const reinitialiserLien = useReinitialiserLien(mutationOpts.editionId, mutationOpts.token);
   const genererPreset = useGenererPreset(mutationOpts.editionId, mutationOpts.token);
+  const conflit = useConflitVerrou([
+    creerPhase.error,
+    modifierPhase.error,
+    supprimerPhase.error,
+    creerGroupe.error,
+    modifierGroupe.error,
+    supprimerGroupe.error,
+    ajouterPlace.error,
+    supprimerPlace.error,
+    definirLien.error,
+    marquerElimine.error,
+    reinitialiserLien.error,
+    genererPreset.error,
+  ]);
 
   const isLoading =
     creerPhase.isPending ||
@@ -104,11 +124,21 @@ export default function FormatCompetitionBuilderPage() {
         Constructeur de format de competition
       </h1>
 
-      {readOnly && (
-        <div className="bg-blue-950/40 border border-blue-800 rounded-lg px-4 py-2 text-sm text-blue-300">
-          Consultation en lecture seule de l'édition démarrée — référence pour construire
-          la nouvelle édition.
-        </div>
+      {formuleFigee ? (
+        <BandeauVerrou message={MESSAGE_FORMULE_FIGEE} />
+      ) : (
+        readOnly && (
+          <div className="bg-blue-950/40 border border-blue-800 rounded-lg px-4 py-2 text-sm text-blue-300">
+            Consultation en lecture seule de l'édition démarrée — référence pour construire
+            la nouvelle édition.
+          </div>
+        )
+      )}
+
+      {conflit && !formuleFigee && (
+        <p role="alert" className="text-sm text-red-400">
+          {conflit.message}
+        </p>
       )}
 
       {grapheError ? (

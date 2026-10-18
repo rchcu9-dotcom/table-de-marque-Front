@@ -205,11 +205,117 @@ describe("CreneauxActiviteTable", () => {
     );
     expect(screen.queryByRole("button", { name: "+ Ajouter un créneau" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Supprimer" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cloner" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Modifier" })).not.toBeInTheDocument();
     const dureeInput = screen.getByLabelText(/Durée \(min\)/, { selector: "input" });
     const form = dureeInput.closest("form")!;
     for (const champ of Array.from(form.querySelectorAll("input, select"))) {
       expect(champ).toBeDisabled();
     }
+  });
+
+  it("Cloner appelle onCreate avec une copie exacte du créneau (activité, date, heure, durée)", () => {
+    const onCreate = vi.fn();
+    const creneau = { ...CRENEAU_LIBRE, activiteId: 20, dureeMin: 25, heureDebut: "2026-05-23T14:35:00.000Z" };
+    render(
+      <CreneauxActiviteTable
+        creneaux={[creneau]}
+        activitesCatalogue={[REPAS, CHALLENGE]}
+        onCreate={onCreate}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        isSaving={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Cloner" }));
+
+    expect(onCreate).toHaveBeenCalledTimes(1);
+    expect(onCreate).toHaveBeenCalledWith({
+      activiteId: 20,
+      date: "2026-05-23",
+      heureDebut: "2026-05-23T14:35:00.000Z",
+      dureeMin: 25,
+    });
+  });
+
+  it("Cloner un créneau confirmé crée un créneau libre (l'équipe n'est pas recopiée)", () => {
+    const onCreate = vi.fn();
+    render(
+      <CreneauxActiviteTable
+        creneaux={[CRENEAU_CONFIRME]}
+        activitesCatalogue={[REPAS]}
+        onCreate={onCreate}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        isSaving={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Cloner" }));
+
+    const payload = onCreate.mock.calls[0][0];
+    expect(Object.keys(payload).sort()).toEqual(["activiteId", "date", "dureeMin", "heureDebut"]);
+  });
+
+  it("Cloner est désactivé pendant un enregistrement", () => {
+    render(
+      <CreneauxActiviteTable
+        creneaux={[CRENEAU_LIBRE]}
+        activitesCatalogue={[REPAS]}
+        onCreate={vi.fn()}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        isSaving
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Cloner" })).toBeDisabled();
+  });
+
+  it("trie par date croissante, puis par heure, sur plusieurs journées", () => {
+    const j2Matin = { ...CRENEAU_LIBRE, id: 5, date: "2026-05-24T00:00:00.000Z", heureDebut: "2026-05-24T08:00:00.000Z" };
+    const j1Soir = { ...CRENEAU_LIBRE, id: 6, date: "2026-05-23T00:00:00.000Z", heureDebut: "2026-05-23T18:00:00.000Z" };
+    const j3 = { ...CRENEAU_LIBRE, id: 7, date: "2026-05-25T00:00:00.000Z", heureDebut: "2026-05-25T10:00:00.000Z" };
+    render(
+      <CreneauxActiviteTable
+        creneaux={[j3, j2Matin, j1Soir, CRENEAU_LIBRE]}
+        activitesCatalogue={[REPAS]}
+        onCreate={vi.fn()}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        isSaving={false}
+      />,
+    );
+
+    const dates = screen.getAllByLabelText(/Date/, { selector: "input" }).map(
+      (el) => (el as HTMLInputElement).value,
+    );
+    expect(dates).toEqual(["2026-05-23", "2026-05-23", "2026-05-24", "2026-05-25"]);
+    const heures = screen.getAllByLabelText(/Heure/, { selector: "input" }).map(
+      (el) => (el as HTMLInputElement).value,
+    );
+    // Même jour : l'heure la plus tôt d'abord (12:00 UTC avant 18:00 UTC).
+    expect(heures[0] < heures[1]).toBe(true);
+  });
+
+  it("à date et heure égales, un clone s'affiche juste après l'original (ordre de création)", () => {
+    const clone = { ...CRENEAU_LIBRE, id: 9 };
+    const autre = { ...CRENEAU_LIBRE, id: 4, dureeMin: 15 };
+    render(
+      <CreneauxActiviteTable
+        creneaux={[clone, autre, CRENEAU_LIBRE]}
+        activitesCatalogue={[REPAS]}
+        onCreate={vi.fn()}
+        onUpdate={vi.fn()}
+        onDelete={vi.fn()}
+        isSaving={false}
+      />,
+    );
+
+    const durees = screen.getAllByLabelText(/Durée \(min\)/, { selector: "input" }).map(
+      (el) => (el as HTMLInputElement).value,
+    );
+    // ids 1 (40 min), 4 (15 min), 9 (40 min)
+    expect(durees).toEqual(["40", "15", "40"]);
   });
 });

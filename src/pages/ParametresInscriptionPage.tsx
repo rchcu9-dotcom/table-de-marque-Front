@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useInscriptionSession } from "../hooks/useInscriptionSession";
 import { useEditionEnPreparation } from "../hooks/useEditionEnPreparation";
 import { useUpdateEdition } from "../hooks/useUpdateEdition";
@@ -7,7 +8,10 @@ import type { Edition } from "../api/types/inscription.types";
 import { validateEditionForm, type EditionValidationError } from "../utils/editionValidation";
 import EditionIdentiteForm from "../components/admin/EditionIdentiteForm";
 import EditionDatesForm from "../components/admin/EditionDatesForm";
-import InscriptionsSwitch from "../components/admin/InscriptionsSwitch";
+import EtapeEditionBadge from "../components/admin/EtapeEditionBadge";
+import BandeauVerrou from "../components/admin/BandeauVerrou";
+import { parametresInscriptionModifiables } from "../utils/editionRegles";
+import { estConflitEtat } from "../hooks/useChangerEtapeEdition";
 import EditionTarifsForm from "../components/admin/EditionTarifsForm";
 import EditionAnneesAgeForm from "../components/admin/EditionAnneesAgeForm";
 import EditionContactImagesForm from "../components/admin/EditionContactImagesForm";
@@ -81,9 +85,13 @@ export default function ParametresInscriptionPage() {
     setSaveMessage(null);
   };
 
+  // Paramètres figés dès l'ouverture des inscriptions (règle appliquée aussi
+  // côté back, 409) : lecture seule, retour en Préparation depuis l'accueil admin.
+  const figee = edition ? !parametresInscriptionModifiables(edition.etape) : false;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form || !edition) return;
+    if (!form || !edition || figee) return;
 
     const validationErrors = validateEditionForm(form);
     setErrors(validationErrors);
@@ -96,10 +104,12 @@ export default function ParametresInscriptionPage() {
       onSuccess: () => {
         setSaveMessage({ type: "success", text: "Paramètres d'inscription enregistrés." });
       },
-      onError: () => {
+      onError: (error) => {
         setSaveMessage({
           type: "error",
-          text: "Impossible d'enregistrer les paramètres d'inscription.",
+          text: estConflitEtat(error)
+            ? error.message
+            : "Impossible d'enregistrer les paramètres d'inscription.",
         });
       },
     });
@@ -133,8 +143,31 @@ export default function ParametresInscriptionPage() {
         </div>
       ) : (
         <>
-        <InscriptionsSwitch edition={edition} token={token ?? ""} />
+        {/* Les changements d'étape se font uniquement depuis l'accueil admin (bloc « Pilotage du tournoi »). */}
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex flex-wrap items-center gap-3">
+          <span className="text-sm text-slate-300">Étape de l'édition :</span>
+          <EtapeEditionBadge etape={edition.etape} />
+          <Link to="/admin" className="text-sm text-emerald-400 hover:text-emerald-300 underline">
+            Changer d'étape depuis l'accueil admin
+          </Link>
+        </div>
+        {figee && (
+          <BandeauVerrou
+            message={
+              edition.etape === "INSCRIPTIONS_OUVERTES"
+                ? "Inscriptions ouvertes : les paramètres d'inscription sont figés, car les équipes candidatent sur cette base."
+                : "Les paramètres d'inscription sont figés depuis l'ouverture des inscriptions, car les équipes ont candidaté sur cette base."
+            }
+            lien={
+              edition.etape === "INSCRIPTIONS_OUVERTES"
+                ? { to: "/admin", label: "Revenir en préparation depuis l'accueil admin" }
+                : { to: "/admin", label: "Accueil admin" }
+            }
+          />
+        )}
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
+          {/* fieldset désactivé : gèle nativement tous les champs des blocs simples. */}
+          <fieldset disabled={figee} className="space-y-4">
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
             <EditionIdentiteForm values={form} errors={errors} onChange={handleChange} />
           </div>
@@ -146,18 +179,20 @@ export default function ParametresInscriptionPage() {
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
             <EditionTarifsForm values={form} errors={errors} onChange={handleChange} />
           </div>
+          </fieldset>
 
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
             <EditionAnneesAgeForm
               editionId={edition.id}
               anneesAge={edition.anneesAge}
               token={token ?? ""}
+              readOnly={figee}
             />
           </div>
 
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
+          <fieldset disabled={figee} className="bg-slate-800 border border-slate-700 rounded-xl p-4">
             <EditionContactImagesForm values={form} onChange={handleChange} />
-          </div>
+          </fieldset>
 
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
             <ImageRibUploadField
@@ -166,11 +201,12 @@ export default function ParametresInscriptionPage() {
               hasImageRib={edition.hasImageRib}
               imageRibUpdatedAt={edition.imageRibUpdatedAt}
               imageRibUrlFallback={edition.imageRibUrl ?? null}
+              readOnly={figee}
             />
           </div>
 
           <div className="bg-slate-800 border border-slate-700 rounded-xl p-4">
-            <EditionMessagesAccordion values={form} onChange={handleChange} />
+            <EditionMessagesAccordion values={form} onChange={handleChange} readOnly={figee} />
           </div>
 
           {saveMessage && (
@@ -185,6 +221,7 @@ export default function ParametresInscriptionPage() {
             </div>
           )}
 
+          {!figee && (
           <button
             type="submit"
             disabled={updateEdition.isPending}
@@ -192,6 +229,7 @@ export default function ParametresInscriptionPage() {
           >
             {updateEdition.isPending ? "Enregistrement…" : "Enregistrer"}
           </button>
+          )}
         </form>
         </>
       )}

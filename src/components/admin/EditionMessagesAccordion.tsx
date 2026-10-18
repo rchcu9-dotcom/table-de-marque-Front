@@ -21,6 +21,8 @@ type MessageField =
 type Props = {
   values: Pick<UpdateEditionPayload, MessageField>;
   onChange: <K extends MessageField>(field: K, value: UpdateEditionPayload[K]) => void;
+  /** Messages lisibles mais non modifiables (paramètres d'inscription figés). */
+  readOnly?: boolean;
 };
 
 type MessageGroup = {
@@ -118,7 +120,7 @@ function toInputValue(value?: string | null): string {
   return value ?? "";
 }
 
-export default function EditionMessagesAccordion({ values, onChange }: Props) {
+export default function EditionMessagesAccordion({ values, onChange, readOnly = false }: Props) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -147,6 +149,7 @@ export default function EditionMessagesAccordion({ values, onChange }: Props) {
                     <textarea
                       value={toInputValue(values[field])}
                       onChange={(e) => onChange(field, e.target.value)}
+                      readOnly={readOnly}
                       rows={2}
                       className="w-full px-2 py-1 rounded bg-slate-800 border border-slate-600 text-slate-100 text-sm"
                     />
