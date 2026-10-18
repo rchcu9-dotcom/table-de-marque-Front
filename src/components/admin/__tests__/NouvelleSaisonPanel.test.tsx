@@ -6,9 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import NouvelleSaisonPanel from "../NouvelleSaisonPanel";
 
-const mockUseEditionEnPreparation = vi.fn();
 vi.mock("../../../hooks/useEditionEnPreparation", () => ({
-  useEditionEnPreparation: () => mockUseEditionEnPreparation(),
   EDITION_EN_PREPARATION_QUERY_KEY: ["inscription", "edition-en-preparation"],
 }));
 
@@ -51,23 +49,11 @@ beforeEach(() => {
   vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
 });
 
-describe("NouvelleSaisonPanel — chargement", () => {
-  it("n'affiche rien tant que l'édition en préparation est en cours de chargement", () => {
-    mockUseEditionEnPreparation.mockReturnValue({ data: undefined, isLoading: true });
-    const { container } = renderPanel();
-    expect(container).toBeEmptyDOMElement();
-  });
-});
-
 describe("NouvelleSaisonPanel — dump (spec §4)", () => {
-  beforeEach(() => {
-    mockUseEditionEnPreparation.mockReturnValue({ data: null, isLoading: false });
-  });
-
-  it("affiche le bouton \"Préparer la nouvelle saison\" quand aucune édition en préparation n'existe", () => {
+  it("affiche le bouton \"Préparer la saison suivante\" ", () => {
     renderPanel();
     expect(
-      screen.getByRole("button", { name: "Préparer la nouvelle saison" }),
+      screen.getByRole("button", { name: "Préparer la saison suivante" }),
     ).toBeInTheDocument();
   });
 
@@ -76,7 +62,7 @@ describe("NouvelleSaisonPanel — dump (spec §4)", () => {
     mockExportTaDump.mockResolvedValue({ blob, filename: "dump-ta-2026-rchc.json" });
     renderPanel();
 
-    fireEvent.click(screen.getByRole("button", { name: "Préparer la nouvelle saison" }));
+    fireEvent.click(screen.getByRole("button", { name: "Préparer la saison suivante" }));
 
     await waitFor(() => expect(mockExportTaDump).toHaveBeenCalledWith(1, "fake-token"));
     expect(URL.createObjectURL).toHaveBeenCalledWith(blob);
@@ -88,7 +74,7 @@ describe("NouvelleSaisonPanel — dump (spec §4)", () => {
     mockExportTaDump.mockResolvedValue({ blob: new Blob(), filename: "dump.json" });
     renderPanel();
 
-    fireEvent.click(screen.getByRole("button", { name: "Préparer la nouvelle saison" }));
+    fireEvent.click(screen.getByRole("button", { name: "Préparer la saison suivante" }));
 
     expect(await screen.findByRole("button", { name: "Créer la nouvelle édition" })).toBeInTheDocument();
     expect(screen.getByLabelText("Nom")).toBeInTheDocument();
@@ -100,7 +86,7 @@ describe("NouvelleSaisonPanel — dump (spec §4)", () => {
     mockExportTaDump.mockRejectedValue(new Error("500"));
     renderPanel();
 
-    fireEvent.click(screen.getByRole("button", { name: "Préparer la nouvelle saison" }));
+    fireEvent.click(screen.getByRole("button", { name: "Préparer la saison suivante" }));
 
     expect(
       await screen.findByText(
@@ -116,7 +102,7 @@ describe("NouvelleSaisonPanel — dump (spec §4)", () => {
     mockExportTaDump.mockResolvedValueOnce({ blob: new Blob(), filename: "dump.json" });
     renderPanel();
 
-    fireEvent.click(screen.getByRole("button", { name: "Préparer la nouvelle saison" }));
+    fireEvent.click(screen.getByRole("button", { name: "Préparer la saison suivante" }));
     await screen.findByRole("button", { name: "Réessayer le dump" });
 
     fireEvent.click(screen.getByRole("button", { name: "Réessayer le dump" }));
@@ -127,14 +113,10 @@ describe("NouvelleSaisonPanel — dump (spec §4)", () => {
 });
 
 describe("NouvelleSaisonPanel — création de la nouvelle édition (spec §5.2)", () => {
-  beforeEach(() => {
-    mockUseEditionEnPreparation.mockReturnValue({ data: null, isLoading: false });
-  });
-
   async function atteindreFormulaireCreation() {
     mockExportTaDump.mockResolvedValue({ blob: new Blob(), filename: "dump.json" });
     renderPanel();
-    fireEvent.click(screen.getByRole("button", { name: "Préparer la nouvelle saison" }));
+    fireEvent.click(screen.getByRole("button", { name: "Préparer la saison suivante" }));
     await screen.findByRole("button", { name: "Créer la nouvelle édition" });
   }
 
@@ -160,7 +142,7 @@ describe("NouvelleSaisonPanel — création de la nouvelle édition (spec §5.2)
     );
   });
 
-  it("redirige vers /admin/parametres-inscription (où se trouve le switch) après création réussie", async () => {
+  it("reste sur l'accueil admin après création : la nouvelle édition apparaît dans le bloc Pilotage", async () => {
     await atteindreFormulaireCreation();
     mockCreateEditionEnPreparation.mockResolvedValue({ id: 2 });
 
@@ -168,9 +150,9 @@ describe("NouvelleSaisonPanel — création de la nouvelle édition (spec §5.2)
     fireEvent.change(screen.getByLabelText("Catégorie"), { target: { value: "U11" } });
     fireEvent.click(screen.getByRole("button", { name: "Créer la nouvelle édition" }));
 
-    await waitFor(() =>
-      expect(mockNavigate).toHaveBeenCalledWith("/admin/parametres-inscription"),
-    );
+    await waitFor(() => expect(mockCreateEditionEnPreparation).toHaveBeenCalled());
+    await waitFor(() => expect(mockInvalidateQueries).toHaveBeenCalled());
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it("affiche un message d'erreur et garde le formulaire affiché quand la création échoue (pas besoin de refaire le dump)", async () => {
@@ -187,60 +169,5 @@ describe("NouvelleSaisonPanel — création de la nouvelle édition (spec §5.2)
     expect(screen.getByRole("button", { name: "Créer la nouvelle édition" })).toBeInTheDocument();
     expect(mockExportTaDump).toHaveBeenCalledTimes(1);
     expect(mockNavigate).not.toHaveBeenCalled();
-  });
-});
-
-describe("NouvelleSaisonPanel — bloc édition en préparation (spec §5.3-5.4)", () => {
-  beforeEach(() => {
-    mockUseEditionEnPreparation.mockReturnValue({
-      data: { id: 2, nom: "RCHC U11 2027", annee: 2027, etape: "CREATION_NOUVEAU_TOURNOI" },
-      isLoading: false,
-    });
-  });
-
-  it("affiche le nom et l'année de l'édition en préparation, jamais le formulaire de dump", () => {
-    renderPanel();
-
-    expect(screen.getByText("Édition en préparation : RCHC U11 2027 2027")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Préparer la nouvelle saison" }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("affiche une frise du cycle des phases pour l'édition en préparation, distincte de celle de l'édition sortante", () => {
-    renderPanel();
-
-    expect(screen.getAllByRole("listitem")).toHaveLength(4);
-    expect(screen.getByText("Préparation")).toHaveAttribute("aria-current", "step");
-  });
-
-  it("expose les liens Paramètres sportifs / Paramètres d'inscription", () => {
-    renderPanel();
-
-    expect(screen.getByRole("link", { name: "Paramètres sportifs" })).toHaveAttribute(
-      "href",
-      "/admin/parametres-sportifs",
-    );
-    expect(screen.getByRole("link", { name: "Paramètres d'inscription" })).toHaveAttribute(
-      "href",
-      "/admin/parametres-inscription",
-    );
-  });
-
-  it("affiche Paramètres d'inscription avant Paramètres sportifs", () => {
-    renderPanel();
-
-    const liens = screen.getAllByRole("link").map((lien) => lien.getAttribute("href"));
-
-    expect(liens).toEqual(["/admin/parametres-inscription", "/admin/parametres-sportifs"]);
-  });
-
-  it("n'affiche plus de bouton « Ouvrir les inscriptions » : l'ouverture se pilote via le switch de Paramètres d'inscription", () => {
-    renderPanel();
-
-    expect(
-      screen.queryByRole("button", { name: /Ouvrir les inscriptions/ }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
   });
 });

@@ -7,6 +7,8 @@ export interface ConfirmModalProps {
   onClose: () => void;
   onConfirm: () => void;
   submitting: boolean;
+  /** Confirmation forte : « Confirmer » reste désactivé tant que la condition n'est pas remplie. */
+  confirmDisabled?: boolean;
 }
 
 export default function ConfirmModal({
@@ -16,6 +18,7 @@ export default function ConfirmModal({
   onClose,
   onConfirm,
   submitting,
+  confirmDisabled = false,
 }: ConfirmModalProps) {
   return (
     <div className="fixed inset-0 z-[999] bg-black/60 flex items-center justify-center px-4">
@@ -39,7 +42,7 @@ export default function ConfirmModal({
           <button
             type="button"
             onClick={onConfirm}
-            disabled={submitting}
+            disabled={submitting || confirmDisabled}
             className="px-4 py-2 rounded-lg text-sm font-semibold bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-50 transition"
           >
             {submitting ? confirmingLabel : 'Confirmer'}

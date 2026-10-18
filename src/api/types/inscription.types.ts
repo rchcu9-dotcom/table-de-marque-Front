@@ -44,10 +44,21 @@ export type Edition = {
 
 export type EquipeRef = {
   id: number;
+  /** Nom court : identifiant fonctionnel, source du nom de fichier de logo. */
   nom: string;
+  /** Nom officiel long, facultatif — affichage secondaire et recherche uniquement. */
+  nomComplet?: string | null;
   logoUrl?: string;
   active: boolean;
+  /**
+   * Inscriptions qui référencent l'équipe, toutes éditions confondues — route
+   * organisateur uniquement. Au-dessus de zéro, le nom court n'est plus modifiable.
+   */
+  nbCandidatures?: number;
 };
+
+/** Corps de PATCH /inscription/equipes/:id : clé absente = inchangé, `nomComplet: null` = effacé. */
+export type ModificationEquipe = { nom?: string; nomComplet?: string | null };
 
 export type ProfilRole = 'RESPONSABLE_EQUIPE' | 'ORGANISATEUR' | 'TABLE_DE_MARQUE';
 
@@ -99,6 +110,7 @@ export type DetailPaiementRepas = {
 export type CandidatureOrganisateur = {
   id: number;
   equipeNom: string;
+  equipeNomComplet?: string | null;
   equipeLogoUrl: string | null;
   utilisateurEmail: string;
   utilisateurDisplayName: string | null;

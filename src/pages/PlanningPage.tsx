@@ -14,6 +14,7 @@ import type { Partenaire } from "../api/partenaire";
 import { buildNamingTitle } from "../utils/namingPartners";
 import { resolveTeamLabel } from "../utils/amicalTeams";
 import { useJ3FinalSquares } from "../hooks/useClassement";
+import { preparerRecherche } from "../utils/recherche";
 
 function normalize(value?: string | null) {
   return (value ?? "").trim().toLowerCase();
@@ -67,7 +68,7 @@ export default function PlanningPage() {
 
   const filtered = React.useMemo(() => {
     if (!matches) return [];
-    const q = normalize(search);
+    const correspond = preparerRecherche(search);
     return [...matches]
       .filter((m) => {
         if (competitionFilter.size > 0 && !competitionFilter.has(m.competitionType ?? "")) return false;
@@ -77,9 +78,11 @@ export default function PlanningPage() {
           const needle = normalize(selectedTeam.id);
           if (normalize(m.teamA) !== needle && normalize(m.teamB) !== needle) return false;
         }
-        if (q) {
-          const haystacks = [m.teamA, m.teamB, m.pouleName, m.pouleCode, m.competitionType, m.surface].map(normalize);
-          if (!haystacks.some((h) => h.includes(q))) return false;
+        if (
+          correspond &&
+          !correspond([m.teamA, m.teamB, m.pouleName, m.pouleCode, m.competitionType, m.surface])
+        ) {
+          return false;
         }
         return true;
       })

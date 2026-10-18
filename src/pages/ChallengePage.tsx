@@ -10,6 +10,8 @@ import { useChallengeGardienJ3 } from "../hooks/useChallengeGardienJ3";
 import { useChallengeJ1Momentum } from "../hooks/useChallengeJ1Momentum";
 import type { VitesseJ3Player, VitesseJ3SlotId, GardienJ3Player } from "../api/challenge";
 import type { ChallengeJ1MomentumEntry } from "../api/challenge";
+import { preparerRecherche } from "../utils/recherche";
+import { nomPourLogoDeSecours } from "../utils/logoSecours";
 
 type ChallengeMomentumItem = {
   id: string;
@@ -99,8 +101,8 @@ export default function ChallengePage() {
   const [layout, setLayout] = React.useState<{ topOffset: number; paddingTop: number }>({ topOffset: 64, paddingTop: 260 });
 
   const teamMap = React.useMemo(() => {
-    const map = new Map<string, { name: string; logoUrl?: string | null }>();
-    teams?.forEach((t) => map.set(t.id.toLowerCase(), { name: t.name, logoUrl: t.logoUrl }));
+    const map = new Map<string, { id: string; name: string; logoUrl?: string | null }>();
+    teams?.forEach((t) => map.set(t.id.toLowerCase(), { id: t.id, name: t.name, logoUrl: t.logoUrl }));
     return map;
   }, [teams]);
 
@@ -326,14 +328,9 @@ export default function ChallengePage() {
     if (selectedTeamId) {
       filtered = filtered.filter((a) => (a.equipeId ?? "").toLowerCase() === selectedTeamId);
     }
-    const term = searchTerm.trim().toLowerCase();
-    if (term) {
-      filtered = filtered.filter((a) => {
-        const joueur = (a.joueurName ?? "").toLowerCase();
-        const equipeId = (a.equipeId ?? "").toLowerCase();
-        const equipeName = (a.equipeName ?? "").toLowerCase();
-        return joueur.includes(term) || equipeId.includes(term) || equipeName.includes(term);
-      });
+    const correspond = preparerRecherche(searchTerm);
+    if (correspond) {
+      filtered = filtered.filter((a) => correspond([a.joueurName, a.equipeId, a.equipeName]));
     }
     if (!opts?.limitTop) return filtered;
     const scorer =
@@ -421,7 +418,8 @@ export default function ChallengePage() {
             {players.map((player) => {
               const equipe = teamMap.get(player.teamId.toLowerCase());
               const displayTeamName = player.teamName ?? equipe?.name ?? null;
-              const fallbackLogo = displayTeamName ? buildLogoUrl(displayTeamName) : null;
+              const nomLogo = nomPourLogoDeSecours(equipe, player.teamName);
+              const fallbackLogo = nomLogo ? buildLogoUrl(nomLogo) : null;
               const logo = equipe?.logoUrl ?? fallbackLogo;
               const isWinner = player.status === "winner";
               return (
@@ -475,7 +473,8 @@ export default function ChallengePage() {
             {ordered.map((player) => {
               const equipe = teamMap.get(player.teamId.toLowerCase());
               const displayTeamName = player.teamName ?? equipe?.name ?? null;
-              const fallbackLogo = displayTeamName ? buildLogoUrl(displayTeamName) : null;
+              const nomLogo = nomPourLogoDeSecours(equipe, player.teamName);
+              const fallbackLogo = nomLogo ? buildLogoUrl(nomLogo) : null;
               const logo = equipe?.logoUrl ?? fallbackLogo;
               const isWinner = player.status === "winner";
               return (
@@ -552,14 +551,9 @@ export default function ChallengePage() {
     if (selectedTeamId) {
       filtered = filtered.filter((a) => (a.equipeId ?? "").toLowerCase() === selectedTeamId);
     }
-    const term = searchTerm.trim().toLowerCase();
-    if (term) {
-      filtered = filtered.filter((a) => {
-        const joueur = (a.joueurName ?? "").toLowerCase();
-        const equipe = (a.equipeId ?? "").toLowerCase();
-        const equipeName = (a.equipeName ?? "").toLowerCase();
-        return joueur.includes(term) || equipe.includes(term) || equipeName.includes(term);
-      });
+    const correspond = preparerRecherche(searchTerm);
+    if (correspond) {
+      filtered = filtered.filter((a) => correspond([a.joueurName, a.equipeId, a.equipeName]));
     }
     return [...filtered]
       .sort((a, b) => {
@@ -575,16 +569,11 @@ export default function ChallengePage() {
 
   const finaleCombiTop3 = React.useMemo(() => {
     const selectedTeamId = selectedTeam?.id?.toLowerCase();
-    const term = searchTerm.trim().toLowerCase();
+    const correspond = preparerRecherche(searchTerm);
     const vitesseAttempts = groupByAtelier.jour1.vitesse.filter((a) => {
       if (a.metrics.type !== "vitesse" || (a.metrics.tempsTotal ?? 0) === 0) return false;
       if (selectedTeamId && (a.equipeId ?? "").toLowerCase() !== selectedTeamId) return false;
-      if (term) {
-        const j = (a.joueurName ?? "").toLowerCase();
-        const e = (a.equipeId ?? "").toLowerCase();
-        const en = (a.equipeName ?? "").toLowerCase();
-        if (!j.includes(term) && !e.includes(term) && !en.includes(term)) return false;
-      }
+      if (correspond && !correspond([a.joueurName, a.equipeId, a.equipeName])) return false;
       return true;
     });
     return [...vitesseAttempts]
@@ -1090,7 +1079,7 @@ function GardienJ3SlotCard({
 }: {
   label?: string;
   players: GardienJ3Player[];
-  teamMap: Map<string, { name: string; logoUrl?: string | null }>;
+  teamMap: Map<string, { id: string; name: string; logoUrl?: string | null }>;
   buildLogoUrl: (name: string) => string;
   statusBadgeClass: (status?: GardienJ3Player["status"]) => string;
   statusLabel: (status?: GardienJ3Player["status"]) => string;
@@ -1107,7 +1096,8 @@ function GardienJ3SlotCard({
           {players.map((player) => {
             const equipe = teamMap.get(player.teamId.toLowerCase());
             const displayTeamName = player.teamName ?? equipe?.name ?? null;
-            const fallbackLogo = displayTeamName ? buildLogoUrl(displayTeamName) : null;
+            const nomLogo = nomPourLogoDeSecours(equipe, player.teamName);
+            const fallbackLogo = nomLogo ? buildLogoUrl(nomLogo) : null;
             const logo = equipe?.logoUrl ?? fallbackLogo;
             const isWinner = player.status === "winner";
             return (

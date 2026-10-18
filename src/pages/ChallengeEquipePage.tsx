@@ -8,6 +8,7 @@ import type { ChallengeAttempt as Attempt, GardienJ3Player } from "../api/challe
 import challengeIcon from "../assets/icons/nav/challenge.png";
 import Breadcrumbs from "../components/navigation/Breadcrumbs";
 import { ACCUEIL_CRUMB, CHALLENGE_CRUMB } from "../components/navigation/breadcrumbItems";
+import { preparerRecherche } from "../utils/recherche";
 
 type TeamInfo = {
   id: string;
@@ -269,14 +270,9 @@ export default function ChallengeEquipePage() {
 
   const applyFilters = (attempts: Attempt[]) => {
     let filtered = attempts;
-    const term = searchTerm.trim().toLowerCase();
-    if (term) {
-      filtered = filtered.filter((a) => {
-        const joueur = (a.joueurName ?? "").toLowerCase();
-        const equipeId = (a.equipeId ?? "").toLowerCase();
-        const equipeName = (a.equipeName ?? "").toLowerCase();
-        return joueur.includes(term) || equipeId.includes(term) || equipeName.includes(term);
-      });
+    const correspond = preparerRecherche(searchTerm);
+    if (correspond) {
+      filtered = filtered.filter((a) => correspond([a.joueurName, a.equipeId, a.equipeName]));
     }
     return filtered;
   };

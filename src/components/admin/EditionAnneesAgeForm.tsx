@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { useAjouterAnneeAge, useRetirerAnneeAge } from "../../hooks/useAnneesAge";
+import { estConflitEtat } from "../../hooks/useChangerEtapeEdition";
 
 type Props = {
   editionId: number;
   anneesAge: number[];
   token: string;
+  /** Paramètres d'inscription figés (étape de l'édition) : liste seule, sans ajout ni retrait. */
+  readOnly?: boolean;
 };
 
 /**
@@ -13,7 +16,12 @@ type Props = {
  * "Enregistrer" commun) : le formulaire dossier joueur doit voir la liste à
  * jour dès l'action de l'organisateur (spec, critère d'acceptation 1).
  */
-export default function EditionAnneesAgeForm({ editionId, anneesAge, token }: Props) {
+export default function EditionAnneesAgeForm({
+  editionId,
+  anneesAge,
+  token,
+  readOnly = false,
+}: Props) {
   const [nouvelleAnnee, setNouvelleAnnee] = useState("");
   const ajouter = useAjouterAnneeAge(editionId, token);
   const retirer = useRetirerAnneeAge(editionId, token);
@@ -44,6 +52,7 @@ export default function EditionAnneesAgeForm({ editionId, anneesAge, token }: Pr
             className="flex items-center gap-1 bg-slate-800 border border-slate-600 rounded-full px-3 py-1 text-sm text-slate-100"
           >
             {annee}
+            {!readOnly && (
             <button
               type="button"
               onClick={() => retirer.mutate(annee)}
@@ -53,6 +62,7 @@ export default function EditionAnneesAgeForm({ editionId, anneesAge, token }: Pr
             >
               ×
             </button>
+            )}
           </li>
         ))}
       </ul>
@@ -65,6 +75,7 @@ export default function EditionAnneesAgeForm({ editionId, anneesAge, token }: Pr
         clic sur "Ajouter"). Le clic + la touche Entrée sont donc gérés
         manuellement plutôt que via onSubmit.
       */}
+      {!readOnly && (
       <div className="flex items-center gap-2">
         <input
           type="number"
@@ -88,9 +99,12 @@ export default function EditionAnneesAgeForm({ editionId, anneesAge, token }: Pr
           Ajouter
         </button>
       </div>
+      )}
       {(ajouter.isError || retirer.isError) && (
         <p className="text-red-400 text-xs">
-          Impossible de mettre à jour les années d'âge. Réessaie.
+          {estConflitEtat(ajouter.error ?? retirer.error)
+            ? (ajouter.error ?? retirer.error)!.message
+            : "Impossible de mettre à jour les années d'âge. Réessaie."}
         </p>
       )}
     </fieldset>

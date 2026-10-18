@@ -1,18 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 
 import FormatCompetitionBuilderPage from "../FormatCompetitionBuilderPage";
 import type { FormatGraphe } from "../../api/formatGraphe";
+import { ServerError } from "../../api/errors";
+import { MESSAGE_FORMULE_FIGEE } from "../../utils/editionRegles";
 
 const mockUseInscriptionSession = vi.fn();
 vi.mock("../../hooks/useInscriptionSession", () => ({
+  EDITION_QUERY_KEY: ["inscription", "edition-courante"],
   useInscriptionSession: () => mockUseInscriptionSession(),
 }));
 
 const mockUseEditionEnPreparation = vi.fn();
 vi.mock("../../hooks/useEditionEnPreparation", () => ({
+  EDITION_EN_PREPARATION_QUERY_KEY: ["inscription", "edition-en-preparation"],
   useEditionEnPreparation: () => mockUseEditionEnPreparation(),
 }));
 
@@ -69,8 +73,11 @@ const GRAPHE_MOCK: FormatGraphe = {
   genereDepuisPreset: null,
 };
 
+let qc: QueryClient;
+
 function renderPage(initialPath = "/admin/format-competition") {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  vi.spyOn(qc, "invalidateQueries");
   return render(
     <MemoryRouter initialEntries={[initialPath]}>
       <QueryClientProvider client={qc}>
@@ -102,7 +109,7 @@ describe("FormatCompetitionBuilderPage", () => {
     mockUseInscriptionSession.mockReturnValue({
       role: "TABLE_DE_MARQUE",
       token: "test-token",
-      edition: { id: 1 },
+      edition: { id: 1, etape: "CLOTUREE" },
       isLoading: false,
     });
     renderPage();
@@ -113,7 +120,7 @@ describe("FormatCompetitionBuilderPage", () => {
     mockUseInscriptionSession.mockReturnValue({
       role: "ORGANISATEUR",
       token: "test-token",
-      edition: { id: 1 },
+      edition: { id: 1, etape: "CLOTUREE" },
       isLoading: false,
     });
     renderPage();
@@ -127,7 +134,7 @@ describe("FormatCompetitionBuilderPage", () => {
     mockUseInscriptionSession.mockReturnValue({
       role: "ORGANISATEUR",
       token: "test-token",
-      edition: { id: 1 },
+      edition: { id: 1, etape: "CLOTUREE" },
       isLoading: false,
     });
     renderPage();
@@ -142,7 +149,7 @@ describe("FormatCompetitionBuilderPage", () => {
     mockUseInscriptionSession.mockReturnValue({
       role: "ORGANISATEUR",
       token: "test-token",
-      edition: { id: 1 },
+      edition: { id: 1, etape: "CLOTUREE" },
       isLoading: false,
     });
     renderPage();
@@ -157,7 +164,7 @@ describe("FormatCompetitionBuilderPage", () => {
     mockUseInscriptionSession.mockReturnValue({
       role: "ORGANISATEUR",
       token: "test-token",
-      edition: { id: 1 },
+      edition: { id: 1, etape: "CLOTUREE" },
       isLoading: false,
     });
     mockUseEditionEnPreparation.mockReturnValue({
@@ -169,11 +176,11 @@ describe("FormatCompetitionBuilderPage", () => {
     expect(api.fetchFormatGraphe).not.toHaveBeenCalledWith(1, "test-token");
   });
 
-  it("?edition=demarree : cible l'édition démarrée même si une édition en préparation existe, et affiche la bannière lecture seule", async () => {
+  it("?edition=demarree : cible l'édition démarrée même si une édition en préparation existe, et affiche le bandeau de verrou", async () => {
     mockUseInscriptionSession.mockReturnValue({
       role: "ORGANISATEUR",
       token: "test-token",
-      edition: { id: 1 },
+      edition: { id: 1, etape: "TOURNOI_DEMARRE" },
       isLoading: false,
     });
     mockUseEditionEnPreparation.mockReturnValue({
@@ -183,16 +190,14 @@ describe("FormatCompetitionBuilderPage", () => {
 
     await waitFor(() => expect(api.fetchFormatGraphe).toHaveBeenCalledWith(1, "test-token"));
     expect(api.fetchFormatGraphe).not.toHaveBeenCalledWith(2, "test-token");
-    expect(
-      screen.getByText(/Consultation en lecture seule de l'édition démarrée/),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(MESSAGE_FORMULE_FIGEE);
   });
 
   it("?edition=demarree : gèle le canevas (pointer-events-none) pour empêcher toute interaction", async () => {
     mockUseInscriptionSession.mockReturnValue({
       role: "ORGANISATEUR",
       token: "test-token",
-      edition: { id: 1 },
+      edition: { id: 1, etape: "TOURNOI_DEMARRE" },
       isLoading: false,
     });
     renderPage("/admin/format-competition?edition=demarree");
@@ -207,7 +212,7 @@ describe("FormatCompetitionBuilderPage", () => {
     mockUseInscriptionSession.mockReturnValue({
       role: "ORGANISATEUR",
       token: "test-token",
-      edition: { id: 1 },
+      edition: { id: 1, etape: "CLOTUREE" },
       isLoading: false,
     });
     renderPage();
@@ -219,12 +224,85 @@ describe("FormatCompetitionBuilderPage", () => {
     expect(screen.getByText("Poule A").closest("[aria-disabled='true']")).toBeNull();
   });
 
+  it("TOURNOI_DEMARRE sans ?edition=demarree : lecture seule, bandeau et lien vers l'accueil admin (CA 3)", async () => {
+    mockUseInscriptionSession.mockReturnValue({
+      role: "ORGANISATEUR",
+      token: "test-token",
+      edition: { id: 1, etape: "TOURNOI_DEMARRE" },
+      isLoading: false,
+    });
+    renderPage();
+
+    await screen.findByText("Poule A");
+    const bandeau = screen.getByRole("status");
+    expect(bandeau).toHaveTextContent(MESSAGE_FORMULE_FIGEE);
+    expect(within(bandeau).getByRole("link", { name: "Accueil admin" })).toHaveAttribute("href", "/admin");
+    expect(screen.getByText("Poule A").closest("[aria-disabled='true']")).toHaveClass("pointer-events-none");
+    expect(screen.queryByText(/Consultation en lecture seule de l'édition démarrée/)).not.toBeInTheDocument();
+  });
+
+  it.each(["CREEE", "CREATION_NOUVEAU_TOURNOI", "INSCRIPTIONS_OUVERTES", "CLOTUREE"] as const)(
+    "%s : graphe modifiable, sans bandeau (CA 1 et 6)",
+    async (etape) => {
+      mockUseInscriptionSession.mockReturnValue({
+        role: "ORGANISATEUR",
+        token: "test-token",
+        edition: { id: 1, etape },
+        isLoading: false,
+      });
+      renderPage();
+
+      await screen.findByText("Poule A");
+      expect(screen.queryByText(MESSAGE_FORMULE_FIGEE)).not.toBeInTheDocument();
+      expect(screen.getByText("Poule A").closest("[aria-disabled='true']")).toBeNull();
+    },
+  );
+
+  it("édition active lancée mais édition en préparation : cible la préparation, modifiable", async () => {
+    mockUseInscriptionSession.mockReturnValue({
+      role: "ORGANISATEUR",
+      token: "test-token",
+      edition: { id: 1, etape: "TOURNOI_DEMARRE" },
+      isLoading: false,
+    });
+    mockUseEditionEnPreparation.mockReturnValue({ data: { id: 2, etape: "CREATION_NOUVEAU_TOURNOI" } });
+    renderPage();
+
+    await waitFor(() => expect(api.fetchFormatGraphe).toHaveBeenCalledWith(2, "test-token"));
+    await screen.findByText("Poule A");
+    expect(screen.queryByText(MESSAGE_FORMULE_FIGEE)).not.toBeInTheDocument();
+    expect(screen.getByText("Poule A").closest("[aria-disabled='true']")).toBeNull();
+  });
+
+  it("409 reçu (onglet ouvert avant le lancement) : message du back et resynchronisation de l'édition (CA 11)", async () => {
+    (api.creerPhase as ReturnType<typeof vi.fn>).mockRejectedValue(new ServerError(409, MESSAGE_FORMULE_FIGEE));
+    mockUseInscriptionSession.mockReturnValue({
+      role: "ORGANISATEUR",
+      token: "test-token",
+      edition: { id: 1, etape: "CLOTUREE" },
+      isLoading: false,
+    });
+    renderPage();
+
+    await screen.findByText("Poule A");
+    fireEvent.change(screen.getByPlaceholderText("Nom de la nouvelle phase (ex : Brassage)"), {
+      target: { value: "Finales" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "+ Phase" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(MESSAGE_FORMULE_FIGEE);
+    await waitFor(() =>
+      expect(qc.invalidateQueries).toHaveBeenCalledWith({ queryKey: ["inscription", "edition-courante"] }),
+    );
+    expect(qc.invalidateQueries).toHaveBeenCalledWith({ queryKey: ["inscription", "edition-en-preparation"] });
+  });
+
   it("déclenche creerPhase quand le formulaire d'ajout de phase est soumis", async () => {
     (api.creerPhase as ReturnType<typeof vi.fn>).mockResolvedValue({});
     mockUseInscriptionSession.mockReturnValue({
       role: "ORGANISATEUR",
       token: "test-token",
-      edition: { id: 1 },
+      edition: { id: 1, etape: "CLOTUREE" },
       isLoading: false,
     });
     renderPage();

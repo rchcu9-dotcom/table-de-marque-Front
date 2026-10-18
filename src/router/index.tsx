@@ -36,6 +36,7 @@ import FormatCompetitionBuilderPage from "../pages/FormatCompetitionBuilderPage"
 import ConnexionPage from "../pages/ConnexionPage";
 import ProfilPage from "../pages/ProfilPage";
 import AdminPage from "../pages/AdminPage";
+import GestionEquipesPage from "../pages/GestionEquipesPage";
 import SearchBar from "../components/ds/SearchBar";
 import type { SortConfig } from "../components/collections/List";
 import type { Match } from "../api/match";
@@ -248,6 +249,14 @@ export default function AppRouter() {
         element={
           <LayoutRoot>
             <AdminPage />
+          </LayoutRoot>
+        }
+      />
+      <Route
+        path="/admin/equipes"
+        element={
+          <LayoutRoot>
+            <GestionEquipesPage />
           </LayoutRoot>
         }
       />

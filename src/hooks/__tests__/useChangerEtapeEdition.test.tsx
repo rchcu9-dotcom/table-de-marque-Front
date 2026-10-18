@@ -4,9 +4,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
 import {
-  useChangerEtapeInscriptions,
+  useChangerEtapeEdition,
   estConflitEtat,
-} from "../useChangerEtapeInscriptions";
+} from "../useChangerEtapeEdition";
 import { EDITION_QUERY_KEY } from "../useInscriptionSession";
 import { EDITION_EN_PREPARATION_QUERY_KEY } from "../useEditionEnPreparation";
 import { ServerError } from "../../api/errors";
@@ -14,7 +14,7 @@ import * as api from "../../api/inscription";
 
 vi.mock("../../api/inscription", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/inscription")>();
-  return { ...actual, ouvrirInscriptions: vi.fn(), cloturerInscriptions: vi.fn() };
+  return { ...actual, ouvrirInscriptions: vi.fn(), cloturerInscriptions: vi.fn(), demarrerTournoi: vi.fn() };
 });
 
 function makeWrapper(qc: QueryClient) {
@@ -23,7 +23,7 @@ function makeWrapper(qc: QueryClient) {
   };
 }
 
-describe("useChangerEtapeInscriptions", () => {
+describe("useChangerEtapeEdition", () => {
   let qc: QueryClient;
 
   beforeEach(() => {
@@ -35,7 +35,7 @@ describe("useChangerEtapeInscriptions", () => {
 
   it("ouvrir → ouvrirInscriptions(editionId, token), et jamais cloturerInscriptions", async () => {
     (api.ouvrirInscriptions as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 3 });
-    const { result } = renderHook(() => useChangerEtapeInscriptions(3, "tok"), {
+    const { result } = renderHook(() => useChangerEtapeEdition(3, "tok"), {
       wrapper: makeWrapper(qc),
     });
 
@@ -48,7 +48,7 @@ describe("useChangerEtapeInscriptions", () => {
 
   it("cloturer → cloturerInscriptions(editionId, token), et jamais ouvrirInscriptions", async () => {
     (api.cloturerInscriptions as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 3 });
-    const { result } = renderHook(() => useChangerEtapeInscriptions(3, "tok"), {
+    const { result } = renderHook(() => useChangerEtapeEdition(3, "tok"), {
       wrapper: makeWrapper(qc),
     });
 
@@ -59,10 +59,24 @@ describe("useChangerEtapeInscriptions", () => {
     expect(api.ouvrirInscriptions).not.toHaveBeenCalled();
   });
 
+  it("demarrer → demarrerTournoi(editionId, token)", async () => {
+    (api.demarrerTournoi as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 3 });
+    const { result } = renderHook(() => useChangerEtapeEdition(3, "tok"), {
+      wrapper: makeWrapper(qc),
+    });
+
+    result.current.mutate("demarrer");
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(api.demarrerTournoi).toHaveBeenCalledWith(3, "tok");
+    expect(api.ouvrirInscriptions).not.toHaveBeenCalled();
+    expect(api.cloturerInscriptions).not.toHaveBeenCalled();
+  });
+
   it("invalide les caches édition courante ET édition en préparation après succès", async () => {
     (api.ouvrirInscriptions as ReturnType<typeof vi.fn>).mockResolvedValue({ id: 3 });
     const invalidateSpy = vi.spyOn(qc, "invalidateQueries").mockResolvedValue();
-    const { result } = renderHook(() => useChangerEtapeInscriptions(3, "tok"), {
+    const { result } = renderHook(() => useChangerEtapeEdition(3, "tok"), {
       wrapper: makeWrapper(qc),
     });
 
@@ -78,7 +92,7 @@ describe("useChangerEtapeInscriptions", () => {
       new ServerError(409, "Transition d'étape interdite"),
     );
     const invalidateSpy = vi.spyOn(qc, "invalidateQueries").mockResolvedValue();
-    const { result } = renderHook(() => useChangerEtapeInscriptions(3, "tok"), {
+    const { result } = renderHook(() => useChangerEtapeEdition(3, "tok"), {
       wrapper: makeWrapper(qc),
     });
 
@@ -95,7 +109,7 @@ describe("useChangerEtapeInscriptions", () => {
       new ServerError(500, "boom"),
     );
     const invalidateSpy = vi.spyOn(qc, "invalidateQueries").mockResolvedValue();
-    const { result } = renderHook(() => useChangerEtapeInscriptions(3, "tok"), {
+    const { result } = renderHook(() => useChangerEtapeEdition(3, "tok"), {
       wrapper: makeWrapper(qc),
     });
 

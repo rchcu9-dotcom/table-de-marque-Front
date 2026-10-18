@@ -5,6 +5,7 @@ import { useSelectedTeam } from "../providers/SelectedTeamProvider";
 import challengeIcon from "../assets/icons/nav/challenge.png";
 import Breadcrumbs from "../components/navigation/Breadcrumbs";
 import { ACCUEIL_CRUMB, CHALLENGE_CRUMB } from "../components/navigation/breadcrumbItems";
+import { preparerRecherche } from "../utils/recherche";
 
 export default function ChallengeFinaleAtelierGardienPage() {
   const { selectedTeam } = useSelectedTeam();
@@ -27,13 +28,9 @@ export default function ChallengeFinaleAtelierGardienPage() {
       ? attempts.filter((a) => (a.equipeId ?? "").toLowerCase() === selectedTeam.id.toLowerCase())
       : attempts;
 
-    const term = search.trim().toLowerCase();
-    if (term) {
-      filtered = filtered.filter((a) => {
-        const joueur = (a.joueurName ?? "").toLowerCase();
-        const equipe = (a.equipeName ?? "").toLowerCase();
-        return joueur.includes(term) || equipe.includes(term) || (a.equipeId ?? "").toLowerCase().includes(term);
-      });
+    const correspond = preparerRecherche(search);
+    if (correspond) {
+      filtered = filtered.filter((a) => correspond([a.joueurName, a.equipeId, a.equipeName]));
     }
 
     return [...filtered].sort((a, b) => {

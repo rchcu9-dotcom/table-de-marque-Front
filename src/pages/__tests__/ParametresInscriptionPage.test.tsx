@@ -1,11 +1,13 @@
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 
 import ParametresInscriptionPage from "../ParametresInscriptionPage";
 import type { Edition } from "../../api/types/inscription.types";
+import { ServerError } from "../../api/errors";
+import { MESSAGE_INSCRIPTION_FIGEE } from "../../utils/editionRegles";
 
 const mockUseInscriptionSession = vi.fn();
 vi.mock("../../hooks/useInscriptionSession", () => ({
@@ -55,8 +57,11 @@ const EDITION_MOCK: Edition = {
   anneesAge: [2014, 2015],
 };
 
+let qc: QueryClient;
+
 function renderPage() {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  vi.spyOn(qc, "invalidateQueries");
   return render(
     <MemoryRouter>
       <QueryClientProvider client={qc}>
@@ -501,7 +506,7 @@ describe("ParametresInscriptionPage — années d'âge (docs/specs/ajoute-dans-l
   });
 });
 
-describe("ParametresInscriptionPage — switch « Inscriptions ouvertes / fermées »", () => {
+describe("ParametresInscriptionPage — étape en lecture seule (pilotage depuis l'accueil admin)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseEditionEnPreparation.mockReturnValue({ data: null });
@@ -516,61 +521,198 @@ describe("ParametresInscriptionPage — switch « Inscriptions ouvertes / fermé
     });
   }
 
-  it("affiche le switch en tête de page, avant le formulaire", () => {
-    givenEdition("CREEE");
-    renderPage();
-
-    const toggle = screen.getByRole("switch");
-    const form = screen.getByLabelText("Nom du tournoi");
-    expect(toggle).toHaveAttribute("aria-checked", "false");
-    expect(
-      toggle.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    expect(screen.getAllByRole("switch")).toHaveLength(1);
-  });
-
-  it("reflète l'état serveur de l'édition (INSCRIPTIONS_OUVERTES → ouvert)", () => {
+  it("n'affiche plus de switch ni aucun bouton de changement d'étape", () => {
     givenEdition("INSCRIPTIONS_OUVERTES");
     renderPage();
 
-    expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByText("Inscriptions ouvertes")).toBeInTheDocument();
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /inscriptions|tournoi/i })).not.toBeInTheDocument();
+    expect(api.ouvrirInscriptions).not.toHaveBeenCalled();
+    expect(api.cloturerInscriptions).not.toHaveBeenCalled();
   });
 
-  it("cible l'édition en préparation (id 2) plutôt que l'édition active pour ouvrir", async () => {
+  it.each([
+    ["CREEE", "Préparation"],
+    ["CREATION_NOUVEAU_TOURNOI", "Préparation"],
+    ["INSCRIPTIONS_OUVERTES", "Inscriptions ouvertes"],
+    ["CLOTUREE", "Inscriptions clôturées"],
+    ["TOURNOI_DEMARRE", "Tournoi en cours"],
+  ] as const)("affiche l'étape %s par son libellé français « %s », jamais le code", (etape, libelle) => {
+    givenEdition(etape);
+    renderPage();
+
+    expect(screen.getByText(libelle)).toBeInTheDocument();
+    expect(screen.queryByText(etape)).not.toBeInTheDocument();
+  });
+
+  it("propose un lien « Changer d'étape depuis l'accueil admin », avant le formulaire", () => {
+    givenEdition("CLOTUREE");
+    renderPage();
+
+    const lien = screen.getByRole("link", { name: "Changer d'étape depuis l'accueil admin" });
+    expect(lien).toHaveAttribute("href", "/admin");
+    const form = screen.getByLabelText("Nom du tournoi");
+    expect(lien.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("affiche l'étape de l'édition en préparation quand elle existe", () => {
     givenEdition("TOURNOI_DEMARRE", 1);
     mockUseEditionEnPreparation.mockReturnValue({
       data: { ...EDITION_MOCK, id: 2, etape: "CREATION_NOUVEAU_TOURNOI" },
     });
-    (api.ouvrirInscriptions as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ...EDITION_MOCK,
-      id: 2,
-      etape: "INSCRIPTIONS_OUVERTES",
-    });
     renderPage();
 
-    const toggle = screen.getByRole("switch");
-    expect(toggle).not.toHaveAttribute("aria-disabled", "true");
-    fireEvent.click(toggle);
+    expect(screen.getByText("Préparation")).toBeInTheDocument();
+    expect(screen.queryByText("Tournoi en cours")).not.toBeInTheDocument();
+  });
+});
 
-    await waitFor(() =>
-      expect(api.ouvrirInscriptions).toHaveBeenCalledWith(2, "test-token"),
-    );
+describe("ParametresInscriptionPage — paramètres figés dès l'ouverture (spec § 2.5, CA 5 et 6)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseEditionEnPreparation.mockReturnValue({ data: null });
   });
 
-  it("est désactivé à TOURNOI_DEMARRE : aucun appel possible", () => {
-    givenEdition("TOURNOI_DEMARRE");
+  function givenEdition(etape: Edition["etape"], patch: Partial<Edition> = {}) {
+    mockUseInscriptionSession.mockReturnValue({
+      role: "ORGANISATEUR",
+      token: "test-token",
+      edition: {
+        ...EDITION_MOCK,
+        etape,
+        hasImageRib: true,
+        imageRibUpdatedAt: "2026-09-16T00:00:00.000Z",
+        ...patch,
+      },
+      isLoading: false,
+    });
+  }
+
+  const FIGEES = ["INSCRIPTIONS_OUVERTES", "CLOTUREE", "TOURNOI_DEMARRE"] as const;
+
+  it.each(FIGEES)("%s : champs désactivés, ni Enregistrer, ni ajout/retrait d'année, ni envoi/suppression du RIB", (etape) => {
+    givenEdition(etape);
+    const { container } = renderPage();
+
+    for (const label of [
+      "Nom du tournoi",
+      "Catégorie",
+      "Début du tournoi",
+      "Fin du tournoi",
+      "Frais d'inscription (€)",
+      "Prix du repas (€)",
+      "Nombre de places max",
+      "Email de contact",
+    ]) {
+      expect(screen.getByLabelText(label)).toBeDisabled();
+    }
+    expect(screen.queryByRole("button", { name: "Enregistrer" })).not.toBeInTheDocument();
+
+    // Années d'âge : lisibles, sans ajout ni retrait.
+    expect(screen.getByText("2014")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ajouter" })).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Ex: 2015")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Retirer l'année/ })).not.toBeInTheDocument();
+
+    // RIB : aperçu conservé, ni envoi ni suppression.
+    expect(screen.getByAltText("Aperçu du RIB")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Supprimer" })).not.toBeInTheDocument();
+    expect(container.querySelector('input[type="file"]')).toBeNull();
+  });
+
+  it.each(FIGEES)("%s : messages lisibles (accordéon dépliable) mais non modifiables", (etape) => {
+    givenEdition(etape);
     renderPage();
 
-    const toggle = screen.getByRole("switch");
-    expect(toggle).toHaveAttribute("aria-disabled", "true");
-    fireEvent.click(toggle);
-    expect(api.ouvrirInscriptions).not.toHaveBeenCalled();
-    expect(api.cloturerInscriptions).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: /Messages du parcours d'inscription/ }));
+
+    const accueil = screen.getByLabelText(/^Message d'accueil/);
+    expect(accueil).toHaveValue("Bienvenue !");
+    expect(accueil).toHaveAttribute("readonly");
+  });
+
+  it("INSCRIPTIONS_OUVERTES : bandeau explicatif et lien « Revenir en préparation depuis l'accueil admin »", () => {
+    givenEdition("INSCRIPTIONS_OUVERTES");
+    renderPage();
+
+    const bandeau = screen.getByRole("status");
+    expect(bandeau).toHaveTextContent(
+      "Inscriptions ouvertes : les paramètres d'inscription sont figés, car les équipes candidatent sur cette base.",
+    );
     expect(
-      screen.getByText(
-        "Le tournoi a démarré, les inscriptions ne peuvent plus être rouvertes",
-      ),
-    ).toBeInTheDocument();
+      within(bandeau).getByRole("link", { name: "Revenir en préparation depuis l'accueil admin" }),
+    ).toHaveAttribute("href", "/admin");
+  });
+
+  it.each(["CLOTUREE", "TOURNOI_DEMARRE"] as const)(
+    "%s : bandeau sans mention du retour en préparation, lien vers l'accueil admin",
+    (etape) => {
+      givenEdition(etape);
+      renderPage();
+
+      const bandeau = screen.getByRole("status");
+      expect(bandeau).toHaveTextContent(/paramètres d'inscription sont figés/);
+      expect(bandeau).not.toHaveTextContent(/Revenir en préparation/);
+      expect(within(bandeau).getByRole("link", { name: "Accueil admin" })).toHaveAttribute("href", "/admin");
+    },
+  );
+
+  it("une soumission forcée du formulaire figé (touche Entrée) n'émet aucun PATCH", () => {
+    givenEdition("INSCRIPTIONS_OUVERTES");
+    renderPage();
+
+    fireEvent.submit(screen.getByLabelText("Nom du tournoi").closest("form")!);
+
+    expect(api.updateEdition).not.toHaveBeenCalled();
+  });
+
+  it.each(["CREEE", "CREATION_NOUVEAU_TOURNOI"] as const)(
+    "%s : tout reste modifiable, sans bandeau",
+    (etape) => {
+      givenEdition(etape);
+      const { container } = renderPage();
+
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Nom du tournoi")).toBeEnabled();
+      expect(screen.getByLabelText("Email de contact")).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Enregistrer" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Ajouter" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Retirer l'année 2014" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Supprimer" })).toBeInTheDocument();
+      expect(container.querySelector('input[type="file"]')).not.toBeNull();
+
+      fireEvent.click(screen.getByRole("button", { name: /Messages du parcours d'inscription/ }));
+      expect(screen.getByLabelText(/^Message d'accueil/)).not.toHaveAttribute("readonly");
+    },
+  );
+
+  it("409 reçu (onglet ouvert avant l'ouverture) : message du back et resynchronisation de l'édition (CA 11)", async () => {
+    (api.updateEdition as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new ServerError(409, MESSAGE_INSCRIPTION_FIGEE),
+    );
+    givenEdition("CREEE");
+    renderPage();
+
+    fireEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    expect(await screen.findByText(MESSAGE_INSCRIPTION_FIGEE)).toBeInTheDocument();
+    expect(qc.invalidateQueries).toHaveBeenCalledWith({ queryKey: ["inscription", "edition-courante"] });
+    expect(qc.invalidateQueries).toHaveBeenCalledWith({ queryKey: ["inscription", "edition-en-preparation"] });
+  });
+
+  it("409 sur l'ajout d'une année d'âge : resynchronisation de l'édition", async () => {
+    (api.ajouterAnneeAge as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new ServerError(409, MESSAGE_INSCRIPTION_FIGEE),
+    );
+    givenEdition("CREEE");
+    renderPage();
+
+    fireEvent.change(screen.getByPlaceholderText("Ex: 2015"), { target: { value: "2016" } });
+    fireEvent.click(screen.getByRole("button", { name: "Ajouter" }));
+
+    await waitFor(() =>
+      expect(qc.invalidateQueries).toHaveBeenCalledWith({ queryKey: ["inscription", "edition-en-preparation"] }),
+    );
+    expect(await screen.findByText(MESSAGE_INSCRIPTION_FIGEE)).toBeInTheDocument();
   });
 });

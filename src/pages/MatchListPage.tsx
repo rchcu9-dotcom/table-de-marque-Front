@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 import HorizontalMatchSlider from "../components/collections/HorizontalMatchSlider";
 import Breadcrumbs from "../components/navigation/Breadcrumbs";
 import { ACCUEIL_CRUMB } from "../components/navigation/breadcrumbItems";
+import { preparerRecherche } from "../utils/recherche";
 
 type Props = {
   searchQuery?: string;
@@ -124,7 +125,6 @@ export default function MatchListPage({
 
   const effectiveSort = sort ?? { key: "date", direction: "asc" as const };
 
-  const normalizedQuery = searchQuery.trim().toLowerCase();
   const filteredMatches = React.useMemo<Match[]>(() => {
     if (!allMatches) return [];
     let base = allMatches;
@@ -144,21 +144,19 @@ export default function MatchListPage({
       });
     }
 
-    if (!normalizedQuery) return base;
-    return base.filter((item) => {
-      const haystack = [
+    const correspond = preparerRecherche(searchQuery);
+    if (!correspond) return base;
+    return base.filter((item) =>
+      correspond([
         item.teamA,
         item.teamB,
         `${item.teamA} ${item.teamB}`,
         item.id,
         item.status,
         new Date(item.date).toLocaleString(),
-      ]
-        .filter(Boolean)
-        .map((value) => String(value).toLowerCase());
-      return haystack.some((value) => value.includes(normalizedQuery));
-    });
-  }, [allMatches, normalizedQuery, teamFilter, pouleFilter]);
+      ]),
+    );
+  }, [allMatches, searchQuery, teamFilter, pouleFilter]);
 
   const teamOptions = React.useMemo(() => {
     const set = new Set<string>();

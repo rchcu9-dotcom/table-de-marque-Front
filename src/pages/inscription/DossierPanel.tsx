@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from 'react';
 import {
   fetchMonDossier,
+  fetchDossierParCandidature,
   ajouterJoueur,
   modifierJoueur,
   supprimerJoueur,
@@ -8,6 +9,15 @@ import {
   modifierCoach,
   supprimerCoach,
   accepterDroitsImage,
+  ajouterJoueurCandidature,
+  modifierJoueurCandidature,
+  supprimerJoueurCandidature,
+  ajouterCoachCandidature,
+  modifierCoachCandidature,
+  supprimerCoachCandidature,
+  accepterDroitsImageCandidature,
+  type JoueurDossierInput,
+  type CoachDossierInput,
 } from '../../api/inscription';
 import type {
   DossierComplet,
@@ -16,6 +26,42 @@ import type {
 } from '../../api/types/inscription.types';
 import { useInscriptionSession } from '../../hooks/useInscriptionSession';
 import { POSTES_JOUEUR, type PosteJoueur } from '../../utils/posteJoueur';
+import { JoueursTable } from './JoueursTable';
+
+/**
+ * Dossier affiché : celui du référent connecté, ou celui d'une candidature
+ * désignée par l'organisateur. Seuls les appels API changent, le rendu est
+ * commun.
+ */
+export type DossierSource = { type: 'moi' } | { type: 'candidature'; id: number };
+
+const SOURCE_MOI: DossierSource = { type: 'moi' };
+
+function dossierApi(source: DossierSource, token: string) {
+  if (source.type === 'moi') {
+    return {
+      charger: () => fetchMonDossier(token),
+      ajouterJoueur: (d: JoueurDossierInput) => ajouterJoueur(d, token),
+      modifierJoueur: (id: number, d: JoueurDossierInput) => modifierJoueur(id, d, token),
+      supprimerJoueur: (id: number) => supprimerJoueur(id, token),
+      ajouterCoach: (d: CoachDossierInput) => ajouterCoach(d, token),
+      modifierCoach: (id: number, d: CoachDossierInput) => modifierCoach(id, d, token),
+      supprimerCoach: (id: number) => supprimerCoach(id, token),
+      droitsImage: (accepte: boolean) => accepterDroitsImage(accepte, token),
+    };
+  }
+  const c = source.id;
+  return {
+    charger: () => fetchDossierParCandidature(c, token),
+    ajouterJoueur: (d: JoueurDossierInput) => ajouterJoueurCandidature(c, d, token),
+    modifierJoueur: (id: number, d: JoueurDossierInput) => modifierJoueurCandidature(c, id, d, token),
+    supprimerJoueur: (id: number) => supprimerJoueurCandidature(c, id, token),
+    ajouterCoach: (d: CoachDossierInput) => ajouterCoachCandidature(c, d, token),
+    modifierCoach: (id: number, d: CoachDossierInput) => modifierCoachCandidature(c, id, d, token),
+    supprimerCoach: (id: number) => supprimerCoachCandidature(c, id, token),
+    droitsImage: (accepte: boolean) => accepterDroitsImageCandidature(c, accepte, token),
+  };
+}
 
 function ErrorBanner({ message }: { message: string }) {
   return (
@@ -29,6 +75,14 @@ interface DossierPanelProps {
   token: string;
   readOnly: boolean;
   onClose: () => void;
+  /** Par défaut : le dossier du référent connecté. */
+  source?: DossierSource;
+  /** Titre remplaçant « Mon dossier… » (vue organisateur). */
+  titre?: string;
+  /** Contenu affiché sous le titre (bandeau de contexte organisateur). */
+  bandeau?: ReactNode;
+  /** Appelé après chaque écriture réussie (le statut a pu changer). */
+  onChange?: () => void;
 }
 
 interface JoueurFormState {
@@ -63,7 +117,15 @@ const COACH_FORM_VIDE: CoachFormState = {
   presenceRepas: false,
 };
 
-export default function DossierPanel({ token, readOnly, onClose }: DossierPanelProps) {
+export default function DossierPanel({
+  token,
+  readOnly,
+  onClose,
+  source = SOURCE_MOI,
+  titre,
+  bandeau,
+  onChange,
+}: DossierPanelProps) {
   const { edition } = useInscriptionSession();
   const anneesAge = edition?.anneesAge ?? [];
 
@@ -77,19 +139,29 @@ export default function DossierPanel({ token, readOnly, onClose }: DossierPanelP
 
   const [coachForm, setCoachForm] = useState<CoachFormState>(COACH_FORM_VIDE);
   const [editingCoachId, setEditingCoachId] = useState<number | null>(null);
+  const [suppressionCoachId, setSuppressionCoachId] = useState<number | null>(null);
+  const joueurNomRef = useRef<HTMLInputElement>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const candidatureId = source.type === 'candidature' ? source.id : null;
+  const api = useMemo(
+    () => dossierApi(candidatureId === null ? SOURCE_MOI : { type: 'candidature', id: candidatureId }, token),
+    [candidatureId, token],
+  );
+
+  // Rechargement silencieux après une action : le tableau des joueurs (et sa
+  // recherche/son tri) reste monté au lieu d'être remplacé par le spinner.
+  const load = useCallback(async (silencieux = false) => {
+    if (!silencieux) setLoading(true);
     setError(null);
     try {
-      const dossier = await fetchMonDossier(token);
+      const dossier = await api.charger();
       setData(dossier);
     } catch {
       setError('Impossible de charger le dossier.');
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [api]);
 
   useEffect(() => {
     void load();
@@ -99,7 +171,8 @@ export default function DossierPanel({ token, readOnly, onClose }: DossierPanelP
     setActionError(null);
     try {
       await action();
-      await load();
+      await load(true);
+      onChange?.();
     } catch (e: unknown) {
       const msg =
         e && typeof e === 'object' && 'message' in e
@@ -119,6 +192,12 @@ export default function DossierPanel({ token, readOnly, onClose }: DossierPanelP
       licenceFFH: joueur.licenceFFH ?? '',
       anneeNaissance: joueur.anneeNaissance ? String(joueur.anneeNaissance) : '',
       particularitesAlim: joueur.particularitesAlim ?? '',
+    });
+    // Le formulaire est sous le tableau : on l'amène à l'écran et on y place
+    // le focus pour que « Modifier » ait un effet visible (y compris au clavier).
+    requestAnimationFrame(() => {
+      joueurNomRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+      joueurNomRef.current?.focus();
     });
   }
 
@@ -150,9 +229,9 @@ export default function DossierPanel({ token, readOnly, onClose }: DossierPanelP
     };
     await runAction(async () => {
       if (editingJoueurId) {
-        await modifierJoueur(editingJoueurId, payload, token);
+        await api.modifierJoueur(editingJoueurId, payload);
       } else {
-        await ajouterJoueur(payload, token);
+        await api.ajouterJoueur(payload);
       }
       resetJoueurForm();
     });
@@ -185,9 +264,9 @@ export default function DossierPanel({ token, readOnly, onClose }: DossierPanelP
     };
     await runAction(async () => {
       if (editingCoachId) {
-        await modifierCoach(editingCoachId, payload, token);
+        await api.modifierCoach(editingCoachId, payload);
       } else {
-        await ajouterCoach(payload, token);
+        await api.ajouterCoach(payload);
       }
       resetCoachForm();
     });
@@ -215,7 +294,7 @@ export default function DossierPanel({ token, readOnly, onClose }: DossierPanelP
     <div className="bg-slate-800 border border-slate-700 rounded-xl p-5 space-y-5">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-slate-100">
-          {readOnly ? 'Mon dossier (validé)' : 'Mon dossier joueurs & coachs'}
+          {titre ?? (readOnly ? 'Mon dossier (validé)' : 'Mon dossier joueurs & coachs')}
         </h3>
         <button
           onClick={onClose}
@@ -225,7 +304,9 @@ export default function DossierPanel({ token, readOnly, onClose }: DossierPanelP
         </button>
       </div>
 
-      {readOnly && (
+      {bandeau}
+
+      {readOnly && source.type === 'moi' && (
         <p className="text-xs text-emerald-300">
           Ce dossier a été validé par l'organisateur et n'est plus modifiable.
         </p>
@@ -235,41 +316,22 @@ export default function DossierPanel({ token, readOnly, onClose }: DossierPanelP
 
       {/* Joueurs */}
       <section className="space-y-3">
-        <h4 className="text-sm font-medium text-slate-200">Joueurs ({data.joueurs.length})</h4>
-        {data.joueurs.length > 0 && (
-          <ul className="space-y-2">
-            {data.joueurs.map((j) => (
-              <li
-                key={j.id}
-                className="flex items-center justify-between bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-sm"
-              >
-                <span className="text-slate-200">
-                  #{j.numero} — {j.prenom} {j.nom} ({j.poste})
-                </span>
-                {!readOnly && (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => startEditJoueur(j)}
-                      className="text-xs text-blue-400 hover:text-blue-300 hover:underline transition"
-                    >
-                      Modifier
-                    </button>
-                    <button
-                      onClick={() => void runAction(() => supprimerJoueur(j.id, token))}
-                      className="text-xs text-red-400 hover:text-red-300 hover:underline transition"
-                    >
-                      Supprimer
-                    </button>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
+        <JoueursTable
+          joueurs={data.joueurs}
+          readOnly={readOnly}
+          onEdit={startEditJoueur}
+          onDelete={(j) => void runAction(() => api.supprimerJoueur(j.id))}
+        />
 
         {!readOnly && (
           <form onSubmit={(e) => void handleSubmitJoueur(e)} className="grid grid-cols-2 gap-2 bg-slate-900/40 rounded p-3">
+            {editingJoueurId && (
+              <p className="col-span-2 text-xs text-blue-300">
+                Modification de {joueurForm.prenom} {joueurForm.nom}
+              </p>
+            )}
             <input
+              ref={joueurNomRef}
               className="col-span-1 border border-slate-600 rounded px-2 py-1 text-sm bg-slate-700 text-slate-100 placeholder-slate-400"
               placeholder="Nom"
               value={joueurForm.nom}
@@ -380,7 +442,26 @@ export default function DossierPanel({ token, readOnly, onClose }: DossierPanelP
                 <span className="text-slate-200">
                   {c.prenom} {c.nom}{c.presenceRepas ? ' — présent au repas' : ''}
                 </span>
-                {!readOnly && (
+                {!readOnly && suppressionCoachId === c.id && (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setSuppressionCoachId(null);
+                        void runAction(() => api.supprimerCoach(c.id));
+                      }}
+                      className="text-xs text-red-400 hover:text-red-300 hover:underline transition"
+                    >
+                      Confirmer la suppression
+                    </button>
+                    <button
+                      onClick={() => setSuppressionCoachId(null)}
+                      className="text-xs text-slate-400 hover:underline transition"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                )}
+                {!readOnly && suppressionCoachId !== c.id && (
                   <div className="flex gap-2">
                     <button
                       onClick={() => startEditCoach(c)}
@@ -389,7 +470,7 @@ export default function DossierPanel({ token, readOnly, onClose }: DossierPanelP
                       Modifier
                     </button>
                     <button
-                      onClick={() => void runAction(() => supprimerCoach(c.id, token))}
+                      onClick={() => setSuppressionCoachId(c.id)}
                       className="text-xs text-red-400 hover:text-red-300 hover:underline transition"
                     >
                       Supprimer
@@ -453,10 +534,12 @@ export default function DossierPanel({ token, readOnly, onClose }: DossierPanelP
             checked={droitsImageAcceptes}
             disabled={readOnly}
             onChange={(e) =>
-              void runAction(() => accepterDroitsImage(e.target.checked, token))
+              void runAction(() => api.droitsImage(e.target.checked))
             }
           />
-          J'accepte que des photos/vidéos de mon équipe soient utilisées par l'organisation du tournoi.
+          {source.type === 'moi'
+            ? "J'accepte que des photos/vidéos de mon équipe soient utilisées par l'organisation du tournoi."
+            : "Le référent accepte que des photos/vidéos de son équipe soient utilisées par l'organisation du tournoi."}
         </label>
       </section>
     </div>

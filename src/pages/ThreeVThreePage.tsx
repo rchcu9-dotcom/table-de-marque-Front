@@ -7,6 +7,7 @@ import { useSelectedTeam } from "../providers/SelectedTeamProvider";
 import { useMatchesFiltered } from "../hooks/useMatches";
 import { usePartenaires } from "../hooks/usePartenaires";
 import type { Partenaire } from "../api/partenaire";
+import { preparerRecherche } from "../utils/recherche";
 
 function normalize(value?: string | null) {
   return (value ?? "").trim().toLowerCase();
@@ -33,7 +34,7 @@ export default function ThreeVThreePage() {
 
   const filtered = React.useMemo(() => {
     if (!matches) return [];
-    const q = normalize(search);
+    const correspond = preparerRecherche(search);
     const selectedId = normalize(selectedTeam?.id);
     return [...matches]
       .filter((m) => {
@@ -42,10 +43,7 @@ export default function ThreeVThreePage() {
           const b = normalize(m.teamB);
           if (a !== selectedId && b !== selectedId) return false;
         }
-        if (q) {
-          const haystacks = [m.teamA, m.teamB, m.pouleName, m.pouleCode].map(normalize);
-          if (!haystacks.some((h) => h.includes(q))) return false;
-        }
+        if (correspond && !correspond([m.teamA, m.teamB, m.pouleName, m.pouleCode])) return false;
         return true;
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
