@@ -232,6 +232,13 @@ export async function fetchEditionCourante(): Promise<Edition | null> {
   }
 }
 
+// NestJS renvoie un 200 au corps vide quand un handler retourne null : res.json()
+// rejetterait alors, et TanStack Query garderait l'ancienne valeur en cache.
+async function readJsonOrNull<T>(res: Response): Promise<T | null> {
+  const text = await res.text();
+  return text ? (JSON.parse(text) as T) : null;
+}
+
 // ── Cycle annuel de l'édition ───────────────────────────────────────────────
 
 export async function fetchEditionEnPreparation(token: string): Promise<Edition | null> {
@@ -239,7 +246,7 @@ export async function fetchEditionEnPreparation(token: string): Promise<Edition 
     const res = await fetchWithRetry(inscriptionUrl('/edition/en-preparation'), {
       headers: { Authorization: `Bearer ${token}` },
     });
-    return res.json() as Promise<Edition | null>;
+    return readJsonOrNull<Edition>(res);
   } catch (e: unknown) {
     if (e && typeof e === 'object' && 'status' in e && (e as { status: number }).status === 404) {
       return null;
@@ -381,7 +388,7 @@ export async function fetchMaCandidature(token: string): Promise<MaCandidature> 
     const res = await fetchWithRetry(inscriptionUrl('/candidatures/ma-candidature'), {
       headers: { Authorization: `Bearer ${token}` },
     });
-    return res.json() as Promise<MaCandidature>;
+    return readJsonOrNull<NonNullable<MaCandidature>>(res);
   } catch (e: unknown) {
     if (e && typeof e === 'object' && 'status' in e && (e as { status: number }).status === 404) {
       return null;
