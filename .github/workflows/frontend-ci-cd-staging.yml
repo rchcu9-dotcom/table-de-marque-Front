@@ -59,14 +59,16 @@ jobs:
 
       - name: Prepare env for build (staging)
         run: |
-          rm -f .env .env.local .env.production
-          echo "VITE_API_BASE_URL=$VITE_API_BASE_URL" > .env
-          echo "VITE_FIREBASE_API_KEY=$VITE_FIREBASE_API_KEY" >> .env
-          echo "VITE_FIREBASE_AUTH_DOMAIN=$VITE_FIREBASE_AUTH_DOMAIN" >> .env
-          echo "VITE_FIREBASE_PROJECT_ID=$VITE_FIREBASE_PROJECT_ID" >> .env
-          echo "VITE_FIREBASE_STORAGE_BUCKET=$VITE_FIREBASE_STORAGE_BUCKET" >> .env
-          echo "VITE_FIREBASE_MESSAGING_SENDER_ID=$VITE_FIREBASE_MESSAGING_SENDER_ID" >> .env
-          echo "VITE_FIREBASE_APP_ID=$VITE_FIREBASE_APP_ID" >> .env
+          # .env.production is kept for the static tournament facts (VITE_TOURNOI_*);
+          # .env.production.local takes precedence over it for the API URL and Firebase keys.
+          rm -f .env .env.local .env.production.local
+          echo "VITE_API_BASE_URL=$VITE_API_BASE_URL" > .env.production.local
+          echo "VITE_FIREBASE_API_KEY=$VITE_FIREBASE_API_KEY" >> .env.production.local
+          echo "VITE_FIREBASE_AUTH_DOMAIN=$VITE_FIREBASE_AUTH_DOMAIN" >> .env.production.local
+          echo "VITE_FIREBASE_PROJECT_ID=$VITE_FIREBASE_PROJECT_ID" >> .env.production.local
+          echo "VITE_FIREBASE_STORAGE_BUCKET=$VITE_FIREBASE_STORAGE_BUCKET" >> .env.production.local
+          echo "VITE_FIREBASE_MESSAGING_SENDER_ID=$VITE_FIREBASE_MESSAGING_SENDER_ID" >> .env.production.local
+          echo "VITE_FIREBASE_APP_ID=$VITE_FIREBASE_APP_ID" >> .env.production.local
 
       - name: Build (staging)
         run: pnpm run build

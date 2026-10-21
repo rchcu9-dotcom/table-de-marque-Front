@@ -55,8 +55,10 @@ jobs:
 
       - name: Prepare env for build (prod secret)
         run: |
-          rm -f .env .env.local .env.production
-          echo "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}" > .env
+          # .env.production is kept for the static tournament facts (VITE_TOURNOI_*);
+          # .env.production.local takes precedence over it for the API URL.
+          rm -f .env .env.local .env.production.local
+          echo "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}" > .env.production.local
 
       - name: Build (uses prod secret)
         run: pnpm build
