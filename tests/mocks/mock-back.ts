@@ -25,6 +25,12 @@ export type MockBackOptions = {
   /** Corps renvoyé par GET /presentation. Par défaut : tableau vide. */
   presentationGroupes?: unknown[];
   /**
+   * Champs de l'édition renvoyée en anonyme par GET /inscription/edition/courante
+   * (nom, année, dates…), fusionnés avec `{ id: 1, etape }`. Sans cette option, un
+   * visiteur anonyme ne reçoit que `{ id, etape }`.
+   */
+  edition?: Record<string, unknown>;
+  /**
    * Simule un organisateur authentifié : GET /inscription/auth/me renvoie le rôle
    * ORGANISATEUR, GET /inscription/edition/courante renvoie une édition complète,
    * GET /inscription/edition/en-preparation renvoie 404 (aucun cycle annuel) et les
@@ -143,6 +149,11 @@ function normaliserNomComplet(nom: string, nomComplet: string | null | undefined
 const MESSAGE_EQUIPE_EXISTE = "Cette équipe existe déjà";
 const MESSAGE_NOM_COURT_VERROUILLE =
   "Le nom court ne peut plus être modifié : une candidature fait référence à cette équipe";
+
+const PNG_1X1 = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+  "base64",
+);
 
 export async function startMockBack(
   port = 4000,
@@ -273,7 +284,7 @@ export async function startMockBack(
                 affichagePlanningPublic: false,
                 anneesAge: [2015, 2016],
               }
-            : { id: 1, etape: editionEtape },
+            : { id: 1, ...options.edition, etape: editionEtape },
         ),
       );
       return;
@@ -618,6 +629,13 @@ export async function startMockBack(
       res.setHeader("Content-Type", "application/json");
       res.writeHead(200);
       res.end(JSON.stringify(presentationGroupes));
+      return;
+    }
+
+    // Images de chapitre de test (relais Drive du back) : PNG 1×1.
+    if (req.url?.startsWith("/presentation/image/test-") && req.method === "GET") {
+      res.writeHead(200, { "Content-Type": "image/png" });
+      res.end(PNG_1X1);
       return;
     }
 

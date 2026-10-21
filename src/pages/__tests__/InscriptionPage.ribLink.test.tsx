@@ -42,9 +42,10 @@ vi.mock("../../api/inscription", () => ({
   validerDossier: vi.fn(),
   rouvrirDossier: vi.fn(),
   marquerPaiementRepas: vi.fn(),
-  buildImageRibSrc: (editionId: number, imageRibUpdatedAt?: string) =>
-    `http://localhost:3000/inscription/editions/${editionId}/image-rib?v=${encodeURIComponent(imageRibUpdatedAt ?? '')}`,
+  fetchImageRib: (...args: unknown[]) => mockFetchImageRib(...args),
 }));
+
+const mockFetchImageRib = vi.fn();
 
 let InscriptionPage: typeof import("../InscriptionPage").default;
 
@@ -72,6 +73,9 @@ beforeEach(async () => {
     signOut: vi.fn(),
     logout: vi.fn(),
   });
+  mockFetchImageRib.mockResolvedValue(new Blob(["fake-png"], { type: "image/png" }));
+  URL.createObjectURL = vi.fn(() => "blob:rib-1");
+  URL.revokeObjectURL = vi.fn();
   mockFetchEquipesReferentiel.mockResolvedValue([]);
   mockFetchProfilInscription.mockResolvedValue({
     id: 1,
@@ -138,7 +142,7 @@ describe("InscriptionPage — lien RIB (regression fix imageRibUrl)", () => {
     expect(screen.queryByRole("link", { name: "Voir le RIB" })).not.toBeInTheDocument();
   });
 
-  it("affiche l'image RIB uploadée (balise <img>, pas de lien) quand hasImageRib est vrai (AC4)", async () => {
+  it("charge l'image RIB uploadée avec le token et l'affiche en blob (balise <img>, pas de lien) quand hasImageRib est vrai (AC4)", async () => {
     mockFetchEditionCourante.mockResolvedValue({
       id: 1,
       nom: "RCHC U11 2026",
@@ -162,11 +166,48 @@ describe("InscriptionPage — lien RIB (regression fix imageRibUrl)", () => {
     render(<InscriptionPage />, { wrapper: Wrapper });
 
     const img = await screen.findByAltText("RIB du tournoi");
-    expect(img).toHaveAttribute(
-      "src",
-      "http://localhost:3000/inscription/editions/1/image-rib?v=2026-09-16T00%3A00%3A00.000Z",
+    expect(img).toHaveAttribute("src", "blob:rib-1");
+    expect(mockFetchImageRib).toHaveBeenCalledWith(
+      1,
+      "2026-09-16T00:00:00.000Z",
+      "fake-firebase-token",
     );
     expect(screen.queryByRole("link", { name: /Voir le RIB/ })).not.toBeInTheDocument();
+  });
+
+  it("ne charge pas l'image RIB quand la candidature n'attend pas de paiement", async () => {
+    mockFetchMaCandidature.mockResolvedValue({
+      id: 42,
+      equipeNom: "Rennes",
+      equipeLogoUrl: null,
+      statut: "CANDIDATE",
+      createdAt: "2026-04-01T00:00:00.000Z",
+      nbJoueurs: 0,
+      fraisInscriptionPaye: false,
+      repasPaiementRecu: false,
+    });
+    mockFetchEditionCourante.mockResolvedValue({
+      id: 1,
+      nom: "RCHC U11 2026",
+      categorie: "U11",
+      annee: 2026,
+      etape: "INSCRIPTIONS_OUVERTES",
+      dateDebut: "2026-05-23T00:00:00",
+      dateFinDebut: "2026-05-01T23:59:59",
+      fraisInscription: 120,
+      prixRepas: 12,
+      nbPlacesMax: 16,
+      hasImageRib: true,
+      imageRibUpdatedAt: "2026-09-16T00:00:00.000Z",
+      affichagePlanningPublic: false,
+    });
+
+    const { Wrapper } = createWrapper();
+    render(<InscriptionPage />, { wrapper: Wrapper });
+
+    await waitFor(() => expect(screen.getByText("Rennes")).toBeInTheDocument());
+    expect(mockFetchImageRib).not.toHaveBeenCalled();
+    expect(screen.queryByAltText("RIB du tournoi")).not.toBeInTheDocument();
   });
 
   it("n'affiche aucun bloc image cassé quand ni image uploadée ni URL ne sont configurées (AC5)", async () => {

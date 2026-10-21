@@ -18,6 +18,14 @@ export default defineConfig({
     timeout: 60_000,
     env: {
       VITE_API_BASE_URL: "http://localhost:4000",
+      // Infos statiques des tokens de présentation : figées ici plutôt que lues dans
+      // .env.production, pour que les E2E ne dépendent pas des valeurs de prod.
+      VITE_TOURNOI_VILLE: "Rennes",
+      VITE_TOURNOI_LIEU: "Le Blizz",
+      VITE_TOURNOI_CLUB_NOM: "RCHC",
+      VITE_TOURNOI_FRAIS_CAUTION: "",
+      VITE_TOURNOI_FORMAT_MATCH: "",
+      VITE_TOURNOI_LIEU_URL: "https://www.leblizz.com",
     },
   },
 });

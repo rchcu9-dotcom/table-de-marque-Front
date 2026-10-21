@@ -1,7 +1,7 @@
 import React from "react";
 import { usePresentation } from "../hooks/usePresentation";
 import { useInscriptionSession } from "../hooks/useInscriptionSession";
-import { type ContentLang } from "../utils/presentationContent";
+import { pickLocalized, type ContentLang } from "../utils/presentationContent";
 import { buildPresentationTokens } from "../utils/presentationTokens";
 import { getPresentationStaticInfo } from "../config/presentationStaticInfo";
 import LanguageToggle from "../components/presentation/LanguageToggle";
@@ -62,7 +62,7 @@ export default function PresentationTournoiPage() {
 
   const outroIndex = groupes.length;
   const railLabels = [
-    ...groupes.map((groupe) => (lang === "fr" ? groupe.nom : groupe.nomEn)),
+    ...groupes.map((groupe) => pickLocalized(lang, groupe.nom, groupe.nomEn)),
     lang === "fr" ? "Fin" : "End",
   ];
 

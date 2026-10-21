@@ -1,5 +1,37 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { getPresentationStaticInfo } from "../presentationStaticInfo";
+import {
+  getPresentationLieuUrl,
+  getPresentationStaticInfo,
+  sanitizeLieuUrl,
+} from "../presentationStaticInfo";
+
+describe("sanitizeLieuUrl", () => {
+  it("accepte une URL http(s) absolue, sans tenir compte de la casse, et la débarrasse de ses espaces", () => {
+    expect(sanitizeLieuUrl("https://www.leblizz.com")).toBe("https://www.leblizz.com");
+    expect(sanitizeLieuUrl("  HTTP://leblizz.com/  ")).toBe("HTTP://leblizz.com/");
+  });
+
+  it.each([undefined, "", "www.leblizz.com", "javascript:alert(1)", "https://", "https://a b"])(
+    "rejette %j",
+    (raw) => {
+      expect(sanitizeLieuUrl(raw)).toBe("");
+    },
+  );
+});
+
+describe("getPresentationLieuUrl", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("lit VITE_TOURNOI_LIEU_URL et la filtre", () => {
+    vi.stubEnv("VITE_TOURNOI_LIEU_URL", "https://www.leblizz.com");
+    expect(getPresentationLieuUrl()).toBe("https://www.leblizz.com");
+
+    vi.stubEnv("VITE_TOURNOI_LIEU_URL", "javascript:alert(1)");
+    expect(getPresentationLieuUrl()).toBe("");
+  });
+});
 
 describe("getPresentationStaticInfo", () => {
   afterEach(() => {

@@ -17,6 +17,7 @@ import {
 import { PRESENTATION_QUERY_KEY } from "../usePresentation";
 import * as api from "../../api/presentation";
 import type { PresentationArticle } from "../../api/presentation";
+import { ServerError } from "../../api/errors";
 
 vi.mock("../../api/presentation", () => ({
   fetchPresentationArticles: vi.fn(),
@@ -162,6 +163,38 @@ describe("usePresentationArticles", () => {
       { dureeMs: 8000 },
       "tok",
     );
+  });
+
+  it("useUpdatePresentationGroupe.mutateAsync rejects with the API error and leaves caches untouched", async () => {
+    // Contrat utilisé par ParametresPresentationPage : le rejet doit remonter au formulaire
+    // du chapitre (qui reste ouvert et affiche le message de la 400).
+    const error = new ServerError(400, "L'URL de l'image doit commencer par http:// ou https://.");
+    vi.mocked(api.updatePresentationGroupe).mockRejectedValue(error);
+    const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
+
+    const { result } = renderHook(() => useUpdatePresentationGroupe("tok"), {
+      wrapper: makeWrapper(qc),
+    });
+
+    await expect(
+      result.current.mutateAsync({ groupe: "Présentation", payload: { imageUrl: "javascript:x" } }),
+    ).rejects.toBe(error);
+    expect(invalidateSpy).not.toHaveBeenCalled();
+  });
+
+  it("useUpdatePresentationGroupe.mutateAsync resolves and invalidates both caches on success", async () => {
+    vi.mocked(api.updatePresentationGroupe).mockResolvedValue(undefined);
+    const invalidateSpy = vi.spyOn(qc, "invalidateQueries");
+
+    const { result } = renderHook(() => useUpdatePresentationGroupe("tok"), {
+      wrapper: makeWrapper(qc),
+    });
+
+    await expect(
+      result.current.mutateAsync({ groupe: "Présentation", payload: { imageUrl: null } }),
+    ).resolves.toBeUndefined();
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: PRESENTATION_ARTICLES_QUERY_KEY });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: PRESENTATION_QUERY_KEY });
   });
 
   it("useDeplacerPresentationGroupe calls the API with groupe and direction", async () => {

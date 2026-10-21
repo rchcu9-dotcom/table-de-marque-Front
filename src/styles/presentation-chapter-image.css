@@ -1,0 +1,19 @@
+/*
+ * Bandeau d'image de chapitre (page récapitulative /tournoi/infos).
+ * La règle d'impression voyage avec le composant : l'image n'apparaît jamais à
+ * l'impression, quelle que soit la feuille de style de la page qui la monte.
+ */
+.presentation-chapter-image {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 6;
+  object-fit: cover;
+  border-radius: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+@media print {
+  .presentation-chapter-image {
+    display: none !important;
+  }
+}

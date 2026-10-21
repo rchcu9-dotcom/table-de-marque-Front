@@ -79,7 +79,7 @@ export default function ParametresPresentationPage() {
             onUpdate={(id, payload) => updateArticle.mutate({ id, payload })}
             onDelete={(id) => deleteArticle.mutate(id)}
             onDeplacerArticle={(id, direction) => deplacerArticle.mutate({ id, direction })}
-            onUpdateGroupe={(groupe, payload) => updateGroupe.mutate({ groupe, payload })}
+            onUpdateGroupe={(groupe, payload) => updateGroupe.mutateAsync({ groupe, payload })}
             onDeplacerGroupe={(groupe, direction) => deplacerGroupe.mutate({ groupe, direction })}
             onDeleteGroupe={(groupe) => deleteGroupe.mutate(groupe)}
             isSaving={

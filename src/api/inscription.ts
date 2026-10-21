@@ -171,17 +171,27 @@ export async function deleteImageRib(
 }
 
 /**
- * URL de récupération du binaire RIB, avec cache-busting basé sur
- * imageRibUpdatedAt (évite qu'un navigateur affiche une image RIB périmée
- * après un nouvel upload sur la même édition).
+ * Binaire du RIB (coordonnées bancaires) : route authentifiée, donc chargée
+ * via fetch + header Authorization puis affichée en blob — une balise
+ * <img src> ne peut pas transmettre le token. Le paramètre `v`
+ * (imageRibUpdatedAt) évite de réafficher une image périmée après un nouvel
+ * upload sur la même édition.
  */
-export function buildImageRibSrc(
+export async function fetchImageRib(
   editionId: number,
-  imageRibUpdatedAt?: string,
-): string {
-  return inscriptionUrl(
-    `/editions/${editionId}/image-rib?v=${encodeURIComponent(imageRibUpdatedAt ?? '')}`,
+  imageRibUpdatedAt: string | undefined,
+  token: string,
+): Promise<Blob> {
+  const res = await fetchWithRetry(
+    inscriptionUrl(
+      `/editions/${editionId}/image-rib?v=${encodeURIComponent(imageRibUpdatedAt ?? '')}`,
+    ),
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    },
   );
+  return res.blob();
 }
 
 // ── Années d'âge (paramètres d'inscription) ─────────────────────────────────

@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import type { ArticlePresentation } from "../../api/presentation";
 import {
   isInscriptionArticle,
@@ -8,6 +7,8 @@ import {
 import { parseFaits } from "../../utils/presentationFaits";
 import { resolveTokens, type PresentationTokens } from "../../utils/presentationTokens";
 import { getSubthemeHeadline } from "../../utils/presentationSubtheme";
+import { resolveArticleLink } from "../../utils/presentationLinks";
+import ArticleLink from "./ArticleLink";
 import PresentationMapsLink from "./PresentationMapsLink";
 
 type Props = {
@@ -36,8 +37,11 @@ export default function PresentationSubtheme({ article, tokens, lang, isActive }
   const lede = descriptionCourte || description;
 
   const paragraphes = lede.split(/\r?\n+/).filter((p) => p.trim() !== "");
-  const isInscription = isInscriptionArticle(article.titre);
-  const href = isInscription ? "/inscription" : article.lienUrl;
+  // Inscription : toujours le parcours interne, quel que soit le lienUrl saisi (historique Glide).
+  const link = resolveArticleLink(
+    isInscriptionArticle(article.titre) ? "/inscription" : article.lienUrl,
+    lang,
+  );
   const ctaLabel = lang === "fr" ? "En savoir plus" : "Learn more";
 
   return (
@@ -67,24 +71,13 @@ export default function PresentationSubtheme({ article, tokens, lang, isActive }
         </div>
       )}
 
-      {(href || article.mapsQuery) && (
+      {(link || article.mapsQuery) && (
         <div className="presentation-links">
-          {href &&
-            (isInscription ? (
-              <Link to={href} data-testid="presentation-subtheme-cta" className="presentation-cta">
-                {ctaLabel}
-              </Link>
-            ) : (
-              <a
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-testid="presentation-subtheme-cta"
-                className="presentation-cta"
-              >
-                {ctaLabel}
-              </a>
-            ))}
+          {link && (
+            <ArticleLink link={link} data-testid="presentation-subtheme-cta" className="presentation-cta">
+              {ctaLabel}
+            </ArticleLink>
+          )}
           <PresentationMapsLink
             mapsQuery={article.mapsQuery}
             lieu={article.lieu}

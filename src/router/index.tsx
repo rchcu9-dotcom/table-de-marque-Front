@@ -7,6 +7,7 @@ import TeamPage from "../pages/TeamPage";
 import NotFoundPage from "../pages/NotFoundPage";
 import HomePage from "../pages/HomePage";
 import PresentationTournoiPage from "../pages/PresentationTournoiPage";
+import TournoiInfosPage from "../pages/TournoiInfosPage";
 import { useInscriptionSession } from "../hooks/useInscriptionSession";
 import Accueil2Page from "../pages/Accueil2Page";
 import Accueil2BroadcastPage from "../pages/Accueil2BroadcastPage";
@@ -56,6 +57,15 @@ export default function AppRouter() {
         element={
           <LayoutRoot fullBleed={etape === "INSCRIPTIONS_OUVERTES"}>
             {etape === "INSCRIPTIONS_OUVERTES" ? <PresentationTournoiPage /> : <HomePage />}
+          </LayoutRoot>
+        }
+      />
+      {/* Récapitulatif public : accessible à toutes les étapes de l'édition (pas de condition sur `etape`). */}
+      <Route
+        path="/tournoi/infos"
+        element={
+          <LayoutRoot>
+            <TournoiInfosPage />
           </LayoutRoot>
         }
       />

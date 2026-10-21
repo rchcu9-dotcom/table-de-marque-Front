@@ -117,6 +117,35 @@ describe("PresentationChapter", () => {
     expect(screen.getByText(/Chapitre 2 \/ 4 — Règlement/)).toBeInTheDocument();
   });
 
+  describe("nom du chapitre en anglais (repli FR, C1)", () => {
+    it("shows nomEn in English when it is filled", () => {
+      renderChapter({ index: 1, total: 4, lang: "en", groupe: makeGroupe({ nom: "Règlement", nomEn: "Rules" }) });
+
+      expect(screen.getByText(/Chapter 2 \/ 4 — Rules/)).toBeInTheDocument();
+    });
+
+    it.each([
+      ["empty", ""],
+      ["whitespace only", "   "],
+    ])("falls back to the French name in English when nomEn is %s", (_label, nomEn) => {
+      renderChapter({ index: 1, total: 4, lang: "en", groupe: makeGroupe({ nom: "Règlement", nomEn }) });
+
+      expect(screen.getByText(/Chapter 2 \/ 4 — Règlement/)).toBeInTheDocument();
+    });
+
+    it("falls back to the French name in the headline of a chapter without subthemes", () => {
+      renderChapter({ lang: "en", groupe: makeGroupe({ nom: "Médias", nomEn: " ", articles: [] }) });
+
+      expect(screen.getByRole("heading", { level: 2, name: "Médias" })).toBeInTheDocument();
+    });
+
+    it("keeps the French name in French whatever nomEn holds", () => {
+      renderChapter({ index: 1, total: 4, lang: "fr", groupe: makeGroupe({ nom: "Règlement", nomEn: "Rules" }) });
+
+      expect(screen.getByText(/Chapitre 2 \/ 4 — Règlement/)).toBeInTheDocument();
+    });
+  });
+
   it("only shows the first subtheme as active initially", () => {
     renderChapter();
 

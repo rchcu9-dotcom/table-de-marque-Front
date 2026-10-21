@@ -30,6 +30,7 @@ vi.mock("../../api/inscription", async (importOriginal) => {
     retirerAnneeAge: vi.fn(),
     ouvrirInscriptions: vi.fn(),
     cloturerInscriptions: vi.fn(),
+    fetchImageRib: vi.fn().mockResolvedValue(new Blob()),
   };
 });
 
@@ -130,7 +131,7 @@ describe("ParametresInscriptionPage", () => {
     ).toHaveAttribute("href", "https://example.com/rib.pdf");
   });
 
-  it("affiche l'aperçu de l'image RIB uploadée (ImageRibUploadField) quand hasImageRib est vrai", () => {
+  it("affiche l'aperçu de l'image RIB uploadée (ImageRibUploadField) quand hasImageRib est vrai", async () => {
     mockUseInscriptionSession.mockReturnValue({
       role: "ORGANISATEUR",
       token: "test-token",
@@ -141,11 +142,21 @@ describe("ParametresInscriptionPage", () => {
       },
       isLoading: false,
     });
+    (api.fetchImageRib as ReturnType<typeof vi.fn>).mockResolvedValue(
+      new Blob(["fake-png"], { type: "image/png" }),
+    );
+    URL.createObjectURL = vi.fn(() => "blob:rib-1");
+    URL.revokeObjectURL = vi.fn();
     renderPage();
 
-    expect(screen.getByAltText("Aperçu du RIB")).toHaveAttribute(
+    expect(await screen.findByAltText("Aperçu du RIB")).toHaveAttribute(
       "src",
-      expect.stringContaining("/inscription/editions/1/image-rib?v="),
+      "blob:rib-1",
+    );
+    expect(api.fetchImageRib).toHaveBeenCalledWith(
+      1,
+      "2026-09-16T00:00:00.000Z",
+      "test-token",
     );
   });
 
@@ -510,6 +521,11 @@ describe("ParametresInscriptionPage — étape en lecture seule (pilotage depuis
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseEditionEnPreparation.mockReturnValue({ data: null });
+    (api.fetchImageRib as ReturnType<typeof vi.fn>).mockResolvedValue(
+      new Blob(["fake-png"], { type: "image/png" }),
+    );
+    URL.createObjectURL = vi.fn(() => "blob:rib-1");
+    URL.revokeObjectURL = vi.fn();
   });
 
   function givenEdition(etape: Edition["etape"], id = 1) {
@@ -571,6 +587,11 @@ describe("ParametresInscriptionPage — paramètres figés dès l'ouverture (spe
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseEditionEnPreparation.mockReturnValue({ data: null });
+    (api.fetchImageRib as ReturnType<typeof vi.fn>).mockResolvedValue(
+      new Blob(["fake-png"], { type: "image/png" }),
+    );
+    URL.createObjectURL = vi.fn(() => "blob:rib-1");
+    URL.revokeObjectURL = vi.fn();
   });
 
   function givenEdition(etape: Edition["etape"], patch: Partial<Edition> = {}) {
@@ -590,7 +611,7 @@ describe("ParametresInscriptionPage — paramètres figés dès l'ouverture (spe
 
   const FIGEES = ["INSCRIPTIONS_OUVERTES", "CLOTUREE", "TOURNOI_DEMARRE"] as const;
 
-  it.each(FIGEES)("%s : champs désactivés, ni Enregistrer, ni ajout/retrait d'année, ni envoi/suppression du RIB", (etape) => {
+  it.each(FIGEES)("%s : champs désactivés, ni Enregistrer, ni ajout/retrait d'année, ni envoi/suppression du RIB", async (etape) => {
     givenEdition(etape);
     const { container } = renderPage();
 
@@ -615,7 +636,7 @@ describe("ParametresInscriptionPage — paramètres figés dès l'ouverture (spe
     expect(screen.queryByRole("button", { name: /Retirer l'année/ })).not.toBeInTheDocument();
 
     // RIB : aperçu conservé, ni envoi ni suppression.
-    expect(screen.getByAltText("Aperçu du RIB")).toBeInTheDocument();
+    expect(await screen.findByAltText("Aperçu du RIB")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Supprimer" })).not.toBeInTheDocument();
     expect(container.querySelector('input[type="file"]')).toBeNull();
   });

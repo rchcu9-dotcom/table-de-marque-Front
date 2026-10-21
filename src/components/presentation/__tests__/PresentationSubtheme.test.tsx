@@ -132,6 +132,64 @@ describe("PresentationSubtheme", () => {
     expect(cta).toHaveAttribute("href", "/inscription");
   });
 
+  it("opens an internal /tournoi/infos lienUrl in the same tab, carrying the displayed language (CA1)", () => {
+    renderSubtheme({ article: { ...baseArticle, lienUrl: "/tournoi/infos" }, lang: "en" });
+
+    const cta = screen.getByTestId("presentation-subtheme-cta");
+    expect(cta).toHaveAttribute("href", "/tournoi/infos?lang=en");
+    expect(cta).not.toHaveAttribute("target");
+    expect(cta).toHaveTextContent("Learn more");
+  });
+
+  it("keeps the external CTA in a new tab with rel=noopener noreferrer (CA8)", () => {
+    renderSubtheme({ article: { ...baseArticle, lienUrl: "https://www.leblizz.com" } });
+
+    const cta = screen.getByTestId("presentation-subtheme-cta");
+    expect(cta).toHaveAttribute("target", "_blank");
+    expect(cta).toHaveAttribute("rel", "noopener noreferrer");
+    expect(cta).toHaveTextContent("En savoir plus");
+  });
+
+  it("opens an 'Http://' (capitalised scheme) lienUrl in a new tab with its href unchanged (CA8, C10)", () => {
+    renderSubtheme({ article: { ...baseArticle, lienUrl: "Http://www.leblizz.com" } });
+
+    const cta = screen.getByTestId("presentation-subtheme-cta");
+    expect(cta).toHaveAttribute("href", "Http://www.leblizz.com");
+    expect(cta).toHaveAttribute("target", "_blank");
+    expect(cta).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("opens other internal paths (/admin/…) in the same tab without adding lang (refac liens internes, CA3)", () => {
+    renderSubtheme({ article: { ...baseArticle, lienUrl: "/admin/equipes" }, lang: "en" });
+
+    const cta = screen.getByTestId("presentation-subtheme-cta");
+    expect(cta).toHaveAttribute("href", "/admin/equipes");
+    expect(cta).not.toHaveAttribute("target");
+  });
+
+  it("keeps an existing lang parameter on a /tournoi link (refac liens internes, CA2)", () => {
+    renderSubtheme({ article: { ...baseArticle, lienUrl: "/tournoi/infos?lang=fr" }, lang: "en" });
+
+    expect(screen.getByTestId("presentation-subtheme-cta")).toHaveAttribute("href", "/tournoi/infos?lang=fr");
+  });
+
+  it("shows no venue-website fallback on / — only the article's own lienUrl (spec de saisie §2.2)", () => {
+    renderSubtheme({
+      article: { ...baseArticle, lienUrl: "/tournoi/infos", lieu: "Patinoire du Blizz", mapsQuery: "48.13,-1.65" },
+    });
+
+    expect(screen.queryByTestId("tournoi-infos-lieu-site")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("tournoi-infos-lieu-url")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /leblizz/i })).not.toBeInTheDocument();
+    expect(screen.getByTestId("presentation-subtheme-cta")).toHaveAttribute("href", "/tournoi/infos?lang=fr");
+  });
+
+  it("renders no CTA for a javascript: lienUrl (CA8)", () => {
+    renderSubtheme({ article: { ...baseArticle, lienUrl: "javascript:alert(1)" } });
+
+    expect(screen.queryByTestId("presentation-subtheme-cta")).not.toBeInTheDocument();
+  });
+
   it("renders no CTA when the article has no lienUrl and is not the Inscription article", () => {
     renderSubtheme({ article: { ...baseArticle, lienUrl: null } });
 

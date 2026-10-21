@@ -5,6 +5,12 @@ import type {
   UpdatePresentationGroupePayload,
   UpsertPresentationArticlePayload,
 } from "../../api/presentation";
+import { ServerError } from "../../api/errors";
+import {
+  PRESENTATION_IMAGE_URL_MAX_LENGTH,
+  getPresentationImageUrlError,
+  toPreviewImageUrl,
+} from "../../utils/presentationImageUrl";
 
 type Props = {
   articles: PresentationArticle[];
@@ -12,7 +18,8 @@ type Props = {
   onUpdate: (id: number, payload: UpsertPresentationArticlePayload) => void;
   onDelete: (id: number) => void;
   onDeplacerArticle: (id: number, direction: DeplacerDirection) => void;
-  onUpdateGroupe: (groupe: string, payload: UpdatePresentationGroupePayload) => void;
+  /** Résolue une fois l'enregistrement fait : le formulaire du chapitre ne se ferme qu'en cas de succès. */
+  onUpdateGroupe: (groupe: string, payload: UpdatePresentationGroupePayload) => Promise<void>;
   onDeplacerGroupe: (groupe: string, direction: DeplacerDirection) => void;
   onDeleteGroupe: (groupe: string) => void;
   isSaving: boolean;
@@ -339,11 +346,46 @@ function groupArticles(articles: PresentationArticle[]): [string, PresentationAr
   );
 }
 
+function messageOf(error: unknown): string {
+  return error instanceof ServerError ? error.message : "Enregistrement impossible, réessayez.";
+}
+
+/**
+ * Miniature de l'URL saisie : un lien Drive passe par le relais du back (cf. toPreviewImageUrl).
+ * Un échec de chargement signale le plus souvent un lien Drive non partagé publiquement.
+ */
+function GroupeImagePreview({ url }: { url: string }) {
+  const previewUrl = toPreviewImageUrl(url);
+  // Mémorise l'URL en échec plutôt qu'un booléen : l'aperçu se réarme dès que l'URL change.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+
+  if (!previewUrl) return null;
+  if (failedUrl === previewUrl) {
+    return (
+      <p className="text-xs text-amber-400" data-testid="groupe-image-preview-error">
+        Image introuvable — vérifiez que le lien Drive est partagé à « tous les utilisateurs
+        disposant du lien ».
+      </p>
+    );
+  }
+  return (
+    <img
+      src={previewUrl}
+      alt="Aperçu de l'image du chapitre"
+      loading="lazy"
+      onError={() => setFailedUrl(previewUrl)}
+      className="w-40 h-[90px] object-cover rounded border border-slate-600"
+      data-testid="groupe-image-preview"
+    />
+  );
+}
+
 function GroupeMetaForm({
   groupe,
   groupeEn,
   dureeMs,
   imageUrl,
+  error,
   onSubmit,
   onCancel,
   isSaving,
@@ -352,6 +394,8 @@ function GroupeMetaForm({
   groupeEn: string;
   dureeMs: number;
   imageUrl: string | null;
+  /** Erreur renvoyée par le back au dernier enregistrement (ex. 400 de validation). */
+  error?: string | null;
   onSubmit: (payload: UpdatePresentationGroupePayload) => void;
   onCancel: () => void;
   isSaving: boolean;
@@ -360,10 +404,17 @@ function GroupeMetaForm({
   const [nomEn, setNomEn] = useState(groupeEn);
   const [duree, setDuree] = useState(dureeMs);
   const [image, setImage] = useState(imageUrl ?? "");
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const imageError = localError ?? error ?? null;
+  const imageErrorId = `groupe-image-error-${groupe}`;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!nom.trim()) return;
+    const urlError = getPresentationImageUrlError(image);
+    setLocalError(urlError);
+    if (urlError) return;
     onSubmit({
       nom: nom.trim(),
       nomEn: nomEn.trim() || nom.trim(),
@@ -404,15 +455,30 @@ function GroupeMetaForm({
             className="w-full px-2 py-1 rounded bg-slate-900 border border-slate-600 text-slate-100 text-sm"
           />
         </label>
-        <label className="text-xs text-slate-400 space-y-1">
-          Image de fond (URL)
-          <input
-            type="text"
-            value={image}
-            onChange={(e) => setImage(e.target.value)}
-            className="w-full px-2 py-1 rounded bg-slate-900 border border-slate-600 text-slate-100 text-sm"
-          />
-        </label>
+        <div className="space-y-1">
+          <label className="text-xs text-slate-400 space-y-1 block">
+            Image de fond (URL)
+            <input
+              type="url"
+              value={image}
+              maxLength={PRESENTATION_IMAGE_URL_MAX_LENGTH}
+              onChange={(e) => {
+                setImage(e.target.value);
+                setLocalError(null);
+              }}
+              aria-invalid={imageError ? true : undefined}
+              aria-describedby={imageError ? imageErrorId : undefined}
+              className="w-full px-2 py-1 rounded bg-slate-900 border border-slate-600 text-slate-100 text-sm"
+              data-testid="groupe-image-input"
+            />
+          </label>
+          {imageError && (
+            <p id={imageErrorId} role="alert" className="text-xs text-red-400" data-testid="groupe-image-error">
+              {imageError}
+            </p>
+          )}
+          <GroupeImagePreview url={image} />
+        </div>
       </div>
       <div className="flex gap-2 pt-1">
         <button
@@ -446,8 +512,15 @@ export default function PresentationArticlesAdmin({
   isSaving,
 }: Props) {
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editingGroupe, setEditingGroupe] = useState<string | null>(null);
+  const [editingGroupe, setEditingGroupeState] = useState<string | null>(null);
+  const [groupeError, setGroupeError] = useState<string | null>(null);
   const [addingToGroupe, setAddingToGroupe] = useState<string | null>(null);
+
+  // Ouvrir, changer ou fermer le chapitre édité efface l'erreur du précédent enregistrement.
+  const setEditingGroupe = (groupe: string | null) => {
+    setEditingGroupeState(groupe);
+    setGroupeError(null);
+  };
   const [addingNewGroupe, setAddingNewGroupe] = useState(false);
 
   const groups = groupArticles(articles);
@@ -523,9 +596,16 @@ export default function PresentationArticlesAdmin({
                 groupeEn={groupeEn}
                 dureeMs={groupeDureeMs}
                 imageUrl={groupeImageUrl}
-                onSubmit={(payload) => {
-                  onUpdateGroupe(groupe, payload);
-                  setEditingGroupe(null);
+                error={groupeError}
+                onSubmit={async (payload) => {
+                  setGroupeError(null);
+                  try {
+                    await onUpdateGroupe(groupe, payload);
+                    setEditingGroupe(null);
+                  } catch (error) {
+                    // Le formulaire reste ouvert pour que l'organisateur corrige sa saisie.
+                    setGroupeError(messageOf(error));
+                  }
                 }}
                 onCancel={() => setEditingGroupe(null)}
                 isSaving={isSaving}

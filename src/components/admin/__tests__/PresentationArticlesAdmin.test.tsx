@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
 import PresentationArticlesAdmin from "../PresentationArticlesAdmin";
 import type { PresentationArticle } from "../../../api/presentation";
+import { ServerError } from "../../../api/errors";
 
 const ARTICLES: PresentationArticle[] = [
   {
@@ -38,7 +39,8 @@ function renderAdmin(overrides: Partial<React.ComponentProps<typeof Presentation
   const onUpdate = vi.fn();
   const onDelete = vi.fn();
   const onDeplacerArticle = vi.fn();
-  const onUpdateGroupe = vi.fn();
+  // Contrat : onUpdateGroupe renvoie une Promise (mutateAsync côté page).
+  const onUpdateGroupe = vi.fn().mockResolvedValue(undefined);
   const onDeplacerGroupe = vi.fn();
   const onDeleteGroupe = vi.fn();
   render(
@@ -174,7 +176,7 @@ describe("PresentationArticlesAdmin", () => {
   });
 
   describe("group meta editing", () => {
-    it("opens the group meta form pre-filled with the current duree/image, and submits the update", () => {
+    it("opens the group meta form pre-filled with the current duree/image, and submits the update", async () => {
       const { onUpdateGroupe } = renderAdmin();
 
       const reglementHeading = screen.getByText("Règlement").closest("div")!;
@@ -193,6 +195,8 @@ describe("PresentationArticlesAdmin", () => {
         dureeMs: 9000,
         imageUrl: "https://x/reglement.png",
       });
+      // Le formulaire ne se ferme qu'une fois la Promise d'enregistrement résolue.
+      await waitFor(() => expect(screen.queryByText("Enregistrer le chapitre")).not.toBeInTheDocument());
     });
 
     it("closes the group meta form on Annuler without calling onUpdateGroupe", () => {
@@ -204,6 +208,186 @@ describe("PresentationArticlesAdmin", () => {
 
       expect(onUpdateGroupe).not.toHaveBeenCalled();
       expect(screen.queryByText("Enregistrer le chapitre")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("contrôle de l'image de chapitre", () => {
+    const API = "http://localhost:3000"; // __APP_API_BASE_URL__ (tests/unit/setup.ts)
+    const SCHEME_MESSAGE = "L'URL de l'image doit commencer par http:// ou https://.";
+    const LENGTH_MESSAGE = "L'URL de l'image ne doit pas dépasser 500 caractères.";
+
+    function openReglementForm(overrides: Parameters<typeof renderAdmin>[0] = {}) {
+      const handlers = renderAdmin(overrides);
+      const reglementHeading = screen.getByText("Règlement").closest("div")!;
+      fireEvent.click(within(reglementHeading).getByText("Modifier le chapitre"));
+      return handlers;
+    }
+
+    const imageInput = () => screen.getByTestId("groupe-image-input");
+    const setImage = (value: string) => fireEvent.change(imageInput(), { target: { value } });
+    const submit = () => fireEvent.click(screen.getByText("Enregistrer le chapitre"));
+
+    it("renders the image field as a URL input capped at the column length", () => {
+      openReglementForm();
+
+      expect(imageInput()).toHaveAttribute("type", "url");
+      expect(imageInput()).toHaveAttribute("maxLength", "500");
+      expect(imageInput()).not.toHaveAttribute("aria-invalid");
+    });
+
+    it("closes the form only once the update has succeeded", async () => {
+      const { onUpdateGroupe } = openReglementForm();
+
+      submit();
+
+      expect(onUpdateGroupe).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(screen.queryByText("Enregistrer le chapitre")).not.toBeInTheDocument());
+    });
+
+    it("sends null when the image field is cleared (removes the chapter image)", async () => {
+      const { onUpdateGroupe } = openReglementForm();
+
+      setImage("   ");
+      submit();
+
+      await waitFor(() =>
+        expect(onUpdateGroupe).toHaveBeenCalledWith("Règlement", expect.objectContaining({ imageUrl: null })),
+      );
+    });
+
+    it("blocks a non-http(s) URL locally, without calling the API, and flags the field", () => {
+      const { onUpdateGroupe } = openReglementForm();
+
+      setImage("javascript:alert(1)");
+      submit();
+
+      expect(onUpdateGroupe).not.toHaveBeenCalled();
+      const error = screen.getByTestId("groupe-image-error");
+      expect(error).toHaveTextContent(SCHEME_MESSAGE);
+      expect(error).toHaveAttribute("role", "alert");
+      expect(imageInput()).toHaveAttribute("aria-invalid", "true");
+      expect(imageInput()).toHaveAttribute("aria-describedby", error.id);
+      expect(screen.getByText("Enregistrer le chapitre")).toBeInTheDocument();
+    });
+
+    it("blocks an URL longer than 500 characters locally", () => {
+      const { onUpdateGroupe } = openReglementForm();
+
+      setImage(`https://cdn.example.com/${"a".repeat(480)}`);
+      submit();
+
+      expect(onUpdateGroupe).not.toHaveBeenCalled();
+      expect(screen.getByTestId("groupe-image-error")).toHaveTextContent(LENGTH_MESSAGE);
+    });
+
+    it("clears the local error as soon as the field is edited", () => {
+      openReglementForm();
+
+      setImage("javascript:alert(1)");
+      submit();
+      expect(screen.getByTestId("groupe-image-error")).toBeInTheDocument();
+
+      setImage("https://cdn.example.com/ok.jpg");
+
+      expect(screen.queryByTestId("groupe-image-error")).not.toBeInTheDocument();
+      expect(imageInput()).not.toHaveAttribute("aria-invalid");
+    });
+
+    it("keeps the form open and shows the server message when the update is rejected (400)", async () => {
+      const onUpdateGroupe = vi
+        .fn()
+        .mockRejectedValue(new ServerError(400, "L'URL de l'image ne doit pas dépasser 500 caractères."));
+      openReglementForm({ onUpdateGroupe });
+
+      submit();
+
+      expect(await screen.findByTestId("groupe-image-error")).toHaveTextContent(LENGTH_MESSAGE);
+      expect(screen.getByText("Enregistrer le chapitre")).toBeInTheDocument();
+      // La saisie n'est pas perdue : l'organisateur peut corriger.
+      expect(imageInput()).toHaveValue("https://x/reglement.png");
+    });
+
+    it("shows a generic message when the update fails for a non-server reason", async () => {
+      const onUpdateGroupe = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+      openReglementForm({ onUpdateGroupe });
+
+      submit();
+
+      expect(await screen.findByTestId("groupe-image-error")).toHaveTextContent(
+        "Enregistrement impossible, réessayez.",
+      );
+    });
+
+    it("clears the server error when the form is closed and reopened", async () => {
+      const onUpdateGroupe = vi.fn().mockRejectedValue(new ServerError(400, "refusé"));
+      openReglementForm({ onUpdateGroupe });
+      submit();
+      await screen.findByTestId("groupe-image-error");
+
+      fireEvent.click(screen.getByText("Annuler"));
+      fireEvent.click(within(screen.getByText("Règlement").closest("div")!).getByText("Modifier le chapitre"));
+
+      expect(screen.queryByTestId("groupe-image-error")).not.toBeInTheDocument();
+    });
+
+    it("succeeds on a second attempt after a server error, then closes", async () => {
+      const onUpdateGroupe = vi
+        .fn()
+        .mockRejectedValueOnce(new ServerError(400, "refusé"))
+        .mockResolvedValueOnce(undefined);
+      openReglementForm({ onUpdateGroupe });
+
+      submit();
+      await screen.findByTestId("groupe-image-error");
+      submit();
+
+      await waitFor(() => expect(screen.queryByText("Enregistrer le chapitre")).not.toBeInTheDocument());
+      expect(onUpdateGroupe).toHaveBeenCalledTimes(2);
+    });
+
+    describe("aperçu", () => {
+      it("previews a plain http(s) URL as is", () => {
+        openReglementForm();
+
+        const preview = screen.getByTestId("groupe-image-preview");
+        expect(preview).toHaveAttribute("src", "https://x/reglement.png");
+        expect(preview).toHaveAttribute("alt", "Aperçu de l'image du chapitre");
+      });
+
+      it("previews a Drive share link through the back relay", () => {
+        openReglementForm();
+
+        setImage("https://drive.google.com/file/d/DRIVE_ID/view?usp=sharing");
+
+        expect(screen.getByTestId("groupe-image-preview")).toHaveAttribute(
+          "src",
+          `${API}/presentation/image/DRIVE_ID?w=400`,
+        );
+      });
+
+      it.each([
+        ["vide", ""],
+        ["invalide", "javascript:alert(1)"],
+      ])("shows no preview for an %s URL", (_label, value) => {
+        openReglementForm();
+
+        setImage(value);
+
+        expect(screen.queryByTestId("groupe-image-preview")).not.toBeInTheDocument();
+      });
+
+      it("replaces a preview that fails to load by a Drive sharing hint, re-armed when the URL changes", () => {
+        openReglementForm();
+
+        fireEvent.error(screen.getByTestId("groupe-image-preview"));
+        expect(screen.queryByTestId("groupe-image-preview")).not.toBeInTheDocument();
+        expect(screen.getByTestId("groupe-image-preview-error")).toHaveTextContent(/partagé/);
+
+        setImage("https://cdn.example.com/autre.jpg");
+
+        expect(screen.queryByTestId("groupe-image-preview-error")).not.toBeInTheDocument();
+        expect(screen.getByTestId("groupe-image-preview")).toHaveAttribute("src", "https://cdn.example.com/autre.jpg");
+      });
     });
   });
 

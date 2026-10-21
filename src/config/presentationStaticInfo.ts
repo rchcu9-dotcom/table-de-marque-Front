@@ -24,3 +24,18 @@ export function getPresentationStaticInfo(): PresentationStaticInfo {
     formatMatch: (import.meta.env.VITE_TOURNOI_FORMAT_MATCH as string | undefined) ?? "",
   };
 }
+
+/** N'accepte qu'une URL http(s) absolue : toute autre valeur désactive le filet. */
+export function sanitizeLieuUrl(raw: string | undefined): string {
+  const value = (raw ?? "").trim();
+  return /^https?:\/\/\S+$/i.test(value) ? value : "";
+}
+
+/**
+ * Site du lieu (ex. https://www.leblizz.com), affiché en filet dans la section lieu de
+ * /tournoi/infos quand le lienUrl de l'article est pris par autre chose. Volontairement
+ * hors de PresentationStaticInfo : ce n'est pas un token {{…}} de texte, mais une URL.
+ */
+export function getPresentationLieuUrl(): string {
+  return sanitizeLieuUrl(import.meta.env.VITE_TOURNOI_LIEU_URL as string | undefined);
+}

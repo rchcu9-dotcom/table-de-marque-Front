@@ -36,7 +36,7 @@ vi.mock("../../api/inscription", () => ({
   rouvrirDossier: vi.fn(),
   marquerPaiementRepas: vi.fn(),
   definirCommentaireOrganisateur: vi.fn(),
-  buildImageRibSrc: vi.fn(),
+  fetchImageRib: vi.fn(),
   fetchMonDossier: vi.fn(),
   fetchDossierParCandidature: vi.fn(),
 }));

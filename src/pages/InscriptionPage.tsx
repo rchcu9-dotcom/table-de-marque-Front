@@ -18,8 +18,8 @@ import {
   rouvrirDossier,
   marquerPaiementRepas,
   definirCommentaireOrganisateur,
-  buildImageRibSrc,
 } from '../api/inscription';
+import { useImageRibObjectUrl } from '../hooks/useImageRibObjectUrl';
 import type {
   Edition,
   EditionEtape,
@@ -905,6 +905,14 @@ function VueResponsable({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showDossier, setShowDossier] = useState(false);
+  const paiementAttendu =
+    candidature?.statut === 'RESERVEE' || candidature?.statut === 'PAIEMENT_ATTENDU';
+  const imageRibSrc = useImageRibObjectUrl(
+    edition?.id ?? 0,
+    edition?.imageRibUpdatedAt,
+    token,
+    Boolean(edition?.hasImageRib) && paiementAttendu,
+  );
 
   function setSelectedEquipe(equipe: EquipeRef) {
     setSelectedEquipeState(equipe);
@@ -1034,11 +1042,13 @@ function VueResponsable({
                 <p className="text-slate-300">{edition.msgChequeInfo2}</p>
               )}
               {edition?.hasImageRib ? (
-                <img
-                  src={buildImageRibSrc(edition.id, edition.imageRibUpdatedAt)}
-                  alt="RIB du tournoi"
-                  className="max-w-xs rounded border border-slate-700"
-                />
+                imageRibSrc && (
+                  <img
+                    src={imageRibSrc}
+                    alt="RIB du tournoi"
+                    className="max-w-xs rounded border border-slate-700"
+                  />
+                )
               ) : (
                 edition?.imageRibUrl && (
                   <div className="space-y-1">

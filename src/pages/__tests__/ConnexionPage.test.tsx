@@ -103,8 +103,8 @@ describe("ConnexionPage — dev-login (import.meta.env.DEV)", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/challenge", { replace: true });
   });
 
-  it("affiche un message d'erreur quand devLogin échoue, sans naviguer", async () => {
-    mockDevLogin.mockRejectedValue(new Error("network"));
+  it("affiche le motif du refus renvoyé par le back, sans naviguer", async () => {
+    mockDevLogin.mockRejectedValue(new Error("dev-login interdit pour un compte à rôle privilégié"));
     renderPage();
 
     fireEvent.change(screen.getByPlaceholderText("Email"), {
@@ -116,7 +116,11 @@ describe("ConnexionPage — dev-login (import.meta.env.DEV)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Se connecter (dev)" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Connexion développeur impossible.")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "Connexion développeur impossible. dev-login interdit pour un compte à rôle privilégié",
+        ),
+      ).toBeInTheDocument();
     });
     expect(mockNavigate).not.toHaveBeenCalled();
     expect(mockSetAuthToken).not.toHaveBeenCalled();

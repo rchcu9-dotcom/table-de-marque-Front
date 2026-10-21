@@ -337,4 +337,38 @@ describe("PresentationTournoiPage", () => {
 
     expect(screen.getByText("The tournament is coming to {{ville}}.")).toBeInTheDocument();
   });
+
+  describe("libellés du rail en anglais (repli FR, C1)", () => {
+    function railButton(name: string) {
+      return within(screen.getByTestId("presentation-rail-nav")).queryByRole("button", { name });
+    }
+
+    it("uses nomEn for the rail labels once switched to English", () => {
+      mockUsePresentation = () => ({ data: groupesFixture, isLoading: false, isError: false });
+      renderPage();
+
+      fireEvent.click(screen.getByTestId("presentation-language-en"));
+
+      expect(railButton("Presentation")).toBeInTheDocument();
+      expect(railButton("Media")).toBeInTheDocument();
+      expect(railButton("End")).toBeInTheDocument();
+    });
+
+    it.each([
+      ["empty", ""],
+      ["whitespace only", "   "],
+    ])("falls back to the French chapter name when nomEn is %s", (_label, nomEn) => {
+      mockUsePresentation = () => ({
+        data: [groupesFixture[0], { ...groupesFixture[1], nomEn }],
+        isLoading: false,
+        isError: false,
+      });
+      renderPage();
+
+      fireEvent.click(screen.getByTestId("presentation-language-en"));
+
+      expect(railButton("Médias")).toBeInTheDocument();
+      expect(railButton("Presentation")).toBeInTheDocument();
+    });
+  });
 });

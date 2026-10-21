@@ -1,0 +1,359 @@
+/*
+ * Page récapitulative /tournoi/infos — scopée sous .tournoi-infos.
+ *
+ * Écran : typographie de document sur le fond sombre du site. Les variables ci-dessous
+ * sont celles que LanguageToggle (.presentation-lang) et PresentationMapsLink
+ * (.presentation-maps-link) attendent : elles ne sont définies dans presentation.css
+ * que sous .presentation-root.
+ *
+ * Impression (@media print, en fin de fichier) : A4, noir sur blanc, sans navigation,
+ * boutons ni images, coupures maîtrisées. Spec de référence :
+ * docs/specs/impression-pdf-contexte-la-prsentation-actuelle-ne-propose-p.md, ajustée par la
+ * spec consolidée (corps 10 pt, marges 12 mm, cible 2-4 pages).
+ */
+
+.tournoi-infos {
+  --ice: #eef3f8;
+  --ice-dim: #c3cede;
+  --steel: #7c8aa3;
+  --steel-200: rgba(238, 243, 248, 0.14);
+  --nav-accent-green: #22c55e;
+  --center-red: #d63a4c;
+  --font-body: "Work Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  max-width: 72ch;
+  margin: 0 auto;
+  padding: 1rem 0 2rem;
+  color: var(--ice);
+  font-family: var(--font-body);
+  line-height: 1.6;
+}
+
+/* ---- En-tête ---- */
+
+.tournoi-infos-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--steel-200);
+}
+
+.tournoi-infos-title {
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  font-weight: 700;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.tournoi-infos-subtitle {
+  margin: 0.4rem 0 0;
+  color: var(--ice-dim);
+}
+
+.tournoi-infos-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 22rem;
+}
+
+/* LanguageToggle est en position absolue dans la présentation plein écran. */
+.tournoi-infos .presentation-lang {
+  position: static;
+}
+
+.tournoi-infos-pdf {
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--nav-accent-green);
+  background: var(--nav-accent-green);
+  color: #04130a;
+  cursor: pointer;
+}
+
+.tournoi-infos-pdf:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.tournoi-infos-pdf:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tournoi-infos-pdf-help {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--steel);
+}
+
+/* ---- Contenu ---- */
+
+.tournoi-infos-state {
+  padding: 2.5rem 0;
+  text-align: center;
+  color: var(--steel);
+}
+
+.tournoi-infos-chapter {
+  margin-bottom: 2.5rem;
+}
+
+.tournoi-infos-chapter-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 2px solid var(--center-red);
+}
+
+.tournoi-infos-article {
+  margin-bottom: 1.75rem;
+}
+
+.tournoi-infos-eyebrow {
+  margin: 0 0 0.15rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--center-red);
+}
+
+.tournoi-infos-article-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+}
+
+.tournoi-infos-chapo {
+  font-weight: 600;
+  margin: 0 0 0.6rem;
+}
+
+/* Retours à la ligne simples conservés : listes du règlement saisies ligne à ligne. */
+.tournoi-infos-paragraph {
+  white-space: pre-line;
+  margin: 0 0 0.6rem;
+  color: var(--ice-dim);
+}
+
+.tournoi-infos-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  margin: 0.75rem 0;
+}
+
+.tournoi-infos-fact dt {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.tournoi-infos-fact dd {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--steel);
+}
+
+.tournoi-infos-lieu {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 1rem;
+  margin: 0.75rem 0;
+}
+
+.tournoi-infos-lieu-adresse {
+  flex-basis: 100%;
+  margin: 0;
+  font-weight: 600;
+}
+
+/* Filet « Site du lieu : <domaine> » (VITE_TOURNOI_LIEU_URL). */
+.tournoi-infos-lieu-site {
+  margin: 0;
+}
+
+.tournoi-infos-article-link {
+  margin: 0.5rem 0 0;
+}
+
+.tournoi-infos-link {
+  color: var(--ice);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.tournoi-infos-link:hover {
+  color: var(--nav-accent-green);
+}
+
+/* Pied de document : impression seulement. */
+.tournoi-infos-print-footer {
+  display: none;
+}
+
+/* ================================ Impression ================================ */
+
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  html,
+  body,
+  #root {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  .no-print,
+  .tournoi-infos img,
+  .tournoi-infos .presentation-chapter-image {
+    display: none !important;
+  }
+
+  .tournoi-infos,
+  .tournoi-infos * {
+    color: #000 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  /* Pagination : pas de flex/grid (coupures mal gérées), pas de sticky/fixed, pas de hauteur contrainte. */
+  .tournoi-infos,
+  .tournoi-infos-header,
+  .tournoi-infos-lieu,
+  .tournoi-infos-facts {
+    display: block !important;
+    position: static !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .tournoi-infos {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 1.3;
+  }
+
+  /*
+   * Espacements resserrés (spec consolidée §2.5 « espacements réduits ») : avec le volume du
+   * contenu réel (~15 000 caractères), c'est ce qui permet de tenir en 5 pages A4 sans toucher
+   * au corps (10 pt, interligne 1,3) ni aux règles de coupure. Mesuré par l'E2E CA5b.
+   */
+  .tournoi-infos-header {
+    border-bottom: 1px solid #000;
+    margin-bottom: 4mm;
+    padding-bottom: 2mm;
+  }
+
+  .tournoi-infos-title {
+    font-size: 18pt;
+  }
+
+  .tournoi-infos-subtitle {
+    font-size: 10.5pt;
+  }
+
+  .tournoi-infos-chapter {
+    margin-bottom: 3mm;
+    break-before: auto;
+  }
+
+  .tournoi-infos-chapter-title {
+    font-size: 14pt;
+    border-bottom: 1.5pt solid #000;
+    margin-bottom: 1.5mm;
+    padding-bottom: 0.5mm;
+  }
+
+  .tournoi-infos-article {
+    margin-bottom: 2mm;
+  }
+
+  .tournoi-infos-article-title {
+    font-size: 11.5pt;
+    margin-bottom: 0.8mm;
+  }
+
+  .tournoi-infos-eyebrow {
+    font-family: inherit;
+    font-size: 8pt;
+    margin-bottom: 0;
+  }
+
+  .tournoi-infos-paragraph,
+  .tournoi-infos-chapo {
+    margin-bottom: 0.8mm;
+    orphans: 3;
+    widows: 3;
+  }
+
+  .tournoi-infos-facts,
+  .tournoi-infos-lieu {
+    margin: 1mm 0;
+  }
+
+  .tournoi-infos-fact {
+    display: inline-block;
+    margin-right: 6mm;
+  }
+
+  .tournoi-infos-fact dt {
+    font-size: 11pt;
+  }
+
+  .tournoi-infos-lieu-adresse {
+    margin-bottom: 1mm;
+  }
+
+  /* Coupures : jamais un titre seul en bas de page, articles courts non coupés. */
+  .tournoi-infos h1,
+  .tournoi-infos h2,
+  .tournoi-infos h3 {
+    break-after: avoid;
+  }
+
+  .tournoi-infos-article:not([data-long="true"]),
+  .tournoi-infos-facts,
+  .tournoi-infos-lieu {
+    break-inside: avoid;
+  }
+
+  /* Liens : cliquables dans le PDF, lisibles sur papier. */
+  .tournoi-infos a {
+    text-decoration: underline;
+    border: 0 !important;
+  }
+
+  .tournoi-infos a[data-print-url]::after {
+    content: " (" attr(href) ")";
+    font-size: 8.5pt;
+    word-break: break-all;
+  }
+
+  .tournoi-infos-print-footer {
+    display: block;
+    margin-top: 8mm;
+    padding-top: 2mm;
+    border-top: 0.5pt solid #000;
+    font-size: 8pt;
+  }
+}

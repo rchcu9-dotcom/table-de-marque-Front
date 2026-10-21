@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type React from "react";
 import type { PresentationGroupe } from "../../api/presentation";
-import type { ContentLang } from "../../utils/presentationContent";
+import { pickLocalized, type ContentLang } from "../../utils/presentationContent";
 import type { PresentationTokens } from "../../utils/presentationTokens";
 import { canNext, canPrev } from "../../utils/presentationSubscreenNav";
 import { getSubthemeHeadline } from "../../utils/presentationSubtheme";
@@ -162,7 +162,7 @@ export default function PresentationChapter({
     if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setIsFocusWithin(false);
   };
 
-  const nom = lang === "fr" ? groupe.nom : groupe.nomEn;
+  const nom = pickLocalized(lang, groupe.nom, groupe.nomEn);
   const chapitreLabel = lang === "fr" ? "Chapitre" : "Chapter";
   const ecranLabel = lang === "fr" ? "Écran" : "Screen";
 

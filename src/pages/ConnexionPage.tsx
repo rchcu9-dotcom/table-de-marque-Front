@@ -20,8 +20,10 @@ export default function ConnexionPage() {
       const { token } = await devLogin(email, displayName);
       setAuthToken(token);
       navigate(consumeRedirectPath('/inscription'), { replace: true });
-    } catch {
-      setError('Connexion développeur impossible.');
+    } catch (err) {
+      // Le back explique le refus (dev-login fermé, rôle privilégié, email déjà pris) : on l'affiche.
+      const detail = err instanceof Error && err.message ? ` ${err.message}` : '';
+      setError(`Connexion développeur impossible.${detail}`);
     } finally {
       setSubmitting(false);
     }

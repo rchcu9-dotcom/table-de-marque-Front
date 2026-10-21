@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
-import { buildImageRibSrc } from "../../api/inscription";
 import { useUploadImageRib, useDeleteImageRib } from "../../hooks/useImageRib";
+import { useImageRibObjectUrl } from "../../hooks/useImageRibObjectUrl";
 import { estConflitEtat } from "../../hooks/useChangerEtapeEdition";
 
 const ACCEPTED_MIME_TYPES = "image/png,image/jpeg,image/webp";
@@ -25,6 +25,7 @@ export default function ImageRibUploadField({
 }: Props) {
   const uploadImageRib = useUploadImageRib(editionId, token);
   const deleteImageRib = useDeleteImageRib(editionId, token);
+  const imageRibSrc = useImageRibObjectUrl(editionId, imageRibUpdatedAt, token, hasImageRib);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -58,11 +59,13 @@ export default function ImageRibUploadField({
       </legend>
       {hasImageRib ? (
         <div className="space-y-2">
-          <img
-            src={buildImageRibSrc(editionId, imageRibUpdatedAt)}
-            alt="Aperçu du RIB"
-            className="max-w-xs rounded border border-slate-600"
-          />
+          {imageRibSrc && (
+            <img
+              src={imageRibSrc}
+              alt="Aperçu du RIB"
+              className="max-w-xs rounded border border-slate-600"
+            />
+          )}
           {!readOnly && (
           <button
             type="button"

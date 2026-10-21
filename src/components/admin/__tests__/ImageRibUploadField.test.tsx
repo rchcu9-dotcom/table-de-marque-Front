@@ -7,7 +7,12 @@ import ImageRibUploadField from "../ImageRibUploadField";
 
 vi.mock("../../../api/inscription", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../api/inscription")>();
-  return { ...actual, uploadImageRib: vi.fn(), deleteImageRib: vi.fn() };
+  return {
+    ...actual,
+    uploadImageRib: vi.fn(),
+    deleteImageRib: vi.fn(),
+    fetchImageRib: vi.fn(),
+  };
 });
 
 import * as api from "../../../api/inscription";
@@ -34,16 +39,44 @@ function makeFile(name = "rib.png", type = "image/png") {
 describe("ImageRibUploadField", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    (api.fetchImageRib as ReturnType<typeof vi.fn>).mockResolvedValue(
+      new Blob(["fake-png"], { type: "image/png" }),
+    );
+    URL.createObjectURL = vi.fn(() => "blob:rib-1");
+    URL.revokeObjectURL = vi.fn();
   });
 
-  it("affiche l'aperçu de l'image et le bouton Supprimer quand hasImageRib est vrai (AC2)", () => {
+  it("affiche l'aperçu de l'image (chargée avec le token) et le bouton Supprimer quand hasImageRib est vrai (AC2)", async () => {
     renderField({ hasImageRib: true, imageRibUpdatedAt: "2026-09-16T00:00:00.000Z" });
 
-    const img = screen.getByAltText("Aperçu du RIB");
-    expect(img).toHaveAttribute(
-      "src",
-      expect.stringContaining("/inscription/editions/1/image-rib?v="),
+    const img = await screen.findByAltText("Aperçu du RIB");
+    expect(img).toHaveAttribute("src", "blob:rib-1");
+    expect(api.fetchImageRib).toHaveBeenCalledWith(
+      1,
+      "2026-09-16T00:00:00.000Z",
+      "test-token",
     );
+    expect(screen.getByRole("button", { name: "Supprimer" })).toBeInTheDocument();
+  });
+
+  it("révoque l'object URL au démontage", async () => {
+    const { unmount } = renderField({
+      hasImageRib: true,
+      imageRibUpdatedAt: "2026-09-16T00:00:00.000Z",
+    });
+    await screen.findByAltText("Aperçu du RIB");
+
+    unmount();
+
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:rib-1");
+  });
+
+  it("n'affiche pas d'image cassée si le chargement authentifié échoue", async () => {
+    (api.fetchImageRib as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("403"));
+    renderField({ hasImageRib: true, imageRibUpdatedAt: "2026-09-16T00:00:00.000Z" });
+
+    await waitFor(() => expect(api.fetchImageRib).toHaveBeenCalled());
+    expect(screen.queryByAltText("Aperçu du RIB")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Supprimer" })).toBeInTheDocument();
   });
 
