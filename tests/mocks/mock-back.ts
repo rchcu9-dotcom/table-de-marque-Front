@@ -27,7 +27,8 @@ export type MockBackOptions = {
   /**
    * Champs de l'édition renvoyée en anonyme par GET /inscription/edition/courante
    * (nom, année, dates…), fusionnés avec `{ id: 1, etape }`. Sans cette option, un
-   * visiteur anonyme ne reçoit que `{ id, etape }`.
+   * visiteur anonyme ne reçoit que `{ id, etape }`. En mode organisateur ou responsable,
+   * ils complètent ou remplacent ceux de l'édition complète.
    */
   edition?: Record<string, unknown>;
   /**
@@ -283,6 +284,7 @@ export async function startMockBack(
                 hasImageRib: false,
                 affichagePlanningPublic: false,
                 anneesAge: [2015, 2016],
+                ...options.edition,
               }
             : { id: 1, ...options.edition, etape: editionEtape },
         ),
@@ -510,6 +512,22 @@ export async function startMockBack(
         Object.assign(joueur, body);
         res.writeHead(200);
         res.end(JSON.stringify(joueur));
+        return;
+      }
+
+      const statutTriage = req.url?.match(/^\/inscription\/candidatures\/(\d+)\/statut-triage$/);
+      if (statutTriage && req.method === "PATCH") {
+        const body = (await lireCorps(req)) as { statut: string };
+        patches.push({ url: req.url!, body });
+        const c = candidatures.find((x) => x.id === Number(statutTriage[1]));
+        if (!c) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ message: "Candidature non trouvée" }));
+          return;
+        }
+        c.statut = body.statut;
+        res.writeHead(200);
+        res.end(JSON.stringify({ id: c.id, statut: c.statut }));
         return;
       }
 

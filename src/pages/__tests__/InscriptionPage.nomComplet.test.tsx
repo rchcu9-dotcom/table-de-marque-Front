@@ -19,7 +19,7 @@ vi.mock("../../api/env", () => ({
 const mockUser = {
   getIdToken: vi.fn().mockResolvedValue("fake-firebase-token"),
   uid: "test-uid-123",
-} as unknown as import("firebase/auth").User;
+} as unknown as import("../../auth/types").AuthUser;
 
 const mockUseAuth = vi.fn();
 vi.mock("../../auth/AuthContext", () => ({
@@ -215,11 +215,9 @@ describe("InscriptionPage — modale « Ajouter une équipe » : saisie des deux
     expect(nomComplet).toHaveAttribute("placeholder", "Ex: Les Sharks de San Jose");
     expect(nomComplet).toHaveAttribute("maxLength", "150");
     expect(nomComplet).not.toBeRequired();
-    // Le champ du blason reste après les deux noms.
-    const blason = within(modale).getByLabelText("Blason (optionnel)");
-    expect(
-      nomComplet.compareDocumentPosition(blason) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    // Plus de champ blason : le fichier n'était jamais envoyé, seule une adresse
+    // `blob:` locale était enregistrée (logo cassé pour tous les autres).
+    expect(within(modale).queryByLabelText("Blason (optionnel)")).not.toBeInTheDocument();
   });
 
   it("explique le nom court par une aide reliée au champ, sans changer son libellé", async () => {

@@ -14,7 +14,7 @@ vi.mock("../../api/env", () => ({
   getApiBaseUrl: () => "http://localhost:3000",
 }));
 
-const mockUser = { uid: "organisateur-uid-1" } as unknown as import("firebase/auth").User;
+const mockUser = { uid: "organisateur-uid-1" } as unknown as import("../../auth/types").AuthUser;
 const mockUseAuth = vi.fn();
 vi.mock("../../auth/AuthContext", () => ({
   useAuth: () => mockUseAuth(),

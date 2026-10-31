@@ -22,7 +22,7 @@ const UID = "test-uid-123";
 const mockUser = {
   getIdToken: mockGetIdToken,
   uid: UID,
-} as unknown as import("firebase/auth").User;
+} as unknown as import("../../auth/types").AuthUser;
 
 const mockUseAuth = vi.fn();
 vi.mock("../../auth/AuthContext", () => ({

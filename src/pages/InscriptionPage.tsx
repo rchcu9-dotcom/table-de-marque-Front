@@ -51,10 +51,10 @@ import {
 } from './inscription/RecapitulatifPaiement';
 import { STATUTS_AVEC_RECAPITULATIF_PAIEMENT } from '../utils/statutsRecapitulatifPaiement';
 import { LIBELLES_MODE_PAIEMENT_REPAS } from '../utils/modePaiementRepas';
+import { BoutonMailPorteur } from './inscription/BoutonMailPorteur';
 import { CommentaireOrganisateur } from './inscription/CommentaireOrganisateur';
 import { TriageStatutSwitch } from './inscription/TriageStatutSwitch';
-import { interpolerMsgPaiementAttendu } from '../utils/msgPaiementAttendu';
-import { msgOr } from '../utils/msgOr';
+import { estDossierVerrouille, messageParcours } from './inscription/messagesParcours';
 import { isImageUrl } from '../utils/isImageUrl';
 import {
   lireEquipeIdPersistee,
@@ -82,6 +82,11 @@ function ErrorBanner({ message }: { message: string }) {
 
 // ─── Modal Ajouter une équipe ─────────────────────────────────────────────
 
+// Le logo d'une équipe sans PNG à son nom renvoie une 404 : on masque l'image cassée.
+function masquerImageCassee(e: React.SyntheticEvent<HTMLImageElement>) {
+  e.currentTarget.style.display = 'none';
+}
+
 interface AddEquipeModalProps {
   token: string;
   introMessage?: string | null;
@@ -92,7 +97,6 @@ interface AddEquipeModalProps {
 function AddEquipeModal({ token, introMessage, onClose, onCreated }: AddEquipeModalProps) {
   const [nom, setNom] = useState('');
   const [nomComplet, setNomComplet] = useState('');
-  const [logoFile, setLogoFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -105,11 +109,10 @@ function AddEquipeModal({ token, introMessage, onClose, onCreated }: AddEquipeMo
     setSubmitting(true);
     setError(null);
     try {
-      const logoUrl = logoFile ? URL.createObjectURL(logoFile) : undefined;
       // Clé absente quand le champ est vide ; la normalisation reste au back.
       const complet = nomComplet.trim();
       const equipe = await createEquipeDemande(
-        { nom: nom.trim(), ...(complet ? { nomComplet: complet } : {}), logoUrl },
+        { nom: nom.trim(), ...(complet ? { nomComplet: complet } : {}) },
         token,
       );
       onCreated(equipe);
@@ -163,19 +166,6 @@ function AddEquipeModal({ token, introMessage, onClose, onCreated }: AddEquipeMo
               placeholder="Ex: Les Sharks de San Jose"
               value={nomComplet}
               onChange={(e) => setNomComplet(e.target.value)}
-              disabled={submitting}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1 text-slate-200" htmlFor="equipe-logo">
-              Blason (optionnel)
-            </label>
-            <input
-              id="equipe-logo"
-              type="file"
-              accept="image/*"
-              className="text-sm text-slate-300 file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-slate-600 file:text-slate-200 file:text-sm hover:file:bg-slate-500"
-              onChange={(e) => setLogoFile(e.target.files?.[0] ?? null)}
               disabled={submitting}
             />
           </div>
@@ -422,7 +412,7 @@ function EquipeDropdown({ equipes, selected, onSelect }: EquipeDropdownProps) {
         {selected ? (
           <>
             {selected.logoUrl && (
-              <img src={selected.logoUrl} alt="" className="w-6 h-6 object-contain rounded-full" />
+              <img src={selected.logoUrl} alt="" className="w-6 h-6 object-contain rounded-full" onError={masquerImageCassee} />
             )}
             <EquipeNoms nom={selected.nom} nomComplet={selected.nomComplet} className="flex-1" />
           </>
@@ -461,7 +451,7 @@ function EquipeDropdown({ equipes, selected, onSelect }: EquipeDropdownProps) {
               }`}
             >
               {equipe.logoUrl && (
-                <img src={equipe.logoUrl} alt="" className="w-6 h-6 object-contain rounded-full" />
+                <img src={equipe.logoUrl} alt="" className="w-6 h-6 object-contain rounded-full" onError={masquerImageCassee} />
               )}
               <EquipeNoms nom={equipe.nom} nomComplet={equipe.nomComplet} />
             </button>
@@ -735,6 +725,8 @@ function VueOrganisateur({ edition, token, etape }: VueOrganisateurProps) {
                 </div>
               </div>
 
+              <BoutonMailPorteur candidature={c} edition={edition} etape={etape} />
+
               {/* Actions — « Voir le dossier » en premier dès VALIDEE */}
               {STATUTS_AVEC_DOSSIER.includes(c.statut) && (
                 <div className="flex flex-wrap gap-2 mt-3">
@@ -991,8 +983,12 @@ function VueResponsable({
   // modifiable jusqu'au moment de la sauvegarde. DOSSIER_COMPLET n'est pas
   // concerné : déjà en lecture seule via DossierPanel.
   if (candidature) {
-    const dossierVerrouille =
-      etape === 'TOURNOI_DEMARRE' && candidature.statut !== 'DOSSIER_COMPLET';
+    const dossierVerrouille = estDossierVerrouille(candidature.statut, etape);
+    const [messagePrincipal, ...messagesCheque] = messageParcours(
+      candidature.statut,
+      edition,
+      etape,
+    );
     return (
       <div className="space-y-6">
         {/* Récapitulatif candidature */}
@@ -1018,29 +1014,17 @@ function VueResponsable({
 
           {/* Message selon statut */}
           {candidature.statut === 'CANDIDATE' && (
-            <p className="text-sm text-slate-300 whitespace-pre-line">
-              {msgOr(edition?.msgDemandeSoumise, 'Ta demande a bien été soumise. En attente de validation.')}
-            </p>
+            <p className="text-sm text-slate-300 whitespace-pre-line">{messagePrincipal}</p>
           )}
           {candidature.statut === 'LISTE_ATTENTE' && (
-            <p className="text-sm text-orange-300 whitespace-pre-line">
-              {msgOr(edition?.msgListeAttente, "Tu es sur liste d'attente.")}
-            </p>
+            <p className="text-sm text-orange-300 whitespace-pre-line">{messagePrincipal}</p>
           )}
           {(candidature.statut === 'RESERVEE' || candidature.statut === 'PAIEMENT_ATTENDU') && (
             <div className="space-y-2 text-sm">
-              <p className="text-slate-200 whitespace-pre-line">
-                {interpolerMsgPaiementAttendu(
-                  msgOr(edition?.msgPaiementAttendu, 'Paiement attendu.'),
-                  edition?.fraisInscription ?? 0,
-                )}
-              </p>
-              {edition?.msgChequeInfo1 && (
-                <p className="text-slate-300">{edition.msgChequeInfo1}</p>
-              )}
-              {edition?.msgChequeInfo2 && (
-                <p className="text-slate-300">{edition.msgChequeInfo2}</p>
-              )}
+              <p className="text-slate-200 whitespace-pre-line">{messagePrincipal}</p>
+              {messagesCheque.map((message, index) => (
+                <p key={index} className="text-slate-300">{message}</p>
+              ))}
               {edition?.hasImageRib ? (
                 imageRibSrc && (
                   <img
@@ -1074,14 +1058,10 @@ function VueResponsable({
           )}
           {candidature.statut === 'VALIDEE' && (
             dossierVerrouille ? (
-              <p className="text-sm text-yellow-300 whitespace-pre-line">
-                Le tournoi a démarré, les dossiers ne sont plus modifiables.
-              </p>
+              <p className="text-sm text-yellow-300 whitespace-pre-line">{messagePrincipal}</p>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm text-green-300 whitespace-pre-line">
-                  {msgOr(edition?.msgInscriptionConfirmee, 'Inscription confirmée !')}
-                </p>
+                <p className="text-sm text-green-300 whitespace-pre-line">{messagePrincipal}</p>
                 {!showDossier && (
                   <button
                     onClick={() => setShowDossier(true)}
@@ -1095,14 +1075,10 @@ function VueResponsable({
           )}
           {candidature.statut === 'DOSSIER_EN_COURS' && (
             dossierVerrouille ? (
-              <p className="text-sm text-yellow-300 whitespace-pre-line">
-                Le tournoi a démarré, les dossiers ne sont plus modifiables.
-              </p>
+              <p className="text-sm text-yellow-300 whitespace-pre-line">{messagePrincipal}</p>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm text-cyan-300 whitespace-pre-line">
-                  {msgOr(edition?.msgRenseigneJoueurs, 'Complète le dossier de ton équipe (joueurs, coachs, droits à l\'image).')}
-                </p>
+                <p className="text-sm text-cyan-300 whitespace-pre-line">{messagePrincipal}</p>
                 {!showDossier && (
                   <button
                     onClick={() => setShowDossier(true)}
@@ -1116,9 +1092,7 @@ function VueResponsable({
           )}
           {candidature.statut === 'DOSSIER_COMPLET' && (
             <div className="space-y-3">
-              <p className="text-sm text-emerald-300 whitespace-pre-line">
-                {msgOr(edition?.msgInscriptionValidee, "Le dossier de ton équipe a été validé par l'organisateur.")}
-              </p>
+              <p className="text-sm text-emerald-300 whitespace-pre-line">{messagePrincipal}</p>
               {!showDossier && (
                 <button
                   onClick={() => setShowDossier(true)}
@@ -1130,12 +1104,7 @@ function VueResponsable({
             </div>
           )}
           {candidature.statut === 'REFUSEE' && (
-            <p className="text-sm text-red-300 whitespace-pre-line">
-              {msgOr(
-                edition?.msgEquipeRefusee,
-                "Nous ne sommes malheureusement pas en mesure de confirmer l'inscription de ton équipe pour cette édition du tournoi. N'hésite pas à contacter l'organisateur si tu as des questions — et à retenter ta chance lors d'une prochaine édition !",
-              )}
-            </p>
+            <p className="text-sm text-red-300 whitespace-pre-line">{messagePrincipal}</p>
           )}
 
           {STATUTS_AVEC_RECAPITULATIF_PAIEMENT.includes(candidature.statut) && (
