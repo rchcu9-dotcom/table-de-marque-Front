@@ -39,6 +39,7 @@ import ProfilPage from "../pages/ProfilPage";
 import AdminPage from "../pages/AdminPage";
 import GestionEquipesPage from "../pages/GestionEquipesPage";
 import SearchBar from "../components/ds/SearchBar";
+import Spinner from "../components/ds/Spinner";
 import type { SortConfig } from "../components/collections/List";
 import type { Match } from "../api/match";
 
@@ -48,15 +49,27 @@ export default function AppRouter() {
     key: "date",
     direction: "asc",
   });
-  const { etape } = useInscriptionSession();
+  const { etapeAccueil, etapeAccueilEnAttente } = useInscriptionSession();
+  const presentation = etapeAccueil === "INSCRIPTIONS_OUVERTES";
 
   return (
     <Routes>
+      {/* Inscriptions ouvertes → présentation ; toute autre étape → équipes et tournoi.
+          Sans étape connue, on attend : afficher HomePage par défaut montrait l'accueil
+          « tournoi démarré » pendant le chargement. */}
       <Route
         path="/"
         element={
-          <LayoutRoot fullBleed={etape === "INSCRIPTIONS_OUVERTES"}>
-            {etape === "INSCRIPTIONS_OUVERTES" ? <PresentationTournoiPage /> : <HomePage />}
+          <LayoutRoot fullBleed={presentation}>
+            {etapeAccueilEnAttente ? (
+              <div className="flex justify-center py-16" data-testid="accueil-chargement" aria-busy="true">
+                <Spinner />
+              </div>
+            ) : presentation ? (
+              <PresentationTournoiPage />
+            ) : (
+              <HomePage />
+            )}
           </LayoutRoot>
         }
       />

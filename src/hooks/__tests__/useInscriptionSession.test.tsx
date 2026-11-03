@@ -3,7 +3,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
-import { useInscriptionSession } from "../useInscriptionSession";
+import { useInscriptionSession, DERNIERE_ETAPE_STORAGE_KEY } from "../useInscriptionSession";
 import type { StatutInscription } from "../../api/types/inscription.types";
 
 const mockFetchEditionCourante = vi.fn();
@@ -109,5 +109,74 @@ describe("useInscriptionSession — etape/role", () => {
 
     await waitFor(() => expect(result.current.etape).toBe("CLOTUREE"));
     expect(result.current.role).toBe("ORGANISATEUR");
+  });
+});
+
+describe("useInscriptionSession — étape de l'accueil", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("première visite : en attente tant que le serveur n'a pas répondu", async () => {
+    let repondre: (edition: unknown) => void = () => {};
+    mockFetchEditionCourante.mockReturnValue(new Promise((r) => { repondre = r; }));
+
+    const { result } = renderSession();
+
+    expect(result.current.etapeAccueil).toBeNull();
+    expect(result.current.etapeAccueilEnAttente).toBe(true);
+    repondre({ id: 1, etape: "INSCRIPTIONS_OUVERTES" });
+    await waitFor(() => expect(result.current.etapeAccueil).toBe("INSCRIPTIONS_OUVERTES"));
+    expect(result.current.etapeAccueilEnAttente).toBe(false);
+  });
+
+  it("mémorise l'étape reçue, sans expiration", async () => {
+    const { result } = renderSession();
+
+    await waitFor(() => expect(result.current.etape).toBe("INSCRIPTIONS_OUVERTES"));
+    expect(localStorage.getItem(DERNIERE_ETAPE_STORAGE_KEY)).toBe("INSCRIPTIONS_OUVERTES");
+  });
+
+  it("visite suivante : l'accueil part de la dernière étape connue, sans attendre", () => {
+    localStorage.setItem(DERNIERE_ETAPE_STORAGE_KEY, "INSCRIPTIONS_OUVERTES");
+    mockFetchEditionCourante.mockReturnValue(new Promise(() => {}));
+
+    const { result } = renderSession();
+
+    expect(result.current.etapeAccueil).toBe("INSCRIPTIONS_OUVERTES");
+    expect(result.current.etapeAccueilEnAttente).toBe(false);
+    // L'étape « officielle » reste celle du serveur : rien n'est autorisé sur une valeur mémorisée.
+    expect(result.current.etape).toBeNull();
+  });
+
+  it("le serveur a le dernier mot quand l'étape a changé depuis la dernière visite", async () => {
+    localStorage.setItem(DERNIERE_ETAPE_STORAGE_KEY, "INSCRIPTIONS_OUVERTES");
+    mockFetchEditionCourante.mockResolvedValue({ id: 1, etape: "TOURNOI_DEMARRE" });
+
+    const { result } = renderSession();
+
+    await waitFor(() => expect(result.current.etapeAccueil).toBe("TOURNOI_DEMARRE"));
+    expect(localStorage.getItem(DERNIERE_ETAPE_STORAGE_KEY)).toBe("TOURNOI_DEMARRE");
+  });
+
+  it("plus d'édition courante : l'étape mémorisée est oubliée", async () => {
+    localStorage.setItem(DERNIERE_ETAPE_STORAGE_KEY, "CLOTUREE");
+    mockFetchEditionCourante.mockResolvedValue(null);
+
+    const { result } = renderSession();
+
+    await waitFor(() => expect(localStorage.getItem(DERNIERE_ETAPE_STORAGE_KEY)).toBeNull());
+    expect(result.current.etapeAccueil).toBeNull();
+    expect(result.current.etapeAccueilEnAttente).toBe(false);
+  });
+
+  it("ignore une valeur mémorisée inconnue", () => {
+    localStorage.setItem(DERNIERE_ETAPE_STORAGE_KEY, "PHASE_INVENTEE");
+    mockFetchEditionCourante.mockReturnValue(new Promise(() => {}));
+
+    const { result } = renderSession();
+
+    expect(result.current.etapeAccueil).toBeNull();
+    expect(result.current.etapeAccueilEnAttente).toBe(true);
   });
 });

@@ -1,15 +1,18 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 import type { EditionEtape } from "../../api/types/inscription.types";
 
 let mockEtape: EditionEtape | null = null;
+let mockEnAttente = false;
 
 vi.mock("../../hooks/useInscriptionSession", () => ({
   useInscriptionSession: () => ({
     edition: null,
     etape: mockEtape,
+    etapeAccueil: mockEtape,
+    etapeAccueilEnAttente: mockEnAttente,
     profil: null,
     role: null,
     hasDossierAccess: false,
@@ -34,6 +37,12 @@ vi.mock("../../pages/TournoiInfosPage", () => ({
   default: () => <div data-testid="stub-tournoi-infos-page" />,
 }));
 
+// Le premier import du routeur charge toutes les pages : sous la charge de la suite complète, il
+// dépassait le délai de 5 s du premier test. On le paie une fois ici, avec un délai adapté.
+beforeAll(async () => {
+  await import("../index");
+}, 30_000);
+
 async function renderRouterAt(path: string) {
   const { default: AppRouter } = await import("../index");
   return render(
@@ -44,6 +53,10 @@ async function renderRouterAt(path: string) {
 }
 
 describe("AppRouter — route '/' conditionnelle par phase d'édition", () => {
+  beforeEach(() => {
+    mockEnAttente = false;
+  });
+
   it("affiche PresentationTournoiPage quand l'étape est INSCRIPTIONS_OUVERTES", async () => {
     mockEtape = "INSCRIPTIONS_OUVERTES";
 
@@ -70,8 +83,31 @@ describe("AppRouter — route '/' conditionnelle par phase d'édition", () => {
     expect(screen.getByTestId("stub-home-page")).toBeInTheDocument();
   });
 
-  it("affiche HomePage par défaut quand l'étape est encore inconnue (null)", async () => {
+  it.each<EditionEtape>(["CREEE", "CREATION_NOUVEAU_TOURNOI"])(
+    "affiche HomePage pendant la préparation de la saison suivante (%s)",
+    async (etape) => {
+      mockEtape = etape;
+
+      await renderRouterAt("/");
+
+      expect(screen.getByTestId("stub-home-page")).toBeInTheDocument();
+    },
+  );
+
+  it("n'affiche aucun des deux accueils tant que l'étape est en attente", async () => {
     mockEtape = null;
+    mockEnAttente = true;
+
+    await renderRouterAt("/");
+
+    expect(screen.getByTestId("accueil-chargement")).toBeInTheDocument();
+    expect(screen.queryByTestId("stub-home-page")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("stub-presentation-page")).not.toBeInTheDocument();
+  });
+
+  it("affiche HomePage quand il n'y a aucune édition courante ou que le chargement a échoué", async () => {
+    mockEtape = null;
+    mockEnAttente = false;
 
     await renderRouterAt("/");
 

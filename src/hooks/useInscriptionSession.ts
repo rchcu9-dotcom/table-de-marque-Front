@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthContext';
 import {
@@ -29,9 +30,49 @@ export const STATUTS_DOSSIER_ACCESSIBLE_FRONT: StatutInscription[] = [
   'DOSSIER_COMPLET',
 ];
 
+/**
+ * Dernière étape reçue du serveur, sans expiration : l'étape ne change que
+ * quelques fois par an, alors que le cache React Query persistant expire au
+ * bout de 30 min. Sert uniquement à choisir l'accueil avant la réponse.
+ */
+export const DERNIERE_ETAPE_STORAGE_KEY = 'edition-derniere-etape';
+
+const ETAPES: readonly EditionEtape[] = [
+  'CREEE',
+  'CREATION_NOUVEAU_TOURNOI',
+  'INSCRIPTIONS_OUVERTES',
+  'CLOTUREE',
+  'TOURNOI_DEMARRE',
+];
+
+function lireDerniereEtape(): EditionEtape | null {
+  try {
+    const raw = localStorage.getItem(DERNIERE_ETAPE_STORAGE_KEY);
+    return ETAPES.find((e) => e === raw) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function memoriserDerniereEtape(etape: EditionEtape | null) {
+  try {
+    if (etape) localStorage.setItem(DERNIERE_ETAPE_STORAGE_KEY, etape);
+    else localStorage.removeItem(DERNIERE_ETAPE_STORAGE_KEY);
+  } catch {
+    // Stockage indisponible (navigation privée) : l'accueil attendra le serveur.
+  }
+}
+
 export interface InscriptionSession {
   edition: Edition | null;
   etape: EditionEtape | null;
+  /**
+   * Étape pour choisir l'accueil : celle du serveur, à défaut la dernière
+   * connue de ce navigateur. Ne pas l'utiliser pour autoriser une action.
+   */
+  etapeAccueil: EditionEtape | null;
+  /** Aucune étape connue et l'édition est en cours de chargement. */
+  etapeAccueilEnAttente: boolean;
   profil: ProfilInscription | null;
   role: ProfilRole | null;
   hasDossierAccess: boolean;
@@ -73,6 +114,14 @@ export function useInscriptionSession(): InscriptionSession {
     refetchOnWindowFocus: false,
   });
 
+  // undefined = pas encore de réponse ; null = aucune édition courante.
+  const editionRecue = editionQuery.data;
+  useEffect(() => {
+    if (editionRecue !== undefined) memoriserDerniereEtape(editionRecue?.etape ?? null);
+  }, [editionRecue]);
+  const etapeAccueil =
+    editionRecue !== undefined ? editionRecue?.etape ?? null : lireDerniereEtape();
+
   const statutInscription = maCandidatureQuery.data?.statut ?? null;
   const hasDossierAccess = statutInscription
     ? STATUTS_DOSSIER_ACCESSIBLE_FRONT.includes(statutInscription)
@@ -81,6 +130,8 @@ export function useInscriptionSession(): InscriptionSession {
   return {
     edition: editionQuery.data ?? null,
     etape: editionQuery.data?.etape ?? null,
+    etapeAccueil,
+    etapeAccueilEnAttente: etapeAccueil === null && editionQuery.isPending,
     profil: profilQuery.data ?? null,
     role: profilQuery.data?.role ?? null,
     hasDossierAccess,
